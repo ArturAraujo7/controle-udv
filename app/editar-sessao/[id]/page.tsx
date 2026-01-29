@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Save, Users, User, Beaker, Trash2 } from 'lucide-react'
+import { ArrowLeft, Save, Users, User, Beaker, Trash2, BookOpen, Mic } from 'lucide-react'
 import Link from 'next/link'
 import { use } from 'react'
 
@@ -26,6 +26,8 @@ export default function EditarSessao({ params }: { params: Promise<{ id: string 
     hora: '',
     tipo: '',
     dirigente: '',
+    explanador: '',
+    leitor_documentos: '',
     quantidade_participantes: '',
     quantidade_consumida: '',
     id_preparo: ''
@@ -44,9 +46,11 @@ export default function EditarSessao({ params }: { params: Promise<{ id: string 
 
   useEffect(() => {
     async function loadData() {
+      // 1. Carrega Preparos
       const { data: dataPreparos } = await supabase.from('preparos').select('id, data_preparo, mestre_preparo, grau').eq('status', 'Disponível').order('data_preparo', { ascending: false })
       if (dataPreparos) setPreparos(dataPreparos)
 
+      // 2. Carrega Sessão
       const { data: sessao, error } = await supabase.from('sessoes').select('*').eq('id', id).single()
       if (error) {
         alert('Sessão não encontrada!')
@@ -54,12 +58,17 @@ export default function EditarSessao({ params }: { params: Promise<{ id: string 
         return
       }
 
+      // 3. Carrega Leitura (se houver)
+      const { data: leitura } = await supabase.from('leituras').select('leitor').eq('id_sessao', id).maybeSingle()
+
       const dataIso = new Date(sessao.data_realizacao)
       setFormData({
         data_realizacao: dataIso.toISOString().split('T')[0],
         hora: dataIso.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
         tipo: sessao.tipo,
         dirigente: sessao.dirigente,
+        explanador: sessao.explanador || '', // Carrega do banco
+        leitor_documentos: leitura?.leitor || '', // Carrega da tabela leituras
         quantidade_participantes: String(sessao.quantidade_participantes),
         quantidade_consumida: String(sessao.quantidade_consumida),
         id_preparo: sessao.id_preparo ? String(sessao.id_preparo) : ''
@@ -73,17 +82,40 @@ export default function EditarSessao({ params }: { params: Promise<{ id: string 
     e.preventDefault()
     setSaving(true)
     const dataCompleta = `${formData.data_realizacao}T${formData.hora}:00`
-    const { error } = await supabase.from('sessoes').update({
+    
+    // 1. Atualiza Sessão
+    const { error: erroSessao } = await supabase.from('sessoes').update({
         data_realizacao: dataCompleta,
         tipo: formData.tipo,
         dirigente: formData.dirigente,
+        explanador: formData.explanador,
         quantidade_participantes: Number(formData.quantidade_participantes),
         quantidade_consumida: Number(formData.quantidade_consumida),
         id_preparo: formData.id_preparo ? Number(formData.id_preparo) : null
       }).eq('id', id)
+
+    if (erroSessao) {
+      alert('Erro: ' + erroSessao.message)
+      setSaving(false)
+      return
+    }
+
+    // 2. Atualiza ou Cria Leitura
+    // Primeiro removemos as antigas (jeito mais fácil de atualizar)
+    await supabase.from('leituras').delete().eq('id_sessao', id)
+    
+    // Se tiver texto, insere a nova
+    if (formData.leitor_documentos) {
+      await supabase.from('leituras').insert({
+        id_sessao: Number(id),
+        documento: 'Documentos da Sessão',
+        leitor: formData.leitor_documentos
+      })
+    }
+
     setSaving(false)
-    if (error) alert('Erro: ' + error.message)
-    else { alert('Atualizado!'); router.push('/sessoes') }
+    alert('Atualizado com sucesso!')
+    router.push('/sessoes')
   }
 
   const handleDelete = async () => {
@@ -116,11 +148,11 @@ export default function EditarSessao({ params }: { params: Promise<{ id: string 
         <div className="grid grid-cols-2 gap-4">
           <div className="bg-gray-800 p-3 rounded-xl border border-gray-700">
             <label className="text-xs text-gray-400 font-medium block mb-1">Data</label>
-            <input type="date" className="w-full bg-transparent font-semibold outline-none text-white scheme-dark" value={formData.data_realizacao} onChange={e => setFormData({...formData, data_realizacao: e.target.value})} />
+            <input type="date" className="w-full bg-transparent font-semibold outline-none text-white [color-scheme:dark]" value={formData.data_realizacao} onChange={e => setFormData({...formData, data_realizacao: e.target.value})} />
           </div>
           <div className="bg-gray-800 p-3 rounded-xl border border-gray-700">
             <label className="text-xs text-gray-400 font-medium block mb-1">Hora</label>
-            <input type="time" className="w-full bg-transparent font-semibold outline-none text-white scheme-dark" value={formData.hora} onChange={e => setFormData({...formData, hora: e.target.value})} />
+            <input type="time" className="w-full bg-transparent font-semibold outline-none text-white [color-scheme:dark]" value={formData.hora} onChange={e => setFormData({...formData, hora: e.target.value})} />
           </div>
         </div>
 
@@ -151,11 +183,30 @@ export default function EditarSessao({ params }: { params: Promise<{ id: string 
           </select>
         </div>
 
-        <div className="bg-gray-800 p-4 rounded-xl border border-gray-700 flex items-center gap-3">
-          <User className="w-5 h-5 text-gray-500" />
-          <div className="flex-1">
-            <label className="text-xs text-gray-400 font-medium block">Dirigente</label>
-            <input type="text" className="w-full bg-transparent outline-none font-medium placeholder-gray-600 text-white" value={formData.dirigente} onChange={e => setFormData({...formData, dirigente: e.target.value})} />
+        {/* Campos de Texto (Direção, Leitura, Explanação) */}
+        <div className="space-y-3">
+          <div className="bg-gray-800 p-4 rounded-xl border border-gray-700 flex items-center gap-3">
+            <User className="w-5 h-5 text-gray-500" />
+            <div className="flex-1">
+              <label className="text-xs text-gray-400 font-medium block">Dirigente</label>
+              <input type="text" className="w-full bg-transparent outline-none font-medium placeholder-gray-600 text-white" value={formData.dirigente} onChange={e => setFormData({...formData, dirigente: e.target.value})} />
+            </div>
+          </div>
+
+          <div className="bg-gray-800 p-4 rounded-xl border border-gray-700 flex items-center gap-3">
+            <BookOpen className="w-5 h-5 text-yellow-500" />
+            <div className="flex-1">
+              <label className="text-xs text-gray-400 font-medium block">Leitura de Documentos</label>
+              <input type="text" className="w-full bg-transparent outline-none font-medium placeholder-gray-600 text-white" value={formData.leitor_documentos} onChange={e => setFormData({...formData, leitor_documentos: e.target.value})} />
+            </div>
+          </div>
+
+          <div className="bg-gray-800 p-4 rounded-xl border border-gray-700 flex items-center gap-3">
+            <Mic className="w-5 h-5 text-blue-500" />
+            <div className="flex-1">
+              <label className="text-xs text-gray-400 font-medium block">Explanação</label>
+              <input type="text" className="w-full bg-transparent outline-none font-medium placeholder-gray-600 text-white" value={formData.explanador} onChange={e => setFormData({...formData, explanador: e.target.value})} />
+            </div>
           </div>
         </div>
 

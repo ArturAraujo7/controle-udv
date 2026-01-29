@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Save, Users, User, Beaker } from 'lucide-react'
+import { ArrowLeft, Save, Users, User, Beaker, BookOpen, Mic } from 'lucide-react'
 import Link from 'next/link'
 
 type PreparoSelect = {
@@ -34,6 +34,8 @@ export default function NovaSessao() {
     hora: '20:00',
     tipo: 'Escala',
     dirigente: '',
+    explanador: '',       // Novo campo simples
+    leitor_documentos: '', // Novo campo simples
     quantidade_participantes: '',
     quantidade_consumida: '',
     id_preparo: ''
@@ -45,17 +47,40 @@ export default function NovaSessao() {
     e.preventDefault()
     setLoading(true)
     const dataCompleta = `${formData.data_realizacao}T${formData.hora}:00`
-    const { error } = await supabase.from('sessoes').insert([{
+    
+    // 1. Salva a Sessão
+    const { data: sessao, error: erroSessao } = await supabase.from('sessoes').insert([{
       data_realizacao: dataCompleta,
       tipo: formData.tipo,
       dirigente: formData.dirigente,
+      explanador: formData.explanador, // Salva na coluna explanador
       quantidade_participantes: Number(formData.quantidade_participantes),
       quantidade_consumida: Number(formData.quantidade_consumida) || 0,
       id_preparo: formData.id_preparo ? Number(formData.id_preparo) : null
     }])
+    .select()
+    .single()
+
+    if (erroSessao) {
+      alert('Erro ao salvar sessão: ' + erroSessao.message)
+      setLoading(false)
+      return
+    }
+
+    // 2. Salva a Leitura (se tiver)
+    // Vamos salvar como um registro genérico na tabela de leituras
+    if (formData.leitor_documentos) {
+      const { error: erroLeitura } = await supabase.from('leituras').insert({
+        id_sessao: sessao.id,
+        documento: 'Documentos da Sessão', // Nome genérico
+        leitor: formData.leitor_documentos
+      })
+      if (erroLeitura) console.error('Erro ao salvar leitura', erroLeitura)
+    }
+
     setLoading(false)
-    if (error) alert('Erro: ' + error.message)
-    else router.push('/')
+    alert('Sessão registrada com sucesso!')
+    router.push('/')
   }
 
   return (
@@ -68,17 +93,19 @@ export default function NovaSessao() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Data e Hora */}
         <div className="grid grid-cols-2 gap-4">
           <div className="bg-gray-800 p-3 rounded-xl border border-gray-700">
             <label className="text-xs text-gray-400 font-medium block mb-1">Data</label>
-            <input type="date" className="w-full bg-transparent font-semibold outline-none text-white scheme-dark" value={formData.data_realizacao} onChange={e => setFormData({...formData, data_realizacao: e.target.value})} />
+            <input type="date" className="w-full bg-transparent font-semibold outline-none text-white [color-scheme:dark]" value={formData.data_realizacao} onChange={e => setFormData({...formData, data_realizacao: e.target.value})} />
           </div>
           <div className="bg-gray-800 p-3 rounded-xl border border-gray-700">
             <label className="text-xs text-gray-400 font-medium block mb-1">Hora</label>
-            <input type="time" className="w-full bg-transparent font-semibold outline-none text-white scheme-dark" value={formData.hora} onChange={e => setFormData({...formData, hora: e.target.value})} />
+            <input type="time" className="w-full bg-transparent font-semibold outline-none text-white [color-scheme:dark]" value={formData.hora} onChange={e => setFormData({...formData, hora: e.target.value})} />
           </div>
         </div>
 
+        {/* Tipo */}
         <div>
           <label className="text-xs text-gray-400 font-medium block mb-2 ml-1">Tipo de Sessão</label>
           <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
@@ -91,6 +118,7 @@ export default function NovaSessao() {
           </div>
         </div>
 
+        {/* Vegetal */}
         <div className="bg-gray-800 p-4 rounded-xl border border-gray-700">
           <div className="flex items-center gap-2 mb-2">
             <Beaker className="w-4 h-4 text-green-500" />
@@ -106,14 +134,34 @@ export default function NovaSessao() {
           </select>
         </div>
 
-        <div className="bg-gray-800 p-4 rounded-xl border border-gray-700 flex items-center gap-3">
-          <User className="w-5 h-5 text-gray-500" />
-          <div className="flex-1">
-            <label className="text-xs text-gray-400 font-medium block">Dirigente</label>
-            <input type="text" placeholder="Nome do Mestre" className="w-full bg-transparent outline-none font-medium placeholder-gray-600 text-white" value={formData.dirigente} onChange={e => setFormData({...formData, dirigente: e.target.value})} />
+        {/* Direção, Leitura e Explanação */}
+        <div className="space-y-3">
+          <div className="bg-gray-800 p-4 rounded-xl border border-gray-700 flex items-center gap-3">
+            <User className="w-5 h-5 text-gray-500" />
+            <div className="flex-1">
+              <label className="text-xs text-gray-400 font-medium block">Dirigente</label>
+              <input type="text" placeholder="Nome do Mestre" className="w-full bg-transparent outline-none font-medium placeholder-gray-600 text-white" value={formData.dirigente} onChange={e => setFormData({...formData, dirigente: e.target.value})} />
+            </div>
+          </div>
+
+          <div className="bg-gray-800 p-4 rounded-xl border border-gray-700 flex items-center gap-3">
+            <BookOpen className="w-5 h-5 text-yellow-500" />
+            <div className="flex-1">
+              <label className="text-xs text-gray-400 font-medium block">Leitura de Documentos</label>
+              <input type="text" placeholder="Quem leu?" className="w-full bg-transparent outline-none font-medium placeholder-gray-600 text-white" value={formData.leitor_documentos} onChange={e => setFormData({...formData, leitor_documentos: e.target.value})} />
+            </div>
+          </div>
+
+          <div className="bg-gray-800 p-4 rounded-xl border border-gray-700 flex items-center gap-3">
+            <Mic className="w-5 h-5 text-blue-500" />
+            <div className="flex-1">
+              <label className="text-xs text-gray-400 font-medium block">Explanação</label>
+              <input type="text" placeholder="Quem explanou?" className="w-full bg-transparent outline-none font-medium placeholder-gray-600 text-white" value={formData.explanador} onChange={e => setFormData({...formData, explanador: e.target.value})} />
+            </div>
           </div>
         </div>
 
+        {/* Números */}
         <div className="grid grid-cols-2 gap-4">
           <div className="bg-gray-800 p-4 rounded-xl border border-gray-700">
             <div className="flex items-center gap-2 mb-2">
