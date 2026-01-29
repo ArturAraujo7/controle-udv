@@ -45,7 +45,7 @@ export default function Home() {
   if (!mounted) return null
 
   return (
-    <main className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 pb-20 transition-colors duration-300">
+    <main className="min-h-screen bg-gray-900 p-4 pb-20 transition-colors duration-300">
       {/* Cabeçalho */}
       <header className="flex justify-between items-center mb-8 pt-4">
         <div>
