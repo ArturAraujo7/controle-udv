@@ -50,7 +50,7 @@ export default function EditarSessao({ params }: { params: Promise<{ id: string 
       const { data: dataPreparos } = await supabase.from('preparos').select('id, data_preparo, mestre_preparo, grau').eq('status', 'Disponível').order('data_preparo', { ascending: false })
       if (dataPreparos) setPreparos(dataPreparos)
 
-      // 2. Carrega Sessão
+      // 2. Carrega Sessão (já com os campos novos)
       const { data: sessao, error } = await supabase.from('sessoes').select('*').eq('id', id).single()
       if (error) {
         alert('Sessão não encontrada!')
@@ -58,17 +58,14 @@ export default function EditarSessao({ params }: { params: Promise<{ id: string 
         return
       }
 
-      // 3. Carrega Leitura (se houver)
-      const { data: leitura } = await supabase.from('leituras').select('leitor').eq('id_sessao', id).maybeSingle()
-
       const dataIso = new Date(sessao.data_realizacao)
       setFormData({
         data_realizacao: dataIso.toISOString().split('T')[0],
         hora: dataIso.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
         tipo: sessao.tipo,
         dirigente: sessao.dirigente,
-        explanador: sessao.explanador || '', // Carrega do banco
-        leitor_documentos: leitura?.leitor || '', // Carrega da tabela leituras
+        explanador: sessao.explanador || '', 
+        leitor_documentos: sessao.leitor_documentos || '', // Carrega direto da sessão
         quantidade_participantes: String(sessao.quantidade_participantes),
         quantidade_consumida: String(sessao.quantidade_consumida),
         id_preparo: sessao.id_preparo ? String(sessao.id_preparo) : ''
@@ -83,39 +80,26 @@ export default function EditarSessao({ params }: { params: Promise<{ id: string 
     setSaving(true)
     const dataCompleta = `${formData.data_realizacao}T${formData.hora}:00`
     
-    // 1. Atualiza Sessão
+    // Atualiza tudo na tabela sessoes
     const { error: erroSessao } = await supabase.from('sessoes').update({
         data_realizacao: dataCompleta,
         tipo: formData.tipo,
         dirigente: formData.dirigente,
         explanador: formData.explanador,
+        leitor_documentos: formData.leitor_documentos,
         quantidade_participantes: Number(formData.quantidade_participantes),
         quantidade_consumida: Number(formData.quantidade_consumida),
         id_preparo: formData.id_preparo ? Number(formData.id_preparo) : null
       }).eq('id', id)
 
+    setSaving(false)
+    
     if (erroSessao) {
       alert('Erro: ' + erroSessao.message)
-      setSaving(false)
-      return
+    } else {
+      alert('Atualizado com sucesso!')
+      router.push('/sessoes')
     }
-
-    // 2. Atualiza ou Cria Leitura
-    // Primeiro removemos as antigas (jeito mais fácil de atualizar)
-    await supabase.from('leituras').delete().eq('id_sessao', id)
-    
-    // Se tiver texto, insere a nova
-    if (formData.leitor_documentos) {
-      await supabase.from('leituras').insert({
-        id_sessao: Number(id),
-        documento: 'Documentos da Sessão',
-        leitor: formData.leitor_documentos
-      })
-    }
-
-    setSaving(false)
-    alert('Atualizado com sucesso!')
-    router.push('/sessoes')
   }
 
   const handleDelete = async () => {
@@ -183,7 +167,6 @@ export default function EditarSessao({ params }: { params: Promise<{ id: string 
           </select>
         </div>
 
-        {/* Campos de Texto (Direção, Leitura, Explanação) */}
         <div className="space-y-3">
           <div className="bg-gray-800 p-4 rounded-xl border border-gray-700 flex items-center gap-3">
             <User className="w-5 h-5 text-gray-500" />

@@ -34,8 +34,8 @@ export default function NovaSessao() {
     hora: '20:00',
     tipo: 'Escala',
     dirigente: '',
-    explanador: '',       // Novo campo simples
-    leitor_documentos: '', // Novo campo simples
+    explanador: '',
+    leitor_documentos: '', // Agora salva direto na sessão
     quantidade_participantes: '',
     quantidade_consumida: '',
     id_preparo: ''
@@ -48,39 +48,26 @@ export default function NovaSessao() {
     setLoading(true)
     const dataCompleta = `${formData.data_realizacao}T${formData.hora}:00`
     
-    // 1. Salva a Sessão
-    const { data: sessao, error: erroSessao } = await supabase.from('sessoes').insert([{
+    // Salva tudo na tabela sessoes de uma vez
+    const { error } = await supabase.from('sessoes').insert([{
       data_realizacao: dataCompleta,
       tipo: formData.tipo,
       dirigente: formData.dirigente,
-      explanador: formData.explanador, // Salva na coluna explanador
+      explanador: formData.explanador,
+      leitor_documentos: formData.leitor_documentos, // Campo novo
       quantidade_participantes: Number(formData.quantidade_participantes),
       quantidade_consumida: Number(formData.quantidade_consumida) || 0,
       id_preparo: formData.id_preparo ? Number(formData.id_preparo) : null
     }])
-    .select()
-    .single()
-
-    if (erroSessao) {
-      alert('Erro ao salvar sessão: ' + erroSessao.message)
-      setLoading(false)
-      return
-    }
-
-    // 2. Salva a Leitura (se tiver)
-    // Vamos salvar como um registro genérico na tabela de leituras
-    if (formData.leitor_documentos) {
-      const { error: erroLeitura } = await supabase.from('leituras').insert({
-        id_sessao: sessao.id,
-        documento: 'Documentos da Sessão', // Nome genérico
-        leitor: formData.leitor_documentos
-      })
-      if (erroLeitura) console.error('Erro ao salvar leitura', erroLeitura)
-    }
 
     setLoading(false)
-    alert('Sessão registrada com sucesso!')
-    router.push('/')
+
+    if (error) {
+      alert('Erro ao salvar: ' + error.message)
+    } else {
+      alert('Sessão registrada com sucesso!')
+      router.push('/')
+    }
   }
 
   return (
