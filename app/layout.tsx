@@ -9,6 +9,8 @@ export const metadata: Metadata = {
   title: 'Controle UDV',
   description: 'Gestão de Estoque e Sessões',
   manifest: '/manifest.json', // Vamos adicionar isso depois se quiser instalar
+  themeColor: '#111827',
+  viewport: 'width=device-width, initial-scale=1, maximum-scale=1',
 }
 
 export default function RootLayout({
