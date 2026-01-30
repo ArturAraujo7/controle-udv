@@ -42,7 +42,7 @@ export default function Home() {
       <header className="flex justify-between items-center mb-8 pt-4">
         <div>
           <h1 className="text-2xl font-bold text-white">Controle UDV</h1>
-          <p className="text-sm text-gray-400">Núcleo Beneficente</p>
+          <p className="text-sm text-gray-400">Núcleo Jardim Real</p>
         </div>
         <div className="w-10 h-10 bg-green-900 rounded-full flex items-center justify-center border border-green-800">
           <span className="text-green-300 font-bold">A</span>
