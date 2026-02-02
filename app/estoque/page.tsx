@@ -24,15 +24,28 @@ export default function GerenciarEstoque() {
 
   useEffect(() => {
     async function fetchEstoque() {
+      // 1. Busca TUDO: Preparos, Sessões e Saídas
       const { data: dadosPreparos } = await supabase.from('preparos').select('*').order('data_preparo', { ascending: false })
       const { data: dadosSessoes } = await supabase.from('sessoes').select('id_preparo, quantidade_consumida')
+      const { data: dadosSaidas } = await supabase.from('saidas').select('preparo_id, quantidade') // <--- NOVO
       
       let somaTotal = 0
+      
       const listaFinal = dadosPreparos?.map((preparo: any) => {
-        const consumos = dadosSessoes?.filter(s => s.id_preparo === preparo.id) || []
-        const totalConsumido = consumos.reduce((acc, curr) => acc + curr.quantidade_consumida, 0)
+        // Filtra sessões DESTE preparo
+        const consumosSessao = dadosSessoes?.filter(s => s.id_preparo === preparo.id) || []
+        const totalSessoes = consumosSessao.reduce((acc, curr) => acc + curr.quantidade_consumida, 0)
+
+        // Filtra saídas/doações DESTE preparo
+        const saidasExtras = dadosSaidas?.filter(s => s.preparo_id === preparo.id) || []
+        const totalSaidas = saidasExtras.reduce((acc, curr) => acc + curr.quantidade, 0)
+        
+        // Total Consumido = Sessões + Saídas
+        const totalConsumido = totalSessoes + totalSaidas
+        
         const saldo = preparo.quantidade_preparada - totalConsumido
         if (saldo > 0) somaTotal += saldo
+        
         return { ...preparo, total_consumido: totalConsumido, saldo: saldo }
       }) || []
 

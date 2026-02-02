@@ -30,14 +30,45 @@ export default function DetalheEstoque({ params }: { params: Promise<{ id: strin
       setPreparo(prep)
 
       // 2. Busca sessões onde esse preparo foi usado
-      const { data: sessoes, error: errSess } = await supabase
+      const { data: sessoes } = await supabase
         .from('sessoes')
         .select('*')
-        .eq('id_preparo', id) // CORRIGIDO: id_preparo
-        .order('data_realizacao', { ascending: false }) // CORRIGIDO: data_realizacao
+        .eq('id_preparo', id)
+        .order('data_realizacao', { ascending: false })
 
-      if (sessoes) setHistorico(sessoes)
-      
+      // 3. Busca saídas/doações deste preparo
+      const { data: saidas } = await supabase
+        .from('saidas')
+        .select('*')
+        .eq('preparo_id', id)
+        .order('data_saida', { ascending: false })
+
+      // 4. Unifica o histórico
+      const listaSessoes = sessoes?.map(s => ({
+        id: `sessao-${s.id}`,
+        tipo: 'Sessão',
+        titulo: s.dirigente || s.tipo, // Mostra o dirigente ou o tipo da sessão
+        data: s.data_realizacao,
+        quantidade: s.quantidade_consumida,
+        subtitulo: `${s.quantidade_participantes} participantes`,
+        isSaida: false
+      })) || []
+
+      const listaSaidas = saidas?.map(s => ({
+        id: `saida-${s.id}`,
+        tipo: 'Doação / Saída',
+        titulo: s.destino, // Pra quem foi doado
+        data: s.data_saida,
+        quantidade: s.quantidade,
+        subtitulo: s.observacoes || 'Saída externa',
+        isSaida: true
+      })) || []
+
+      const historicoUnificado = [...listaSessoes, ...listaSaidas].sort((a, b) => 
+        new Date(b.data).getTime() - new Date(a.data).getTime()
+      )
+
+      setHistorico(historicoUnificado)
       setLoading(false)
     }
     loadData()
@@ -97,10 +128,9 @@ export default function DetalheEstoque({ params }: { params: Promise<{ id: strin
             <p className="font-semibold text-gray-300">{preparo.quantidade_preparada} L</p>
           </div>
           <div>
-            <p className="text-xs text-gray-500">Qtd. Atual (Estimada)</p>
-            {/* Aqui poderiamos calcular subtraindo o consumo, mas por enquanto vamos deixar fixo ou calcular simples */}
+            <p className="text-xs text-gray-500">Qtd. Atual</p>
             <p className="font-bold text-white text-lg">
-              {(preparo.quantidade_preparada - historico.reduce((acc, s) => acc + (Number(s.quantidade_consumida) || 0), 0)).toFixed(1)} L
+              {(preparo.quantidade_preparada - historico.reduce((acc, item) => acc + (Number(item.quantidade) || 0), 0)).toFixed(1)} L
             </p>
           </div>
         </div>
@@ -117,34 +147,49 @@ export default function DetalheEstoque({ params }: { params: Promise<{ id: strin
         </div>
       </div>
 
-      {/* Histórico de Consumo */}
+      {/* Histórico de Consumo e Saídas */}
       <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2">
-        <History className="w-4 h-4" /> Histórico de Consumo
+        <History className="w-4 h-4" /> Histórico de Movimentação
       </h2>
 
       {historico.length === 0 ? (
         <div className="text-center py-10 text-gray-600 bg-gray-800/30 rounded-xl border border-dashed border-gray-800">
-          <p>Nenhum consumo registrado ainda.</p>
+          <p>Nenhuma movimentação registrada.</p>
         </div>
       ) : (
         <div className="space-y-3">
-          {historico.map((sessao) => (
-            <div key={sessao.id} className="bg-gray-800 p-4 rounded-xl border border-gray-700 flex justify-between items-center">
+          {historico.map((item) => (
+            <div key={item.id} className={`p-4 rounded-xl border flex justify-between items-center ${
+              item.isSaida ? 'bg-gray-800/50 border-red-900/30' : 'bg-gray-800 border-gray-700'
+            }`}>
               <div>
-                <p className="font-bold text-white">{sessao.dirigente}</p>
-                <div className="flex items-center gap-2 text-xs text-gray-400 mt-1">
+                <div className="flex items-center gap-2 mb-1">
+                  {item.isSaida && <span className="text-[10px] font-bold bg-red-900/40 text-red-400 px-1.5 py-0.5 rounded">SAÍDA</span>}
+                  <p className="font-bold text-white">{item.titulo}</p>
+                </div>
+                
+                <div className="flex items-center gap-2 text-xs text-gray-400">
                   <Calendar className="w-3 h-3" />
-                  {new Date(sessao.data_realizacao).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}
+                  {new Date(item.data).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}
                 </div>
               </div>
+              
               <div className="text-right">
-                <div className="flex items-center justify-end gap-1 text-red-400 font-bold">
+                <div className={`flex items-center justify-end gap-1 font-bold ${
+                  item.isSaida ? 'text-red-400' : 'text-blue-300'
+                }`}>
                   <Droplets className="w-3 h-3" />
-                  -{sessao.quantidade_consumida} L
+                  -{Number(item.quantidade).toFixed(1)} L
                 </div>
                 <div className="text-xs text-gray-500 mt-1 flex items-center justify-end gap-1">
-                  <Users className="w-3 h-3" />
-                  {sessao.quantidade_participantes} pessoas
+                  {item.isSaida ? (
+                    <span className="italic">{item.subtitulo}</span>
+                  ) : (
+                    <>
+                      <Users className="w-3 h-3" />
+                      {item.subtitulo}
+                    </>
+                  )}
                 </div>
               </div>
             </div>

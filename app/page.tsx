@@ -2,7 +2,7 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabaseClient'
-import { Plus, Database, History, Droplet, ChevronRight, Users, LogOut } from 'lucide-react'
+import { Plus, Database, History, Droplet, ChevronRight, Users, LogOut, ArrowUpRight } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
 type SessaoResumo = {
@@ -21,13 +21,20 @@ export default function Home() {
 
   useEffect(() => {
     async function fetchData() {
+      // 1. Buscamos todas as tabelas: preparos, sessoes e AGORA saidas
       const { data: preparos } = await supabase.from('preparos').select('quantidade_preparada')
       const { data: sessoes } = await supabase.from('sessoes').select('quantidade_consumida, id, data_realizacao, tipo, quantidade_participantes').order('data_realizacao', { ascending: false })
+      const { data: saidas } = await supabase.from('saidas').select('quantidade') // <--- NOVO
 
+      // 2. Calculamos os totais
       const totalEntrada = preparos?.reduce((acc, curr) => acc + (curr.quantidade_preparada || 0), 0) || 0
-      const totalSaida = sessoes?.reduce((acc, curr) => acc + (curr.quantidade_consumida || 0), 0) || 0
+      const totalConsumoSessoes = sessoes?.reduce((acc, curr) => acc + (curr.quantidade_consumida || 0), 0) || 0
+      const totalSaidasExtras = saidas?.reduce((acc, curr) => acc + (curr.quantidade || 0), 0) || 0 // <--- NOVO
+
+      // 3. Atualizamos a conta final
+      // Estoque = Tudo que entrou - (O que bebeu na sessão + O que saiu/doou)
+      setEstoqueAtual(totalEntrada - totalConsumoSessoes - totalSaidasExtras)
       
-      setEstoqueAtual(totalEntrada - totalSaida)
       setTotalSessoes(sessoes?.length || 0)
       
       if (sessoes) {
@@ -106,6 +113,21 @@ export default function Home() {
               </div>
             </div>
             <ChevronRight className="text-white/50" />
+          </div>
+        </Link>
+
+        <Link href="/nova-saida" className="group">
+          <div className="bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-700 flex items-center justify-between active:scale-95 transition-all">
+            <div className="flex items-center gap-4">
+              <div className="bg-red-900/30 p-2 rounded-lg">
+                <ArrowUpRight className="w-6 h-6 text-red-400" />
+              </div>
+              <div>
+                <h3 className="text-white font-bold">Saída / Doação</h3>
+                <p className="text-gray-400 text-xs">Registrar saída externa</p>
+              </div>
+            </div>
+            <ChevronRight className="text-gray-600" />
           </div>
         </Link>
 
