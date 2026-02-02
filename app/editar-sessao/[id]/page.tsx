@@ -36,6 +36,7 @@ export default function EditarSessao({ params }: { params: Promise<{ id: string 
   const tiposSessao = [
     'Escala', 
     'Escala Anual', 
+    'Casal',
     'Extra', 
     'Instrutiva', 
     'Da Direção', 
