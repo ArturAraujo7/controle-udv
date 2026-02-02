@@ -42,7 +42,8 @@ export default function EditarSessao({ params }: { params: Promise<{ id: string 
     'Da Direção', 
     'Quadro de Mestres', 
     'Adventício', 
-    'Preparo'
+    'Preparo',
+    'Caráter Instrutivo'
   ]
 
   useEffect(() => {

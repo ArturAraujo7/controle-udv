@@ -46,8 +46,9 @@ export default function DetalheEstoque({ params }: { params: Promise<{ id: strin
       // 4. Unifica o histórico
       const listaSessoes = sessoes?.map(s => ({
         id: `sessao-${s.id}`,
+        realId: s.id, // ID real para link
         tipo: 'Sessão',
-        titulo: s.dirigente || s.tipo, // Mostra o dirigente ou o tipo da sessão
+        titulo: s.dirigente || s.tipo,
         data: s.data_realizacao,
         quantidade: s.quantidade_consumida,
         subtitulo: `${s.quantidade_participantes} participantes`,
@@ -56,8 +57,9 @@ export default function DetalheEstoque({ params }: { params: Promise<{ id: strin
 
       const listaSaidas = saidas?.map(s => ({
         id: `saida-${s.id}`,
+        realId: s.id, // ID real para link
         tipo: 'Doação / Saída',
-        titulo: s.destino, // Pra quem foi doado
+        titulo: s.destino,
         data: s.data_saida,
         quantidade: s.quantidade,
         subtitulo: s.observacoes || 'Saída externa',
@@ -159,40 +161,48 @@ export default function DetalheEstoque({ params }: { params: Promise<{ id: strin
       ) : (
         <div className="space-y-3">
           {historico.map((item) => (
-            <div key={item.id} className={`p-4 rounded-xl border flex justify-between items-center ${
-              item.isSaida ? 'bg-gray-800/50 border-red-900/30' : 'bg-gray-800 border-gray-700'
-            }`}>
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  {item.isSaida && <span className="text-[10px] font-bold bg-red-900/40 text-red-400 px-1.5 py-0.5 rounded">SAÍDA</span>}
-                  <p className="font-bold text-white">{item.titulo}</p>
+            <Link 
+              key={item.id} 
+              href={item.isSaida ? `/editar-saida/${item.realId}` : `/editar-sessao/${item.realId}`}
+              className="block group"
+            >
+              <div className={`p-4 rounded-xl border flex justify-between items-center transition-colors ${
+                item.isSaida 
+                  ? 'bg-gray-800/50 border-red-900/30 group-hover:border-red-500/50' 
+                  : 'bg-gray-800 border-gray-700 group-hover:border-blue-500/50'
+              }`}>
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    {item.isSaida && <span className="text-[10px] font-bold bg-red-900/40 text-red-400 px-1.5 py-0.5 rounded">SAÍDA</span>}
+                    <p className="font-bold text-white group-hover:text-blue-300 transition-colors">{item.titulo}</p>
+                  </div>
+                  
+                  <div className="flex items-center gap-2 text-xs text-gray-400">
+                    <Calendar className="w-3 h-3" />
+                    {new Date(item.data).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}
+                  </div>
                 </div>
                 
-                <div className="flex items-center gap-2 text-xs text-gray-400">
-                  <Calendar className="w-3 h-3" />
-                  {new Date(item.data).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}
+                <div className="text-right">
+                  <div className={`flex items-center justify-end gap-1 font-bold ${
+                    item.isSaida ? 'text-red-400' : 'text-blue-300'
+                  }`}>
+                    <Droplets className="w-3 h-3" />
+                    -{Number(item.quantidade).toFixed(1)} L
+                  </div>
+                  <div className="text-xs text-gray-500 mt-1 flex items-center justify-end gap-1">
+                    {item.isSaida ? (
+                      <span className="italic">{item.subtitulo}</span>
+                    ) : (
+                      <>
+                        <Users className="w-3 h-3" />
+                        {item.subtitulo}
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
-              
-              <div className="text-right">
-                <div className={`flex items-center justify-end gap-1 font-bold ${
-                  item.isSaida ? 'text-red-400' : 'text-blue-300'
-                }`}>
-                  <Droplets className="w-3 h-3" />
-                  -{Number(item.quantidade).toFixed(1)} L
-                </div>
-                <div className="text-xs text-gray-500 mt-1 flex items-center justify-end gap-1">
-                  {item.isSaida ? (
-                    <span className="italic">{item.subtitulo}</span>
-                  ) : (
-                    <>
-                      <Users className="w-3 h-3" />
-                      {item.subtitulo}
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
+            </Link>
           ))}
         </div>
       )}
