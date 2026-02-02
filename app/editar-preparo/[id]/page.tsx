@@ -21,6 +21,8 @@ export default function EditarPreparo({ params }: { params: Promise<{ id: string
     data_chegada: '',
     nucleo_origem: '',
     mestre_preparo: '',
+    procedencia_mariri: '',
+    procedencia_chacrona: '',
     quantidade_preparada: '',
     grau: '',
     status: ''
@@ -43,6 +45,8 @@ export default function EditarPreparo({ params }: { params: Promise<{ id: string
         data_chegada: preparo.data_chegada || '',
         nucleo_origem: preparo.nucleo_origem || '',
         mestre_preparo: preparo.mestre_preparo,
+        procedencia_mariri: preparo.procedencia_mariri || '',
+        procedencia_chacrona: preparo.procedencia_chacrona || '',
         quantidade_preparada: String(preparo.quantidade_preparada),
         grau: preparo.grau,
         status: preparo.status
@@ -62,6 +66,8 @@ export default function EditarPreparo({ params }: { params: Promise<{ id: string
       data_chegada: tipoEntrada === 'Doação' ? formData.data_chegada : null,
       nucleo_origem: tipoEntrada === 'Doação' ? formData.nucleo_origem : null,
       mestre_preparo: formData.mestre_preparo,
+      procedencia_mariri: formData.procedencia_mariri,
+      procedencia_chacrona: formData.procedencia_chacrona,
       quantidade_preparada: Number(formData.quantidade_preparada),
       grau: formData.grau,
       status: formData.status
@@ -117,6 +123,30 @@ export default function EditarPreparo({ params }: { params: Promise<{ id: string
           <div className="flex items-center gap-2 mb-2 border-b border-gray-700 pb-2"><Beaker className="w-5 h-5 text-green-500" /><label className="text-sm font-bold text-gray-200">Dados do Vegetal</label></div>
           <div><label className="text-xs text-gray-400 font-medium block mb-1">Data Preparo</label><input type="date" className="w-full bg-transparent font-semibold outline-none text-white [color-scheme:dark]" value={formData.data_preparo} onChange={e => setFormData({...formData, data_preparo: e.target.value})} /></div>
           <div><label className="text-xs text-gray-400 font-medium block mb-1">Mestre</label><input type="text" className="w-full bg-transparent font-semibold outline-none text-white" value={formData.mestre_preparo} onChange={e => setFormData({...formData, mestre_preparo: e.target.value})} /></div>
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs text-gray-400 font-medium block mb-1">Procedência Mariri</label>
+              <input 
+                type="text" 
+                placeholder="Ex: Seringal Novo"
+                className="w-full bg-transparent border-b border-gray-700 pb-1 outline-none text-white text-sm placeholder-gray-600 focus:border-green-500 transition-colors"
+                value={formData.procedencia_mariri}
+                onChange={e => setFormData({...formData, procedencia_mariri: e.target.value})}
+              />
+            </div>
+            <div>
+              <label className="text-xs text-gray-400 font-medium block mb-1">Procedência Chacrona</label>
+              <input 
+                type="text" 
+                placeholder="Ex: Plantio Local"
+                className="w-full bg-transparent border-b border-gray-700 pb-1 outline-none text-white text-sm placeholder-gray-600 focus:border-green-500 transition-colors"
+                value={formData.procedencia_chacrona}
+                onChange={e => setFormData({...formData, procedencia_chacrona: e.target.value})}
+              />
+            </div>
+          </div>
+
           <div className="grid grid-cols-2 gap-4 pt-2">
             <div><label className="text-xs text-gray-400 font-medium block mb-1">Qtd (L)</label><input type="number" step="0.1" className="w-full bg-transparent text-xl font-bold outline-none text-white" value={formData.quantidade_preparada} onChange={e => setFormData({...formData, quantidade_preparada: e.target.value})} /></div>
             <div><label className="text-xs text-gray-400 font-medium block mb-1">Grau</label><input type="text" className="w-full bg-transparent text-xl font-bold outline-none text-white" value={formData.grau} onChange={e => setFormData({...formData, grau: e.target.value})} /></div>

@@ -17,6 +17,8 @@ export default function NovoPreparo() {
     data_chegada: new Date().toISOString().split('T')[0], // Novo campo
     nucleo_origem: '', // Novo campo
     mestre_preparo: '',
+    procedencia_mariri: '',
+    procedencia_chacrona: '',
     quantidade_preparada: '',
     grau: '',
     status: 'Disponível'
@@ -35,6 +37,8 @@ export default function NovoPreparo() {
           data_chegada: tipoEntrada === 'Doação' ? formData.data_chegada : null, // Só salva se for doação
           nucleo_origem: tipoEntrada === 'Doação' ? formData.nucleo_origem : null,
           mestre_preparo: formData.mestre_preparo,
+          procedencia_mariri: formData.procedencia_mariri,
+          procedencia_chacrona: formData.procedencia_chacrona,
           quantidade_preparada: Number(formData.quantidade_preparada),
           grau: formData.grau,
           status: formData.status
@@ -143,6 +147,29 @@ export default function NovoPreparo() {
               value={formData.mestre_preparo}
               onChange={e => setFormData({...formData, mestre_preparo: e.target.value})}
             />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs text-gray-400 font-medium block mb-1">Procedência Mariri</label>
+              <input 
+                type="text" 
+                placeholder="Ex: Seringal Novo"
+                className="w-full bg-transparent border-b border-gray-700 pb-1 outline-none text-white text-sm placeholder-gray-600 focus:border-green-500 transition-colors"
+                value={formData.procedencia_mariri}
+                onChange={e => setFormData({...formData, procedencia_mariri: e.target.value})}
+              />
+            </div>
+            <div>
+              <label className="text-xs text-gray-400 font-medium block mb-1">Procedência Chacrona</label>
+              <input 
+                type="text" 
+                placeholder="Ex: Plantio Local"
+                className="w-full bg-transparent border-b border-gray-700 pb-1 outline-none text-white text-sm placeholder-gray-600 focus:border-green-500 transition-colors"
+                value={formData.procedencia_chacrona}
+                onChange={e => setFormData({...formData, procedencia_chacrona: e.target.value})}
+              />
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4 pt-2">
