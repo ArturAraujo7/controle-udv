@@ -82,7 +82,7 @@ export default function GerenciarEstoque() {
               const isDoacao = preparo.tipo === 'Doação'
               
               return (
-                <div key={preparo.id} className={`bg-gray-800 p-4 rounded-xl shadow-sm border ${isDoacao ? 'border-blue-900/50' : 'border-green-900/30'} relative overflow-hidden group`}>
+                <div key={preparo.id} className={`bg-gray-800 rounded-xl shadow-sm border ${isDoacao ? 'border-blue-900/50' : 'border-green-900/30'} relative overflow-hidden group`}>
                   
                   {/* Barra de Progresso */}
                   <div 
@@ -90,72 +90,79 @@ export default function GerenciarEstoque() {
                     style={{ width: `${(preparo.saldo / preparo.quantidade_preparada) * 100}%` }}
                   />
 
-                  <div className="flex justify-between items-start mb-3">
-                    <div>
-                      {/* Badge de Tipo */}
-                      <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase mb-2 ${
-                        isDoacao ? 'bg-blue-900/40 text-blue-400' : 'bg-green-900/40 text-green-400'
-                      }`}>
-                        {isDoacao ? <Truck className="w-3 h-3" /> : <Beaker className="w-3 h-3" />}
-                        {isDoacao ? 'Doação Externa' : 'Produção Local'}
-                      </div>
-
-                      <h3 className="font-bold text-white text-lg leading-tight">
-                        {isDoacao ? preparo.nucleo_origem : `M. ${preparo.mestre_preparo}`}
-                      </h3>
-                      
-                      <div className="flex flex-col mt-1">
-                        <span className="text-xs text-gray-400">
-                          {new Date(preparo.data_preparo).toLocaleDateString('pt-BR')} • Grau {preparo.grau}
-                        </span>
-                        {isDoacao && (
-                          <span className="text-xs text-blue-300/70 mt-0.5">
-                            Resp: M. {preparo.mestre_preparo}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    
-                    {/* LADO DIREITO: Saldo + Botão de Editar */}
-                    <div className="text-right flex flex-col items-end gap-2">
-                      <Link href={`/editar-preparo/${preparo.id}`} className="p-2 -mr-2 text-gray-500 hover:text-white transition-colors">
-                        <Pencil className="w-4 h-4" />
-                      </Link>
-
+                  {/* Card clicável leva pro Detalhe */}
+                  <Link href={`/estoque/${preparo.id}`} className="block p-4 pb-2">
+                    <div className="flex justify-between items-start mb-3">
                       <div>
-                        <p className={`text-2xl font-bold ${isDoacao ? 'text-blue-100' : 'text-green-50'}`}>
-                          {preparo.saldo.toFixed(1)} <span className="text-sm font-normal text-gray-500">L</span>
-                        </p>
-                        <p className="text-xs text-gray-500">restantes</p>
+                        {/* Badge de Tipo */}
+                        <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase mb-2 ${
+                          isDoacao ? 'bg-blue-900/40 text-blue-400' : 'bg-green-900/40 text-green-400'
+                        }`}>
+                          {isDoacao ? <Truck className="w-3 h-3" /> : <Beaker className="w-3 h-3" />}
+                          {isDoacao ? 'Doação Externa' : 'Produção Local'}
+                        </div>
+
+                        <h3 className="font-bold text-white text-lg leading-tight">
+                          {isDoacao ? preparo.nucleo_origem : `M. ${preparo.mestre_preparo}`}
+                        </h3>
+                        
+                        <div className="flex flex-col mt-1">
+                          <span className="text-xs text-gray-400">
+                            {new Date(preparo.data_preparo).toLocaleDateString('pt-BR')} • Grau {preparo.grau}
+                          </span>
+                          {isDoacao && (
+                            <span className="text-xs text-blue-300/70 mt-0.5">
+                              Resp: M. {preparo.mestre_preparo}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      
+                      {/* LADO DIREITO: Saldo */}
+                      <div className="text-right flex flex-col items-end gap-2">
+                        {/* Botão Editar (Absolute pra não conflitar com o Link principal) */}
+                        <object className="absolute top-4 right-2 z-10"> {/* Object/div trick to prevent nesting links */}
+                            <Link href={`/editar-preparo/${preparo.id}`} className="p-2 text-gray-500 hover:text-white transition-colors">
+                                <Pencil className="w-4 h-4" />
+                            </Link>
+                        </object>
+
+                        <div className="mt-8"> {/* Espaço pra compensar o botão editar */}
+                          <p className={`text-2xl font-bold ${isDoacao ? 'text-blue-100' : 'text-green-50'}`}>
+                            {preparo.saldo.toFixed(1)} <span className="text-sm font-normal text-gray-500">L</span>
+                          </p>
+                          <p className="text-xs text-gray-500">restantes</p>
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  {/* Detalhes de Consumo */}
-                  <div className="bg-gray-900/50 rounded-lg p-3 flex justify-between items-center text-xs text-gray-400 border border-gray-700/50">
-                    <div>
-                      Inicial: <strong className="text-gray-300">{preparo.quantidade_preparada} L</strong>
+                    {/* Detalhes de Consumo */}
+                    <div className="bg-gray-900/50 rounded-lg p-3 flex justify-between items-center text-xs text-gray-400 border border-gray-700/50">
+                      <div>
+                        Inicial: <strong className="text-gray-300">{preparo.quantidade_preparada} L</strong>
+                      </div>
+                      <div>
+                        Consumido: <strong className="text-gray-300">{preparo.total_consumido.toFixed(1)} L</strong>
+                      </div>
                     </div>
-                    <div>
-                      Consumido: <strong className="text-gray-300">{preparo.total_consumido.toFixed(1)} L</strong>
-                    </div>
-                  </div>
+                  </Link> {/* Fim do Link principal */}
 
                   {/* Alertas */}
                   {preparo.saldo < 5 && preparo.saldo > 0 && (
-                    <div className="mt-3 flex items-center gap-2 text-orange-400 text-xs font-medium animate-pulse">
+                    <div className="px-4 pb-4 mt-[-8px] flex items-center gap-2 text-orange-400 text-xs font-medium animate-pulse pointer-events-none">
                       <AlertCircle className="w-4 h-4" />
                       <span>Estoque baixo!</span>
                     </div>
                   )}
                   
                   {preparo.saldo <= 0 && (
-                    <div className="absolute inset-0 bg-gray-900/80 backdrop-blur-[1px] flex items-center justify-center">
+                    <div className="absolute inset-0 bg-gray-900/80 backdrop-blur-[1px] flex items-center justify-center z-20">
                        <span className="bg-gray-800 text-gray-400 px-3 py-1 rounded-full text-xs font-bold border border-gray-600 uppercase tracking-widest">Esgotado</span>
-                       {/* Botão de editar visível mesmo esgotado */}
-                       <Link href={`/editar-preparo/${preparo.id}`} className="absolute top-4 right-4 p-2 text-gray-400 hover:text-white z-10">
+                       
+                       <Link href={`/editar-preparo/${preparo.id}`} className="absolute top-4 right-4 p-2 text-gray-400 hover:text-white z-30 pointer-events-auto">
                         <Pencil className="w-4 h-4" />
                       </Link>
+                       <Link href={`/estoque/${preparo.id}`} className="absolute inset-0 z-20" /> {/* Link invisível pra funcionar o clique no card esgotado */}
                     </div>
                   )}
 
