@@ -41,7 +41,7 @@ export default function NovaSessao() {
     id_preparo: ''
   })
 
-  const tiposSessao = ['Escala', 'Escala Anual', 'Extra', 'Instrutiva', 'Da Direção', 'Quadro de Mestres', 'Adventício', 'Preparo']
+  const tiposSessao = ['Escala', 'Escala Anual', 'Casal', 'Extra', 'Instrutiva', 'Da Direção', 'Quadro de Mestres', 'Adventício', 'Preparo']
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
