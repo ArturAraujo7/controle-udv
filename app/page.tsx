@@ -2,7 +2,8 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabaseClient'
-import { Plus, Database, History, Droplet, ChevronRight, Users } from 'lucide-react'
+import { Plus, Database, History, Droplet, ChevronRight, Users, LogOut } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 
 type SessaoResumo = {
   id: number
@@ -12,6 +13,7 @@ type SessaoResumo = {
 }
 
 export default function Home() {
+  const router = useRouter()
   const [estoqueAtual, setEstoqueAtual] = useState<number>(0)
   const [totalSessoes, setTotalSessoes] = useState<number>(0)
   const [ultimasSessoes, setUltimasSessoes] = useState<SessaoResumo[]>([])
@@ -36,6 +38,11 @@ export default function Home() {
     fetchData()
   }, [])
 
+  const handleLogout = async () => {
+    await supabase.auth.signOut()
+    router.push('/login')
+  }
+
   return (
     <main className="min-h-screen bg-gray-900 p-4 pb-20 text-white">
       {/* Cabeçalho */}
@@ -44,9 +51,12 @@ export default function Home() {
           <h1 className="text-2xl font-bold text-white">Controle UDV</h1>
           <p className="text-sm text-gray-400">Núcleo Jardim Real</p>
         </div>
-        <div className="w-10 h-10 bg-green-900 rounded-full flex items-center justify-center border border-green-800">
-          <span className="text-green-300 font-bold">A</span>
-        </div>
+        <button 
+          onClick={handleLogout}
+          className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center border border-gray-700 hover:bg-gray-700 transition"
+        >
+          <LogOut className="w-5 h-5 text-gray-400" />
+        </button>
       </header>
 
       {/* Cards de Resumo */}
