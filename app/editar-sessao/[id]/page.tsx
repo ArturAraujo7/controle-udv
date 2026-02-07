@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Save, Users, User, Beaker, Trash2, BookOpen, Mic } from 'lucide-react'
+import { ArrowLeft, Save, Users, User, Beaker, Trash2, BookOpen, Mic, Plus } from 'lucide-react'
 import Link from 'next/link'
 import { use } from 'react'
 
@@ -11,6 +11,11 @@ type PreparoSelect = {
   data_preparo: string
   mestre_preparo: string
   grau: string
+}
+
+type ConsumoItem = {
+  id_preparo: string
+  quantidade: string
 }
 
 export default function EditarSessao({ params }: { params: Promise<{ id: string }> }) {
@@ -29,9 +34,10 @@ export default function EditarSessao({ params }: { params: Promise<{ id: string 
     explanador: '',
     leitor_documentos: '',
     quantidade_participantes: '',
-    quantidade_consumida: '',
-    id_preparo: ''
   })
+
+  // Estado para lista de consumos
+  const [consumos, setConsumos] = useState<ConsumoItem[]>([])
 
   const tiposSessao = [
     'Escala', 
@@ -48,11 +54,11 @@ export default function EditarSessao({ params }: { params: Promise<{ id: string 
 
   useEffect(() => {
     async function loadData() {
-      // 1. Carrega Preparos
+      // 1. Carrega Preparos disponíveis
       const { data: dataPreparos } = await supabase.from('preparos').select('id, data_preparo, mestre_preparo, grau').eq('status', 'Disponível').order('data_preparo', { ascending: false })
       if (dataPreparos) setPreparos(dataPreparos)
 
-      // 2. Carrega Sessão (já com os campos novos)
+      // 2. Carrega Sessão
       const { data: sessao, error } = await supabase.from('sessoes').select('*').eq('id', id).single()
       if (error) {
         alert('Sessão não encontrada!')
@@ -60,6 +66,13 @@ export default function EditarSessao({ params }: { params: Promise<{ id: string 
         return
       }
 
+      // 3. Carrega Consumos Vinculados
+      const { data: dataConsumos } = await supabase
+        .from('consumos_sessao')
+        .select('id_preparo, quantidade_consumida')
+        .eq('id_sessao', id)
+
+      // Preenche o formulário
       const dataIso = new Date(sessao.data_realizacao)
       setFormData({
         data_realizacao: dataIso.toISOString().split('T')[0],
@@ -67,22 +80,64 @@ export default function EditarSessao({ params }: { params: Promise<{ id: string 
         tipo: sessao.tipo,
         dirigente: sessao.dirigente,
         explanador: sessao.explanador || '', 
-        leitor_documentos: sessao.leitor_documentos || '', // Carrega direto da sessão
+        leitor_documentos: sessao.leitor_documentos || '',
         quantidade_participantes: String(sessao.quantidade_participantes),
-        quantidade_consumida: String(sessao.quantidade_consumida),
-        id_preparo: sessao.id_preparo ? String(sessao.id_preparo) : ''
       })
+
+      // Preenche a lista de consumos (ou cria um vazio se não tiver nada)
+      if (dataConsumos && dataConsumos.length > 0) {
+        setConsumos(dataConsumos.map(c => ({
+            id_preparo: String(c.id_preparo),
+            quantidade: String(c.quantidade_consumida)
+        })))
+      } else {
+        // Fallback para sessões antigas que podem ter o ID direto na tabela sessoes (se ainda existir a coluna no select *)
+        // Mas como mudamos o schema, o ideal é vir vazio ou tentar recuperar se tivéssemos migrado.
+        // Vamos assumir vazio para simplificar, o usuário adiciona se precisar.
+        setConsumos([{ id_preparo: '', quantidade: '' }])
+      }
+
       setLoading(false)
     }
     loadData()
   }, [id, router])
 
+  // Funções de manipulação da lista
+  const addConsumo = () => {
+    setConsumos([...consumos, { id_preparo: '', quantidade: '' }])
+  }
+
+  const removeConsumo = (index: number) => {
+    if (consumos.length > 1) {
+      const newConsumos = [...consumos]
+      newConsumos.splice(index, 1)
+      setConsumos(newConsumos)
+    }
+  }
+
+  const updateConsumo = (index: number, field: keyof ConsumoItem, value: string) => {
+    const newConsumos = [...consumos]
+    newConsumos[index][field] = value
+    setConsumos(newConsumos)
+  }
+
+  const totalConsumido = consumos.reduce((acc, item) => acc + (Number(item.quantidade) || 0), 0)
+
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault()
     setSaving(true)
+    
+    // Validação
+    const consumosValidos = consumos.filter(c => c.id_preparo && c.quantidade)
+    if (consumosValidos.length === 0) {
+      alert('Informe pelo menos um consumo válido.')
+      setSaving(false)
+      return
+    }
+
     const dataCompleta = `${formData.data_realizacao}T${formData.hora}:00`
     
-    // Atualiza tudo na tabela sessoes
+    // 1. Atualiza dados da Sessão
     const { error: erroSessao } = await supabase.from('sessoes').update({
         data_realizacao: dataCompleta,
         tipo: formData.tipo,
@@ -90,14 +145,42 @@ export default function EditarSessao({ params }: { params: Promise<{ id: string 
         explanador: formData.explanador,
         leitor_documentos: formData.leitor_documentos,
         quantidade_participantes: Number(formData.quantidade_participantes),
-        quantidade_consumida: Number(formData.quantidade_consumida),
-        id_preparo: formData.id_preparo ? Number(formData.id_preparo) : null
       }).eq('id', id)
+    
+    if (erroSessao) {
+      alert('Erro ao atualizar sessão: ' + erroSessao.message)
+      setSaving(false)
+      return
+    }
+
+    // 2. Atualiza Consumos (Estratégia: Delete All + Insert New)
+    // Primeiro remove os antigos
+    const { error: erroDelete } = await supabase
+        .from('consumos_sessao')
+        .delete()
+        .eq('id_sessao', id)
+    
+    if (erroDelete) {
+        alert('Erro ao limpar consumos antigos: ' + erroDelete.message)
+        setSaving(false)
+        return
+    }
+
+    // Depois insere os atuais da tela
+    const consumosParaSalvar = consumosValidos.map(c => ({
+        id_sessao: id, // ID da sessão atual
+        id_preparo: Number(c.id_preparo),
+        quantidade_consumida: Number(c.quantidade)
+    }))
+
+    const { error: erroInsert } = await supabase
+        .from('consumos_sessao')
+        .insert(consumosParaSalvar)
 
     setSaving(false)
     
-    if (erroSessao) {
-      alert('Erro: ' + erroSessao.message)
+    if (erroInsert) {
+      alert('Erro ao salvar novos consumos: ' + erroInsert.message)
     } else {
       alert('Atualizado com sucesso!')
       router.push('/sessoes')
@@ -113,106 +196,158 @@ export default function EditarSessao({ params }: { params: Promise<{ id: string 
     }
   }
 
-  if (loading) return <p className="text-center p-10 text-gray-500">Carregando...</p>
+  if (loading) return (
+    <div className="flex items-center justify-center min-h-screen bg-gray-900 text-gray-400">
+        <div className="animate-pulse">Carregando dados da sessão...</div>
+    </div>
+  )
 
   return (
     <div className="min-h-screen bg-gray-900 p-4 pb-20 text-white">
-      <div className="flex items-center justify-between mb-6">
+      <header className="flex items-center justify-between mb-6">
         <div className="flex items-center">
-          <Link href="/sessoes" className="p-2 bg-gray-800 rounded-full shadow-sm mr-4 border border-gray-700">
+          <Link href="/sessoes" className="p-2 bg-gray-800 rounded-full shadow-sm mr-4 border border-gray-700 hover:bg-gray-700 transition">
             <ArrowLeft className="w-5 h-5 text-gray-300" />
           </Link>
           <h1 className="text-xl font-bold">Editar Sessão</h1>
         </div>
-        <button onClick={handleDelete} className="p-2 text-red-400 bg-red-900/30 rounded-full hover:bg-red-900/50">
+        <button 
+            onClick={handleDelete} 
+            className="p-2 text-red-400 bg-red-900/20 border border-red-900/50 rounded-full hover:bg-red-900/40 transition"
+            title="Excluir Sessão"
+        >
           <Trash2 className="w-5 h-5" />
         </button>
-      </div>
+      </header>
 
-      <form onSubmit={handleUpdate} className="space-y-4">
+      <form onSubmit={handleUpdate} className="space-y-6 max-w-lg mx-auto">
         
+        {/* Bloco 1: Data e Hora */}
         <div className="grid grid-cols-2 gap-4">
           <div className="bg-gray-800 p-3 rounded-xl border border-gray-700">
-            <label className="text-xs text-gray-400 font-medium block mb-1">Data</label>
+            <label className="text-xs text-gray-400 font-medium block mb-1 uppercase tracking-wider">Data</label>
             <input type="date" className="w-full bg-transparent font-semibold outline-none text-white [color-scheme:dark]" value={formData.data_realizacao} onChange={e => setFormData({...formData, data_realizacao: e.target.value})} />
           </div>
           <div className="bg-gray-800 p-3 rounded-xl border border-gray-700">
-            <label className="text-xs text-gray-400 font-medium block mb-1">Hora</label>
+            <label className="text-xs text-gray-400 font-medium block mb-1 uppercase tracking-wider">Hora</label>
             <input type="time" className="w-full bg-transparent font-semibold outline-none text-white [color-scheme:dark]" value={formData.hora} onChange={e => setFormData({...formData, hora: e.target.value})} />
           </div>
         </div>
 
+        {/* Bloco 2: Tipo */}
         <div>
-          <label className="text-xs text-gray-400 font-medium block mb-2 ml-1">Tipo de Sessão</label>
-          <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
+          <label className="text-xs text-gray-400 font-medium block mb-2 ml-1 uppercase tracking-wider">Tipo de Sessão</label>
+          <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar mask-fade-right">
             {tiposSessao.map(tipo => (
               <button key={tipo} type="button" onClick={() => setFormData({...formData, tipo})}
-                className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${formData.tipo === tipo ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-300 border border-gray-700'}`}>
+                className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all border ${formData.tipo === tipo ? 'bg-blue-600 text-white border-blue-500 shadow-lg shadow-blue-900/20' : 'bg-gray-800 text-gray-300 border-gray-700 hover:bg-gray-700'}`}>
                 {tipo}
               </button>
             ))}
           </div>
         </div>
 
-        <div className="bg-gray-800 p-4 rounded-xl border border-gray-700">
-          <div className="flex items-center gap-2 mb-2">
-            <Beaker className="w-4 h-4 text-green-500" />
-            <label className="text-xs text-gray-400 font-medium">Vegetal Servido</label>
+        {/* Bloco 3: Preparos e Consumo (Múltiplos) */}
+        <section className="bg-gray-800 p-4 rounded-xl border border-gray-700 shadow-sm relative overflow-hidden">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Beaker className="w-4 h-4 text-green-500" />
+              <label className="text-xs text-gray-400 font-medium uppercase tracking-wider">Vegetal Servido</label>
+            </div>
+            <span className="text-xs font-mono text-green-400 bg-green-900/30 px-2 py-1 rounded">
+              Total: {totalConsumido.toFixed(1)} L
+            </span>
           </div>
-          <select className="w-full bg-transparent outline-none font-medium py-2 border-b border-gray-700 text-white" value={formData.id_preparo} onChange={e => setFormData({...formData, id_preparo: e.target.value})}>
-            <option value="" className="bg-gray-800">Selecione...</option>
-            {preparos.map(prep => (
-              <option key={prep.id} value={prep.id} className="bg-gray-800">
-                {new Date(prep.data_preparo).toLocaleDateString('pt-BR')} - {prep.mestre_preparo}
-              </option>
+
+          <div className="space-y-3">
+            {consumos.map((item, index) => (
+              <div key={index} className="flex gap-2 items-start animate-in fade-in slide-in-from-top-1 duration-200">
+                <div className="flex-1">
+                  <select 
+                    className="w-full bg-gray-900/50 outline-none font-medium py-2 px-3 rounded-lg border border-gray-600 text-sm text-white focus:border-green-500 transition-colors appearance-none" 
+                    value={item.id_preparo} 
+                    onChange={e => updateConsumo(index, 'id_preparo', e.target.value)}
+                  >
+                    <option value="" className="text-gray-500">Selecione...</option>
+                    {preparos.map(prep => (
+                      <option key={prep.id} value={prep.id}>
+                        {new Date(prep.data_preparo).toLocaleDateString('pt-BR')} • {prep.mestre_preparo}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="w-20">
+                  <input 
+                    type="number" 
+                    step="0.1" 
+                    placeholder="Qtd" 
+                    className="w-full bg-gray-900/50 outline-none font-medium py-2 px-2 rounded-lg border border-gray-600 text-sm text-white focus:border-green-500 transition-colors text-center" 
+                    value={item.quantidade} 
+                    onChange={e => updateConsumo(index, 'quantidade', e.target.value)} 
+                  />
+                </div>
+                {consumos.length > 1 && (
+                  <button 
+                    type="button" 
+                    onClick={() => removeConsumo(index)} 
+                    className="p-2 text-gray-500 hover:text-red-400 hover:bg-red-900/20 rounded-lg transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
             ))}
-          </select>
-        </div>
+          </div>
 
+          <button 
+            type="button" 
+            onClick={addConsumo} 
+            className="mt-4 text-xs font-medium text-blue-400 hover:text-blue-300 flex items-center gap-1 py-2 px-3 rounded-lg hover:bg-blue-900/20 transition-colors w-full justify-center border border-dashed border-blue-900/50"
+          >
+            <Plus className="w-3 h-3" /> Adicionar outro preparo
+          </button>
+        </section>
+
+        {/* Bloco 4: Detalhes */}
         <div className="space-y-3">
-          <div className="bg-gray-800 p-4 rounded-xl border border-gray-700 flex items-center gap-3">
-            <User className="w-5 h-5 text-gray-500" />
+          <div className="bg-gray-800 p-3 rounded-xl border border-gray-700 shadow-sm flex items-center gap-3">
+            <div className="p-2 bg-gray-700/50 rounded-lg"><User className="w-4 h-4 text-gray-400" /></div>
             <div className="flex-1">
-              <label className="text-xs text-gray-400 font-medium block">Dirigente</label>
-              <input type="text" className="w-full bg-transparent outline-none font-medium placeholder-gray-600 text-white" value={formData.dirigente} onChange={e => setFormData({...formData, dirigente: e.target.value})} />
+              <label className="text-[10px] text-gray-500 font-medium block uppercase">Dirigente</label>
+              <input type="text" className="w-full bg-transparent outline-none font-medium text-sm text-white" value={formData.dirigente} onChange={e => setFormData({...formData, dirigente: e.target.value})} />
             </div>
           </div>
 
-          <div className="bg-gray-800 p-4 rounded-xl border border-gray-700 flex items-center gap-3">
-            <BookOpen className="w-5 h-5 text-yellow-500" />
+          <div className="bg-gray-800 p-3 rounded-xl border border-gray-700 shadow-sm flex items-center gap-3">
+            <div className="p-2 bg-gray-700/50 rounded-lg"><BookOpen className="w-4 h-4 text-yellow-500" /></div>
             <div className="flex-1">
-              <label className="text-xs text-gray-400 font-medium block">Leitura de Documentos</label>
-              <input type="text" className="w-full bg-transparent outline-none font-medium placeholder-gray-600 text-white" value={formData.leitor_documentos} onChange={e => setFormData({...formData, leitor_documentos: e.target.value})} />
+              <label className="text-[10px] text-gray-500 font-medium block uppercase">Leitura</label>
+              <input type="text" className="w-full bg-transparent outline-none font-medium text-sm text-white" value={formData.leitor_documentos} onChange={e => setFormData({...formData, leitor_documentos: e.target.value})} />
             </div>
           </div>
 
-          <div className="bg-gray-800 p-4 rounded-xl border border-gray-700 flex items-center gap-3">
-            <Mic className="w-5 h-5 text-blue-500" />
+          <div className="bg-gray-800 p-3 rounded-xl border border-gray-700 shadow-sm flex items-center gap-3">
+            <div className="p-2 bg-gray-700/50 rounded-lg"><Mic className="w-4 h-4 text-blue-500" /></div>
             <div className="flex-1">
-              <label className="text-xs text-gray-400 font-medium block">Explanação</label>
-              <input type="text" className="w-full bg-transparent outline-none font-medium placeholder-gray-600 text-white" value={formData.explanador} onChange={e => setFormData({...formData, explanador: e.target.value})} />
+              <label className="text-[10px] text-gray-500 font-medium block uppercase">Explanação</label>
+              <input type="text" className="w-full bg-transparent outline-none font-medium text-sm text-white" value={formData.explanador} onChange={e => setFormData({...formData, explanador: e.target.value})} />
+            </div>
+          </div>
+          
+           <div className="bg-gray-800 p-3 rounded-xl border border-gray-700 shadow-sm flex items-center gap-3">
+            <div className="p-2 bg-gray-700/50 rounded-lg"><Users className="w-4 h-4 text-purple-400" /></div>
+            <div className="flex-1">
+              <label className="text-[10px] text-gray-500 font-medium block uppercase">Participantes</label>
+              <input type="number" className="w-full bg-transparent outline-none font-bold text-lg text-white" value={formData.quantidade_participantes} onChange={e => setFormData({...formData, quantidade_participantes: e.target.value})} />
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div className="bg-gray-800 p-4 rounded-xl border border-gray-700">
-            <div className="flex items-center gap-2 mb-2">
-              <Users className="w-4 h-4 text-blue-400" />
-              <label className="text-xs text-gray-400 font-medium">Pessoas</label>
-            </div>
-            <input type="number" className="w-full bg-transparent text-2xl font-bold outline-none text-white" value={formData.quantidade_participantes} onChange={e => setFormData({...formData, quantidade_participantes: e.target.value})} />
-          </div>
-          <div className="bg-gray-800 p-4 rounded-xl border border-gray-700">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-4 h-4 rounded-full bg-green-900 flex items-center justify-center text-green-400 text-[10px] font-bold">V</div>
-              <label className="text-xs text-gray-400 font-medium">Consumo</label>
-            </div>
-            <input type="number" step="0.1" className="w-full bg-transparent text-2xl font-bold outline-none text-white" value={formData.quantidade_consumida} onChange={e => setFormData({...formData, quantidade_consumida: e.target.value})} />
-          </div>
-        </div>
-
-        <button type="submit" disabled={saving} className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold text-lg hover:bg-blue-700 transition-all flex items-center justify-center gap-2 mt-4">
+        <button 
+            type="submit" 
+            disabled={saving} 
+            className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold text-lg hover:bg-blue-700 transition-all flex items-center justify-center gap-2 mt-6 shadow-lg hover:shadow-blue-900/30 active:scale-[0.98]"
+        >
           {saving ? 'Salvando...' : <><Save className="w-5 h-5" /> Salvar Alterações</>}
         </button>
       </form>
