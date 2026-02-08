@@ -19,8 +19,24 @@ export default function HistoricoSessoes() {
 
   useEffect(() => {
     async function fetchSessoes() {
-      const { data } = await supabase.from('sessoes').select('*').order('data_realizacao', { ascending: false })
-      if (data) setSessoes(data)
+      // 1. Busca as sessões
+      const { data: dadosSessoes } = await supabase.from('sessoes').select('*').order('data_realizacao', { ascending: false })
+      
+      // 2. Busca os consumos
+      const { data: dadosConsumos } = await supabase.from('consumos_sessao').select('id_sessao, quantidade_consumida')
+
+      // 3. Calcula o total por sessão
+      const sessoesComConsumo = dadosSessoes?.map((sessao: any) => {
+        const consumosDaSessao = dadosConsumos?.filter(c => c.id_sessao === sessao.id) || []
+        const totalConsumido = consumosDaSessao.reduce((acc, curr) => acc + (curr.quantidade_consumida || 0), 0)
+        
+        return {
+          ...sessao,
+          quantidade_consumida: totalConsumido
+        }
+      }) || []
+
+      setSessoes(sessoesComConsumo)
       setLoading(false)
     }
     fetchSessoes()

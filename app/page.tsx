@@ -38,7 +38,10 @@ export default function Home() {
       // Estoque = Tudo que entrou - (O que bebeu na sessão + O que saiu/doou)
       setEstoqueAtual(totalEntrada - totalConsumoSessoes - totalSaidasExtras)
       
-      setTotalSessoes(sessoes?.length || 0)
+      const anoAtual = new Date().getFullYear()
+      const sessoesDoAno = sessoes?.filter(s => new Date(s.data_realizacao).getFullYear() === anoAtual)
+      
+      setTotalSessoes(sessoesDoAno?.length || 0)
       
       if (sessoes) {
         setUltimasSessoes(sessoes.slice(0, 3) as SessaoResumo[])
