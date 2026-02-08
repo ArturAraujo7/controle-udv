@@ -79,11 +79,18 @@ export default function EditarPreparo({ params }: { params: Promise<{ id: string
   }
 
   const handleDelete = async () => {
-    if (confirm('ATENÇÃO: Excluir este preparo pode quebrar o histórico das sessões que consumiram dele. Tem certeza?')) {
+    if (window.confirm('ATENÇÃO: Excluir este preparo pode quebrar o histórico das sessões que consumiram dele. Tem certeza?')) {
       setSaving(true)
       const { error } = await supabase.from('preparos').delete().eq('id', id)
-      if (error) alert('Erro: ' + error.message)
-      else router.push('/estoque')
+      
+      if (error) {
+        alert('Erro ao excluir: ' + error.message)
+        setSaving(false)
+      } else {
+        alert('Preparo excluído com sucesso!')
+        router.push('/estoque')
+        router.refresh() // Força atualização da lista ao voltar
+      }
     }
   }
 
