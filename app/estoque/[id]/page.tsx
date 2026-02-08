@@ -29,35 +29,59 @@ export default function DetalheEstoque({ params }: { params: Promise<{ id: strin
       }
       setPreparo(prep)
 
-      // 2. Busca sessões onde esse preparo foi usado
-      const { data: sessoes } = await supabase
-        .from('sessoes')
-        .select('*')
+      // 2. Busca consumos deste preparo (na tabela nova)
+      // Precisamos dos dados da sessão também, então fazemos um select relacional
+      const { data: consumos, error: errConsumos } = await supabase
+        .from('consumos_sessao')
+        .select(`
+          quantidade_consumida,
+          sessoes (
+            id,
+            data_realizacao,
+            tipo,
+            dirigente,
+            quantidade_participantes
+          )
+        `)
         .eq('id_preparo', id)
-        .order('data_realizacao', { ascending: false })
+
+      if (errConsumos) {
+        console.error('Erro ao buscar consumos:', errConsumos)
+      }
 
       // 3. Busca saídas/doações deste preparo
-      const { data: saidas } = await supabase
+      const { data: saidas, error: errSaidas } = await supabase
         .from('saidas')
         .select('*')
         .eq('preparo_id', id)
         .order('data_saida', { ascending: false })
 
-      // 4. Unifica o histórico
-      const listaSessoes = sessoes?.map(s => ({
-        id: `sessao-${s.id}`,
-        realId: s.id, // ID real para link
-        tipo: 'Sessão',
-        titulo: s.dirigente || s.tipo,
-        data: s.data_realizacao,
-        quantidade: s.quantidade_consumida,
-        subtitulo: `${s.quantidade_participantes} participantes`,
-        isSaida: false
-      })) || []
+      if (errSaidas) {
+        console.error('Erro ao buscar saídas:', errSaidas)
+      }
 
+      // 4. Formata a lista de sessões a partir dos consumos
+      const listaSessoes = consumos?.map((c: any) => {
+        const sessao = c.sessoes
+        // Verifica se a sessão existe (pode ser nulo se houve delete em cascata mal configurado, mas aqui deve estar ok)
+        if (!sessao) return null
+        
+        return {
+          id: `sessao-${sessao.id}`, // ID único pra lista
+          realId: sessao.id,         // ID real pra link
+          tipo: 'Sessão',
+          titulo: sessao.dirigente || sessao.tipo,
+          data: sessao.data_realizacao,
+          quantidade: c.quantidade_consumida, // Quantidade vem da tabela de consumo
+          subtitulo: `${sessao.quantidade_participantes} participantes`,
+          isSaida: false
+        }
+      }).filter(item => item !== null) || []
+
+      // 5. Formata lista de saídas
       const listaSaidas = saidas?.map(s => ({
         id: `saida-${s.id}`,
-        realId: s.id, // ID real para link
+        realId: s.id,
         tipo: 'Doação / Saída',
         titulo: s.destino,
         data: s.data_saida,
@@ -66,7 +90,8 @@ export default function DetalheEstoque({ params }: { params: Promise<{ id: strin
         isSaida: true
       })) || []
 
-      const historicoUnificado = [...listaSessoes, ...listaSaidas].sort((a, b) => 
+      // 6. Unifica e ordena por data (mais recente primeiro)
+      const historicoUnificado = [...listaSessoes, ...listaSaidas].sort((a: any, b: any) => 
         new Date(b.data).getTime() - new Date(a.data).getTime()
       )
 
