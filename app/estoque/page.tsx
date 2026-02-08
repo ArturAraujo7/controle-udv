@@ -164,12 +164,6 @@ export default function GerenciarEstoque() {
                   </Link> {/* Fim do Link principal */}
 
                   {/* Alertas */}
-                  {preparo.saldo < 5 && preparo.saldo > 0 && (
-                    <div className="px-4 pb-4 mt-[-8px] flex items-center gap-2 text-orange-400 text-xs font-medium animate-pulse pointer-events-none">
-                      <AlertCircle className="w-4 h-4" />
-                      <span>Estoque baixo!</span>
-                    </div>
-                  )}
                   
                   {preparo.saldo <= 0 && (
                     <div className="absolute inset-0 bg-gray-900/80 backdrop-blur-[1px] flex items-center justify-center z-20">
