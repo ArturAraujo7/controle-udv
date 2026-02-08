@@ -24,17 +24,20 @@ export default function GerenciarEstoque() {
 
   useEffect(() => {
     async function fetchEstoque() {
-      // 1. Busca TUDO: Preparos, Sessões e Saídas
+      // 1. Busca TUDO: Preparos, Consumos e Saídas
       const { data: dadosPreparos } = await supabase.from('preparos').select('*').order('data_preparo', { ascending: false })
-      const { data: dadosSessoes } = await supabase.from('sessoes').select('id_preparo, quantidade_consumida')
-      const { data: dadosSaidas } = await supabase.from('saidas').select('preparo_id, quantidade') // <--- NOVO
+      
+      // Agora buscamos da tabela nova de consumos
+      const { data: dadosConsumos } = await supabase.from('consumos_sessao').select('id_preparo, quantidade_consumida')
+      
+      const { data: dadosSaidas } = await supabase.from('saidas').select('preparo_id, quantidade')
       
       let somaTotal = 0
       
       const listaFinal = dadosPreparos?.map((preparo: any) => {
-        // Filtra sessões DESTE preparo
-        const consumosSessao = dadosSessoes?.filter(s => s.id_preparo === preparo.id) || []
-        const totalSessoes = consumosSessao.reduce((acc, curr) => acc + curr.quantidade_consumida, 0)
+        // Filtra consumos DESTE preparo
+        const consumosDoPreparo = dadosConsumos?.filter(c => c.id_preparo === preparo.id) || []
+        const totalSessoes = consumosDoPreparo.reduce((acc, curr) => acc + curr.quantidade_consumida, 0)
 
         // Filtra saídas/doações DESTE preparo
         const saidasExtras = dadosSaidas?.filter(s => s.preparo_id === preparo.id) || []
