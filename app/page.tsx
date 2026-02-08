@@ -21,15 +21,18 @@ export default function Home() {
 
   useEffect(() => {
     async function fetchData() {
-      // 1. Buscamos todas as tabelas: preparos, sessoes e AGORA saidas
+      // 1. Buscamos todas as tabelas: preparos, consumos_sessao e saidas
       const { data: preparos } = await supabase.from('preparos').select('quantidade_preparada')
-      const { data: sessoes } = await supabase.from('sessoes').select('quantidade_consumida, id, data_realizacao, tipo, quantidade_participantes').order('data_realizacao', { ascending: false })
-      const { data: saidas } = await supabase.from('saidas').select('quantidade') // <--- NOVO
+      // Agora buscamos o consumo na tabela certa
+      const { data: consumos } = await supabase.from('consumos_sessao').select('quantidade_consumida')
+      const { data: sessoes } = await supabase.from('sessoes').select('id, data_realizacao, tipo, quantidade_participantes').order('data_realizacao', { ascending: false })
+      const { data: saidas } = await supabase.from('saidas').select('quantidade')
 
       // 2. Calculamos os totais
       const totalEntrada = preparos?.reduce((acc, curr) => acc + (curr.quantidade_preparada || 0), 0) || 0
-      const totalConsumoSessoes = sessoes?.reduce((acc, curr) => acc + (curr.quantidade_consumida || 0), 0) || 0
-      const totalSaidasExtras = saidas?.reduce((acc, curr) => acc + (curr.quantidade || 0), 0) || 0 // <--- NOVO
+      // Soma da tabela de consumos
+      const totalConsumoSessoes = consumos?.reduce((acc, curr) => acc + (curr.quantidade_consumida || 0), 0) || 0
+      const totalSaidasExtras = saidas?.reduce((acc, curr) => acc + (curr.quantidade || 0), 0) || 0
 
       // 3. Atualizamos a conta final
       // Estoque = Tudo que entrou - (O que bebeu na sessão + O que saiu/doou)
