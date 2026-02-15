@@ -43,7 +43,22 @@ export default function Home() {
 
   useEffect(() => {
     async function fetchData() {
-      // 1. Buscamos todas as tabelas: preparos, consumos_sessao e saidas
+      // 1. Verifica se usuario tem nome definido (Forçar Cadastro)
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('full_name')
+          .eq('id', user.id)
+          .single()
+
+        if (!profile?.full_name) {
+          router.push('/perfil')
+          return // Interrompe o carregamento da dash
+        }
+      }
+
+      // 2. Buscamos todas as tabelas: preparos, consumos_sessao e saidas
       const { data: preparos } = await supabase.from('preparos').select('quantidade_preparada')
       // Agora buscamos o consumo na tabela certa
       const { data: consumos } = await supabase.from('consumos_sessao').select('quantidade_consumida')
@@ -128,9 +143,17 @@ export default function Home() {
         </div>
         <div className="flex items-center gap-2">
           <ThemeToggle />
+          <Link
+            href="/perfil"
+            className="w-10 h-10 bg-white dark:bg-gray-800 rounded-full flex items-center justify-center border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 transition shadow-sm"
+            title="Meu Perfil"
+          >
+            <User className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+          </Link>
           <button
             onClick={handleLogout}
             className="w-10 h-10 bg-white dark:bg-gray-800 rounded-full flex items-center justify-center border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 transition shadow-sm"
+            title="Sair"
           >
             <LogOut className="w-5 h-5 text-gray-500 dark:text-gray-400" />
           </button>

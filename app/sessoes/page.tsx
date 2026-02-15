@@ -14,6 +14,7 @@ type Sessao = {
   user_id?: string
   explanador?: string
   leitor_documentos?: string
+  user_name?: string
 }
 
 type ConsumoDetalhado = {
@@ -44,14 +45,20 @@ export default function HistoricoSessoes() {
       // 2. Busca os consumos (apenas totais para a lista)
       const { data: dadosConsumos } = await supabase.from('consumos_sessao').select('id_sessao, quantidade_consumida')
 
-      // 3. Calcula o total por sessão
+      // 3. Busca perfis de usuários
+      const userIds = Array.from(new Set(dadosSessoes?.map((s: any) => s.user_id).filter(Boolean))) || []
+      const { data: profiles } = await supabase.from('profiles').select('id, full_name').in('id', userIds)
+
+      // 4. Calcula o total por sessão e adiciona nome do usuário
       const sessoesComConsumo = dadosSessoes?.map((sessao: any) => {
         const consumosDaSessao = dadosConsumos?.filter(c => c.id_sessao === sessao.id) || []
         const totalConsumido = consumosDaSessao.reduce((acc: number, curr: any) => acc + (curr.quantidade_consumida || 0), 0)
+        const profile = profiles?.find((p: any) => p.id === sessao.user_id)
 
         return {
           ...sessao,
-          quantidade_consumida: totalConsumido
+          quantidade_consumida: totalConsumido,
+          user_name: profile?.full_name
         }
       }) || []
 
@@ -144,7 +151,7 @@ export default function HistoricoSessoes() {
                   <p className="text-sm text-gray-500 dark:text-gray-400">Dirigente: {sessao.dirigente}</p>
                   {sessao.user_id && (
                     <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1 flex items-center gap-1" title={`ID: ${sessao.user_id}`}>
-                      <Users className="w-3 h-3" /> {sessao.user_id.slice(0, 8)}...
+                      <Users className="w-3 h-3" /> {sessao.user_name || sessao.user_id.slice(0, 8) + '...'}
                     </p>
                   )}
                 </div>
@@ -275,7 +282,7 @@ export default function HistoricoSessoes() {
                 </Link>
                 {selectedSession.user_id && (
                   <p className="text-[10px] text-center text-gray-400 dark:text-gray-500 mt-4 flex items-center justify-center gap-1">
-                    <User className="w-3 h-3" /> Registrado por: <span className="font-mono">{selectedSession.user_id}</span>
+                    <User className="w-3 h-3" /> Registrado por: <span className="font-mono">{selectedSession.user_name || selectedSession.user_id}</span>
                   </p>
                 )}
               </div>
