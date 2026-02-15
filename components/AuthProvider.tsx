@@ -43,7 +43,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
   // (Evita piscar o conteúdo protegido antes de redirecionar)
   if (loading && pathname !== '/login') {
     return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center transition-colors duration-300">
         <div className="w-8 h-8 border-4 border-green-600 border-t-transparent rounded-full animate-spin"></div>
       </div>
     )

@@ -28,8 +28,8 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="pt-BR" suppressHydrationWarning> 
-      <body className={`${inter.className} transition-colors duration-300 bg-gray-900`}>
+    <html lang="pt-BR" suppressHydrationWarning>
+      <body className={`${inter.className} transition-colors duration-300 bg-background text-foreground`}>
         <ThemeProvider>
           <AuthProvider>
             {children}

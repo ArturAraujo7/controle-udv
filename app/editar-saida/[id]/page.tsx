@@ -15,11 +15,11 @@ type Preparo = {
 export default function EditarSaida({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter()
   const { id } = use(params)
-  
+
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [preparos, setPreparos] = useState<Preparo[]>([])
-  
+
   const [formData, setFormData] = useState({
     data_saida: '',
     quantidade: '',
@@ -35,7 +35,7 @@ export default function EditarSaida({ params }: { params: Promise<{ id: string }
         .from('preparos')
         .select('id, data_preparo, mestre_preparo, grau')
         .order('data_preparo', { ascending: false })
-      
+
       if (dataPreparos) setPreparos(dataPreparos)
 
       // 2. Busca a Saída atual
@@ -91,7 +91,7 @@ export default function EditarSaida({ params }: { params: Promise<{ id: string }
     if (confirm('Tem certeza que deseja EXCLUIR esse registro de saída? O estoque será devolvido.')) {
       setSaving(true)
       const { error } = await supabase.from('saidas').delete().eq('id', id)
-      
+
       if (error) {
         alert('Erro ao excluir: ' + error.message)
         setSaving(false)
@@ -102,22 +102,22 @@ export default function EditarSaida({ params }: { params: Promise<{ id: string }
     }
   }
 
-  if (loading) return <div className="p-8 text-center text-gray-400">Carregando...</div>
+  if (loading) return <div className="p-8 text-center text-gray-500 dark:text-gray-400">Carregando...</div>
 
   return (
-    <main className="min-h-screen bg-gray-900 p-4 pb-20 text-white">
+    <main className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 pb-20 text-gray-900 dark:text-white transition-colors duration-300">
       {/* Cabeçalho */}
       <div className="flex items-center justify-between mb-8 pt-4">
         <div className="flex items-center gap-4">
-          <button onClick={() => router.back()} className="p-2 bg-gray-800 rounded-lg hover:bg-gray-700 transition">
-            <ArrowLeft className="w-6 h-6 text-gray-400" />
+          <button onClick={() => router.back()} className="p-2 bg-white dark:bg-gray-800 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition border border-gray-200 dark:border-gray-700 shadow-sm">
+            <ArrowLeft className="w-6 h-6 text-gray-500 dark:text-gray-400" />
           </button>
           <h1 className="text-2xl font-bold">Editar Saída</h1>
         </div>
-        
-        <button 
+
+        <button
           onClick={handleDelete}
-          className="p-2 text-red-400 bg-red-900/30 rounded-full hover:bg-red-900/50 transition border border-red-900/50"
+          className="p-2 text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 rounded-full hover:bg-red-100 dark:hover:bg-red-900/50 transition border border-red-200 dark:border-red-900/50"
           title="Excluir Saída"
         >
           <Trash2 className="w-5 h-5" />
@@ -125,23 +125,23 @@ export default function EditarSaida({ params }: { params: Promise<{ id: string }
       </div>
 
       <form onSubmit={handleUpdate} className="space-y-6 max-w-md mx-auto">
-        
+
         <div>
-          <label className="block text-sm text-gray-400 mb-2">Data da Saída</label>
+          <label className="block text-sm text-gray-500 dark:text-gray-400 mb-2">Data da Saída</label>
           <input
             type="date"
             required
-            className="w-full bg-gray-800 border border-gray-700 rounded-xl p-4 text-white focus:ring-2 focus:ring-blue-500 outline-none"
+            className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none dark:[color-scheme:dark]"
             value={formData.data_saida}
             onChange={e => setFormData({ ...formData, data_saida: e.target.value })}
           />
         </div>
 
         <div>
-          <label className="block text-sm text-gray-400 mb-2">Origem (Qual Preparo?)</label>
+          <label className="block text-sm text-gray-500 dark:text-gray-400 mb-2">Origem (Qual Preparo?)</label>
           <select
             required
-            className="w-full bg-gray-800 border border-gray-700 rounded-xl p-4 text-white focus:ring-2 focus:ring-blue-500 outline-none appearance-none"
+            className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none appearance-none"
             value={formData.preparo_id}
             onChange={e => setFormData({ ...formData, preparo_id: e.target.value })}
           >
@@ -155,35 +155,35 @@ export default function EditarSaida({ params }: { params: Promise<{ id: string }
         </div>
 
         <div>
-          <label className="block text-sm text-gray-400 mb-2">Destino</label>
+          <label className="block text-sm text-gray-500 dark:text-gray-400 mb-2">Destino</label>
           <input
             type="text"
             required
-            className="w-full bg-gray-800 border border-gray-700 rounded-xl p-4 text-white focus:ring-2 focus:ring-blue-500 outline-none"
+            className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none placeholder-gray-400 dark:placeholder-gray-500"
             value={formData.destino}
             onChange={e => setFormData({ ...formData, destino: e.target.value })}
           />
         </div>
 
         <div>
-          <label className="block text-sm text-gray-400 mb-2">Quantidade (L)</label>
+          <label className="block text-sm text-gray-500 dark:text-gray-400 mb-2">Quantidade (L)</label>
           <div className="relative">
             <input
               type="number"
               step="0.01"
               required
-              className="w-full bg-gray-800 border border-gray-700 rounded-xl p-4 text-white focus:ring-2 focus:ring-blue-500 outline-none"
+              className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none placeholder-gray-400 dark:placeholder-gray-500"
               value={formData.quantidade}
               onChange={e => setFormData({ ...formData, quantidade: e.target.value })}
             />
             <span className="absolute right-4 top-4 text-gray-500">L</span>
           </div>
         </div>
-        
+
         <div>
-          <label className="block text-sm text-gray-400 mb-2">Observações (Opcional)</label>
+          <label className="block text-sm text-gray-500 dark:text-gray-400 mb-2">Observações (Opcional)</label>
           <textarea
-            className="w-full bg-gray-800 border border-gray-700 rounded-xl p-4 text-white focus:ring-2 focus:ring-blue-500 outline-none min-h-[100px]"
+            className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none min-h-[100px] placeholder-gray-400 dark:placeholder-gray-500"
             value={formData.observacoes}
             onChange={e => setFormData({ ...formData, observacoes: e.target.value })}
           />

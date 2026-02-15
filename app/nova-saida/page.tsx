@@ -16,7 +16,7 @@ export default function NovaSaida() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [preparos, setPreparos] = useState<Preparo[]>([])
-  
+
   const [formData, setFormData] = useState({
     data_saida: new Date().toISOString().split('T')[0],
     quantidade: '',
@@ -32,7 +32,7 @@ export default function NovaSaida() {
         .from('preparos')
         .select('id, data_preparo, mestre_preparo, grau')
         .order('data_preparo', { ascending: false })
-      
+
       if (data) setPreparos(data)
       if (error) console.error('Erro ao buscar preparos:', error)
     }
@@ -65,32 +65,32 @@ export default function NovaSaida() {
   }
 
   return (
-    <main className="min-h-screen bg-gray-900 p-4 pb-20 text-white">
+    <main className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 pb-20 text-gray-900 dark:text-white transition-colors duration-300">
       <header className="flex items-center gap-4 mb-8 pt-4">
-        <Link href="/" className="p-2 bg-gray-800 rounded-lg hover:bg-gray-700 transition">
-          <ArrowLeft className="w-6 h-6 text-gray-400" />
+        <Link href="/" className="p-2 bg-white dark:bg-gray-800 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition border border-gray-200 dark:border-gray-700 shadow-sm">
+          <ArrowLeft className="w-6 h-6 text-gray-500 dark:text-gray-400" />
         </Link>
         <h1 className="text-2xl font-bold">Registrar Saída/Doação</h1>
       </header>
 
       <form onSubmit={handleSave} className="space-y-6 max-w-md mx-auto">
-        
+
         <div>
-          <label className="block text-sm text-gray-400 mb-2">Data da Saída</label>
+          <label className="block text-sm text-gray-500 dark:text-gray-400 mb-2">Data da Saída</label>
           <input
             type="date"
             required
-            className="w-full bg-gray-800 border border-gray-700 rounded-xl p-4 text-white focus:ring-2 focus:ring-blue-500 outline-none"
+            className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none dark:[color-scheme:dark]"
             value={formData.data_saida}
             onChange={e => setFormData({ ...formData, data_saida: e.target.value })}
           />
         </div>
 
         <div>
-          <label className="block text-sm text-gray-400 mb-2">Origem (Qual Preparo?)</label>
+          <label className="block text-sm text-gray-500 dark:text-gray-400 mb-2">Origem (Qual Preparo?)</label>
           <select
             required
-            className="w-full bg-gray-800 border border-gray-700 rounded-xl p-4 text-white focus:ring-2 focus:ring-blue-500 outline-none appearance-none"
+            className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none appearance-none"
             value={formData.preparo_id}
             onChange={e => setFormData({ ...formData, preparo_id: e.target.value })}
           >
@@ -104,26 +104,26 @@ export default function NovaSaida() {
         </div>
 
         <div>
-          <label className="block text-sm text-gray-400 mb-2">Destino (Núcleo ou Pessoa)</label>
+          <label className="block text-sm text-gray-500 dark:text-gray-400 mb-2">Destino (Núcleo ou Pessoa)</label>
           <input
             type="text"
             required
             placeholder="Ex: Núcleo Mestre Gabriel..."
-            className="w-full bg-gray-800 border border-gray-700 rounded-xl p-4 text-white focus:ring-2 focus:ring-blue-500 outline-none"
+            className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none placeholder-gray-400 dark:placeholder-gray-500"
             value={formData.destino}
             onChange={e => setFormData({ ...formData, destino: e.target.value })}
           />
         </div>
 
         <div>
-          <label className="block text-sm text-gray-400 mb-2">Quantidade (Litros)</label>
+          <label className="block text-sm text-gray-500 dark:text-gray-400 mb-2">Quantidade (Litros)</label>
           <div className="relative">
             <input
               type="number"
               step="0.01"
               required
               placeholder="0.00"
-              className="w-full bg-gray-800 border border-gray-700 rounded-xl p-4 text-white focus:ring-2 focus:ring-blue-500 outline-none"
+              className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none placeholder-gray-400 dark:placeholder-gray-500"
               value={formData.quantidade}
               onChange={e => setFormData({ ...formData, quantidade: e.target.value })}
             />
