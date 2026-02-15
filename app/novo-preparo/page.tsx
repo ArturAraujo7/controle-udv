@@ -28,6 +28,8 @@ export default function NovoPreparo() {
     e.preventDefault()
     setLoading(true)
 
+    const { data: { user } } = await supabase.auth.getUser()
+
     const { error } = await supabase
       .from('preparos')
       .insert([
@@ -41,7 +43,8 @@ export default function NovoPreparo() {
           procedencia_chacrona: formData.procedencia_chacrona,
           quantidade_preparada: Number(formData.quantidade_preparada),
           grau: formData.grau,
-          status: formData.status
+          status: formData.status,
+          user_id: user?.id
         }
       ])
 
@@ -69,8 +72,8 @@ export default function NovoPreparo() {
         <button
           onClick={() => setTipoEntrada('Local')}
           className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${tipoEntrada === 'Local'
-              ? 'bg-green-600 text-white shadow-md'
-              : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+            ? 'bg-green-600 text-white shadow-md'
+            : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
             }`}
         >
           Produção Local
@@ -78,8 +81,8 @@ export default function NovoPreparo() {
         <button
           onClick={() => setTipoEntrada('Doação')}
           className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${tipoEntrada === 'Doação'
-              ? 'bg-blue-600 text-white shadow-md'
-              : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+            ? 'bg-blue-600 text-white shadow-md'
+            : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
             }`}
         >
           Doação Recebida
@@ -199,8 +202,8 @@ export default function NovoPreparo() {
           type="submit"
           disabled={loading}
           className={`w-full py-4 rounded-xl font-bold text-lg shadow-lg transition-all flex items-center justify-center gap-2 mt-4 text-white ${tipoEntrada === 'Local'
-              ? 'bg-green-600 hover:bg-green-700'
-              : 'bg-blue-600 hover:bg-blue-700'
+            ? 'bg-green-600 hover:bg-green-700'
+            : 'bg-blue-600 hover:bg-blue-700'
             }`}
         >
           {loading ? 'Salvando...' : (

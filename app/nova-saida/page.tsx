@@ -43,6 +43,8 @@ export default function NovaSaida() {
     e.preventDefault()
     setLoading(true)
 
+    const { data: { user } } = await supabase.auth.getUser()
+
     const { error } = await supabase
       .from('saidas')
       .insert([
@@ -51,7 +53,8 @@ export default function NovaSaida() {
           quantidade: parseFloat(formData.quantidade),
           destino: formData.destino,
           preparo_id: parseInt(formData.preparo_id),
-          observacoes: formData.observacoes
+          observacoes: formData.observacoes,
+          user_id: user?.id
         }
       ])
 

@@ -85,6 +85,8 @@ export default function NovaSessao() {
 
     const dataCompleta = `${formData.data_realizacao}T${formData.hora}:00`
 
+    const { data: { user } } = await supabase.auth.getUser()
+
     // 1. Cria a Sessão
     const { data: sessao, error: erroSessao } = await supabase
       .from('sessoes')
@@ -94,7 +96,7 @@ export default function NovaSessao() {
         dirigente: formData.dirigente,
         explanador: formData.explanador,
         quantidade_participantes: Number(formData.quantidade_participantes),
-        // Removido id_preparo e quantidade_consumida direto daqui, pois mudamos o banco
+        user_id: user?.id // Rastreamento de usuário
       }])
       .select()
       .single()
