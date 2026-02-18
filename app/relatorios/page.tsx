@@ -1,24 +1,11 @@
 'use client'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 import Link from 'next/link'
 import { ArrowLeft, Calendar, BarChart3, Users, Droplet, Printer } from 'lucide-react'
 import { useReactToPrint } from 'react-to-print'
 
-type Sessao = {
-    id: number
-    data_realizacao: string
-    quantidade_participantes: number
-}
 
-type Consumo = {
-    quantidade_consumida: number
-}
-
-type Saida = {
-    quantidade: number
-    data_saida: string
-}
 
 export default function Relatorios() {
     type SessaoDetalhe = {
@@ -58,11 +45,7 @@ export default function Relatorios() {
         documentTitle: `Relatorio_UDV_${new Date().toISOString().split('T')[0]}`,
     })
 
-    useEffect(() => {
-        fetchData()
-    }, [dataInicio, dataFim])
-
-    const fetchData = async () => {
+    const fetchData = useCallback(async () => {
         setLoading(true)
 
         // 1. Buscar Sessões no período
@@ -122,7 +105,15 @@ export default function Relatorios() {
         })
 
         setLoading(false)
-    }
+    }, [dataInicio, dataFim])
+
+
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    useEffect(() => {
+        // eslint-disable-next-line
+        fetchData()
+    }, [fetchData])
 
     return (
         <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 pb-20 text-gray-900 dark:text-white transition-colors duration-300">

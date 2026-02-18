@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 import Link from 'next/link'
-import { ArrowLeft, Users, Droplet, Search, X, Calendar, User, BookOpen, Mic, RefreshCw } from 'lucide-react'
+import { ArrowLeft, Users, Droplet, Search, X, User, BookOpen, Mic } from 'lucide-react'
 
 type Sessao = {
   id: number
@@ -46,14 +46,14 @@ export default function HistoricoSessoes() {
       const { data: dadosConsumos } = await supabase.from('consumos_sessao').select('id_sessao, quantidade_consumida')
 
       // 3. Busca perfis de usuários
-      const userIds = Array.from(new Set(dadosSessoes?.map((s: any) => s.user_id).filter(Boolean))) || []
+      const userIds = Array.from(new Set(dadosSessoes?.map((s) => s.user_id).filter(Boolean))) || []
       const { data: profiles } = await supabase.from('profiles').select('id, full_name').in('id', userIds)
 
       // 4. Calcula o total por sessão e adiciona nome do usuário
-      const sessoesComConsumo = dadosSessoes?.map((sessao: any) => {
+      const sessoesComConsumo = dadosSessoes?.map((sessao) => {
         const consumosDaSessao = dadosConsumos?.filter(c => c.id_sessao === sessao.id) || []
-        const totalConsumido = consumosDaSessao.reduce((acc: number, curr: any) => acc + (curr.quantidade_consumida || 0), 0)
-        const profile = profiles?.find((p: any) => p.id === sessao.user_id)
+        const totalConsumido = consumosDaSessao.reduce((acc: number, curr) => acc + (curr.quantidade_consumida || 0), 0)
+        const profile = profiles?.find((p) => p.id === sessao.user_id)
 
         return {
           ...sessao,
@@ -88,7 +88,8 @@ export default function HistoricoSessoes() {
       .eq('id_sessao', sessao.id)
 
     if (data) {
-      setSessionConsumos(data as any)
+      // Cast explícito necessário pois o supabase retorna tipos complexos no join
+      setSessionConsumos(data as unknown as ConsumoDetalhado[])
     } else if (error) {
       console.error('Erro ao buscar detalhes:', error)
     }

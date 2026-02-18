@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 import Link from 'next/link'
-import { ArrowLeft, Beaker, Plus, AlertCircle, Truck, Droplet, Pencil, Search, Users } from 'lucide-react'
+import { ArrowLeft, Beaker, Plus, Truck, Droplet, Pencil, Search, Users } from 'lucide-react'
 
 type PreparoComSaldo = {
   id: number
@@ -36,7 +36,7 @@ export default function GerenciarEstoque() {
 
       let somaTotal = 0
 
-      const listaFinal = dadosPreparos?.map((preparo: any) => {
+      const listaFinal = dadosPreparos?.map((preparo) => {
         // Filtra consumos DESTE preparo
         const consumosDoPreparo = dadosConsumos?.filter(c => c.id_preparo === preparo.id) || []
         const totalSessoes = consumosDoPreparo.reduce((acc, curr) => acc + curr.quantidade_consumida, 0)

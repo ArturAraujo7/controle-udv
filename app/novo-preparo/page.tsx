@@ -2,7 +2,7 @@
 import { useState } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Save, Beaker, User, Truck, Calendar } from 'lucide-react'
+import { ArrowLeft, Save, Beaker, Truck } from 'lucide-react'
 import Link from 'next/link'
 
 export default function NovoPreparo() {

@@ -23,7 +23,7 @@ export default function Perfil() {
 
             setUserId(user.id)
 
-            const { data, error } = await supabase
+            const { data } = await supabase
                 .from('profiles')
                 .select('full_name')
                 .eq('id', user.id)

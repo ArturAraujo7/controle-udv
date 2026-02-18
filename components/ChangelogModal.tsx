@@ -9,7 +9,8 @@ export function ChangelogModal() {
     useEffect(() => {
         const savedVersion = localStorage.getItem('changelog_viewed_version')
         if (savedVersion !== CURRENT_VERSION) {
-            setIsOpen(true)
+            const timer = setTimeout(() => setIsOpen(true), 0)
+            return () => clearTimeout(timer)
         }
     }, [])
 

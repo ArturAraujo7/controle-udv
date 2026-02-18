@@ -9,8 +9,33 @@ export default function DetalheEstoque({ params }: { params: Promise<{ id: strin
   const { id } = use(params)
   const router = useRouter()
 
-  const [preparo, setPreparo] = useState<any>(null)
-  const [historico, setHistorico] = useState<any[]>([])
+  type Preparo = {
+    id: number
+    mestre_preparo: string
+    grau: string
+    quantidade_preparada: number
+    status: string
+    procedencia_mariri?: string
+    procedencia_chacrona?: string
+    nucleo_origem?: string
+    data_preparo: string
+    user_id?: string
+    tipo?: string
+  }
+
+  type HistoricoItem = {
+    id: string
+    realId: number
+    tipo: string
+    titulo: string
+    data: string
+    quantidade: number
+    subtitulo: string
+    isSaida: boolean
+  }
+
+  const [preparo, setPreparo] = useState<Preparo | null>(null)
+  const [historico, setHistorico] = useState<HistoricoItem[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -60,8 +85,9 @@ export default function DetalheEstoque({ params }: { params: Promise<{ id: strin
       }
 
       // 4. Formata a lista de sessões a partir dos consumos
-      const listaSessoes = consumos?.map((c: any) => {
-        const sessao = c.sessoes
+      // 4. Formata a lista de sessões a partir dos consumos
+      const listaSessoes = consumos?.map((c) => {
+        const sessao = c.sessoes as unknown as { id: number, data_realizacao: string, tipo: string, dirigente: string, quantidade_participantes: number }
         if (!sessao) return null
 
         return {
@@ -74,7 +100,7 @@ export default function DetalheEstoque({ params }: { params: Promise<{ id: strin
           subtitulo: `${sessao.quantidade_participantes} participantes`,
           isSaida: false
         }
-      }).filter(item => item !== null) || []
+      }).filter(item => item !== null) as HistoricoItem[] || []
 
       // 5. Formata lista de saídas
       const listaSaidas = saidas?.map(s => ({
@@ -86,10 +112,10 @@ export default function DetalheEstoque({ params }: { params: Promise<{ id: strin
         quantidade: s.quantidade,
         subtitulo: s.observacoes || 'Saída externa',
         isSaida: true
-      })) || []
+      })) as HistoricoItem[] || []
 
       // 6. Unifica e ordena por data (mais recente primeiro)
-      const historicoUnificado = [...listaSessoes, ...listaSaidas].sort((a: any, b: any) =>
+      const historicoUnificado = [...listaSessoes, ...listaSaidas].sort((a, b) =>
         new Date(b.data).getTime() - new Date(a.data).getTime()
       )
 
@@ -104,6 +130,8 @@ export default function DetalheEstoque({ params }: { params: Promise<{ id: strin
       <div className="animate-pulse">Carregando histórico...</div>
     </div>
   )
+
+  if (!preparo) return null
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 text-gray-900 dark:text-white pb-20 transition-colors duration-300">
@@ -128,8 +156,8 @@ export default function DetalheEstoque({ params }: { params: Promise<{ id: strin
         <div className="flex justify-between items-start mb-4">
           <div>
             <span className={`text-xs font-bold px-2 py-1 rounded-full border ${preparo.status === 'Disponível' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800' :
-                preparo.status === 'Esgotado' ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800' :
-                  'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800'
+              preparo.status === 'Esgotado' ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800' :
+                'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800'
               }`}>
               {preparo.status}
             </span>
@@ -193,8 +221,8 @@ export default function DetalheEstoque({ params }: { params: Promise<{ id: strin
               className="block group"
             >
               <div className={`p-4 rounded-xl border flex justify-between items-center transition-all shadow-sm hover:shadow-md ${item.isSaida
-                  ? 'bg-red-50 dark:bg-gray-800/50 border-red-100 dark:border-red-900/30 group-hover:border-red-400 dark:group-hover:border-red-500/50'
-                  : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 group-hover:border-blue-300 dark:group-hover:border-blue-500/50'
+                ? 'bg-red-50 dark:bg-gray-800/50 border-red-100 dark:border-red-900/30 group-hover:border-red-400 dark:group-hover:border-red-500/50'
+                : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 group-hover:border-blue-300 dark:group-hover:border-blue-500/50'
                 }`}>
                 <div>
                   <div className="flex items-center gap-2 mb-1">

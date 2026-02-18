@@ -2,8 +2,8 @@
 import { useState, useEffect, use } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
-import { ArrowLeft, Save, Trash2, AlertCircle } from 'lucide-react'
-import Link from 'next/link'
+import { ArrowLeft, Save, Trash2 } from 'lucide-react'
+
 
 type Preparo = {
   id: number

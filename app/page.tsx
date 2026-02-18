@@ -2,7 +2,7 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabaseClient'
-import { Plus, Database, History, Droplet, ChevronRight, Users, LogOut, ArrowUpRight, BarChart3, User, BookOpen, Mic, X, Calendar } from 'lucide-react'
+import { Plus, Database, History, Droplet, ChevronRight, Users, LogOut, ArrowUpRight, BarChart3, User, BookOpen, Mic, X } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { ChangelogModal } from '@/components/ChangelogModal'
@@ -119,7 +119,7 @@ export default function Home() {
       .eq('id_sessao', sessao.id)
 
     if (data) {
-      setSessionConsumos(data as any)
+      setSessionConsumos(data as unknown as ConsumoDetalhado[])
     } else if (error) {
       console.error('Erro ao buscar detalhes:', error)
     }
