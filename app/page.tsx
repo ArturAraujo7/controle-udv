@@ -29,11 +29,21 @@ type ConsumoDetalhado = {
   }
 }
 
+type Movimentacao = {
+  id: string
+  tipo_movimento: 'entrada' | 'saida' | 'consumo'
+  data: string
+  titulo: string
+  subtitulo: string
+  quantidade: number
+  detalhesSessao?: Sessao
+}
+
 export default function Home() {
   const router = useRouter()
   const [estoqueAtual, setEstoqueAtual] = useState<number>(0)
   const [totalSessoes, setTotalSessoes] = useState<number>(0)
-  const [ultimasSessoes, setUltimasSessoes] = useState<Sessao[]>([])
+  const [ultimasMovimentacoes, setUltimasMovimentacoes] = useState<Movimentacao[]>([])
   const [loading, setLoading] = useState(true)
 
   // Estado para o Modal
@@ -59,9 +69,9 @@ export default function Home() {
       }
 
       // 2. Buscamos todas as tabelas: preparos, consumos_sessao e saidas
-      const { data: preparos } = await supabase.from('preparos').select('quantidade_preparada')
+      const { data: preparos } = await supabase.from('preparos').select('id, quantidade_preparada, data_preparo, tipo, grau, nucleo_origem, mestre_preparo')
       // Agora buscamos o consumo na tabela certa
-      const { data: consumos } = await supabase.from('consumos_sessao').select('quantidade_consumida')
+      const { data: consumos } = await supabase.from('consumos_sessao').select('id_sessao, quantidade_consumida')
 
       // Buscamos sessões com todos os campos necessários para o modal
       const { data: sessoes } = await supabase
@@ -69,7 +79,7 @@ export default function Home() {
         .select('*') // Trazendo tudo para ter dirigente, explanador, etc.
         .order('data_realizacao', { ascending: false })
 
-      const { data: saidas } = await supabase.from('saidas').select('quantidade')
+      const { data: saidas } = await supabase.from('saidas').select('id, quantidade, data_saida, destino')
 
       // 2. Calculamos os totais
       const totalEntrada = preparos?.reduce((acc, curr) => acc + (curr.quantidade_preparada || 0), 0) || 0
@@ -86,9 +96,61 @@ export default function Home() {
 
       setTotalSessoes(sessoesDoAno?.length || 0)
 
-      if (sessoes) {
-        setUltimasSessoes(sessoes.slice(0, 3) as Sessao[])
+      // 4. Montar a lista unificada de movimentações
+      const movimentos: Movimentacao[] = []
+
+      if (preparos) {
+        preparos.forEach(p => {
+          const isDoacao = p.tipo === 'Doação'
+          movimentos.push({
+            id: `preparo-${p.id}`,
+            tipo_movimento: 'entrada',
+            data: p.data_preparo,
+            titulo: isDoacao ? 'Entrada (Doação)' : 'Novo Preparo',
+            subtitulo: isDoacao ? `De: ${p.nucleo_origem || 'Outro núcleo'}` : `Grau ${p.grau} - M. ${p.mestre_preparo}`,
+            quantidade: p.quantidade_preparada
+          })
+        })
       }
+
+      if (sessoes) {
+        sessoes.forEach(s => {
+          const consumosDaSessao = consumos?.filter(c => c.id_sessao === s.id) || []
+          const totalConsumidoNaSessao = consumosDaSessao.reduce((acc, curr) => acc + (curr.quantidade_consumida || 0), 0)
+
+          if (totalConsumidoNaSessao > 0) {
+            movimentos.push({
+              id: `sessao-${s.id}`,
+              tipo_movimento: 'consumo',
+              data: s.data_realizacao,
+              titulo: `Sessão: ${s.tipo || 'Sem Tipo'}`,
+              subtitulo: `${s.quantidade_participantes || 0} participantes`,
+              quantidade: totalConsumidoNaSessao,
+              detalhesSessao: s
+            })
+          }
+        })
+      }
+
+      if (saidas) {
+        saidas.forEach(s => {
+          if (s.quantidade > 0) {
+            movimentos.push({
+              id: `saida-${s.id}`,
+              tipo_movimento: 'saida',
+              data: s.data_saida,
+              titulo: 'Saída / Doação',
+              subtitulo: `Para: ${s.destino || 'Não informado'}`,
+              quantidade: s.quantidade
+            })
+          }
+        })
+      }
+
+      // Ordenar do mais recente para o mais antigo e pegar os 5 primeiros
+      movimentos.sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime())
+      setUltimasMovimentacoes(movimentos.slice(0, 5))
+
       setLoading(false)
     }
     fetchData()
@@ -172,7 +234,7 @@ export default function Home() {
               <span className="font-semibold text-sm">Estoque</span>
             </div>
             <p className="text-3xl font-bold text-gray-900 dark:text-white">
-              {loading ? '...' : estoqueAtual.toFixed(1)} <span className="text-sm text-gray-500 dark:text-gray-400 font-normal">L</span>
+              {loading ? '...' : estoqueAtual.toFixed(2).replace('.', ',')} <span className="text-sm text-gray-500 dark:text-gray-400 font-normal">L</span>
             </p>
             <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">Disponível hoje</p>
           </div>
@@ -257,33 +319,57 @@ export default function Home() {
       </div>
 
       {/* Histórico Recente */}
-      <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 px-1">Últimas Sessões</h2>
+      <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 px-1">Últimas Movimentações</h2>
       <div className="space-y-3">
         {loading ? (
           <p className="text-center text-gray-500 dark:text-gray-400 text-sm py-4">Carregando...</p>
-        ) : ultimasSessoes.length === 0 ? (
+        ) : ultimasMovimentacoes.length === 0 ? (
           <div className="bg-white dark:bg-gray-800 rounded-xl p-6 text-center border border-dashed border-gray-300 dark:border-gray-700">
-            <p className="text-gray-500 dark:text-gray-400 text-sm">Nenhuma sessão registrada.</p>
+            <p className="text-gray-500 dark:text-gray-400 text-sm">Nenhuma movimentação registrada.</p>
           </div>
         ) : (
-          ultimasSessoes.map(sessao => (
-            <div
-              key={sessao.id}
-              onClick={() => handleOpenModal(sessao)}
-              className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 flex items-center justify-between active:scale-95 transition-all hover:bg-gray-50 dark:hover:bg-gray-750 cursor-pointer"
-            >
-              <div>
-                <p className="text-xs text-gray-500 dark:text-gray-500 font-medium mb-1">
-                  {new Date(sessao.data_realizacao).toLocaleDateString('pt-BR')}
-                </p>
-                <h3 className="font-bold text-gray-900 dark:text-gray-200">{sessao.tipo}</h3>
+          ultimasMovimentacoes.map(mov => {
+            const isEntrada = mov.tipo_movimento === 'entrada'
+            const isConsumo = mov.tipo_movimento === 'consumo'
+            const isSaida = mov.tipo_movimento === 'saida'
+
+            return (
+              <div
+                key={mov.id}
+                onClick={() => {
+                  if (isConsumo && mov.detalhesSessao) {
+                    handleOpenModal(mov.detalhesSessao)
+                  }
+                }}
+                className={`bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 flex items-center justify-between transition-all ${isConsumo ? 'active:scale-95 hover:bg-gray-50 dark:hover:bg-gray-750 cursor-pointer' : ''}`}
+              >
+                <div className="flex items-center gap-4">
+                  <div className={`p-2 rounded-lg ${isEntrada ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400' :
+                    isSaida ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400' :
+                      'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
+                    }`}>
+                    {isEntrada ? <Database className="w-5 h-5" /> :
+                      isSaida ? <ArrowUpRight className="w-5 h-5" /> :
+                        <History className="w-5 h-5" />}
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mb-1">
+                      {new Date(mov.data).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}
+                    </p>
+                    <h3 className="font-bold text-gray-900 dark:text-gray-200 leading-tight">{mov.titulo}</h3>
+                    <p className="text-xs text-gray-500 mt-0.5">{mov.subtitulo}</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className={`text-sm font-bold ${isEntrada ? 'text-green-600 dark:text-green-400' :
+                    'text-red-500 dark:text-red-400'
+                    }`}>
+                    {isEntrada ? '+' : '-'}{mov.quantidade.toFixed(2).replace('.', ',')} <span className="text-[10px] font-normal">L</span>
+                  </span>
+                </div>
               </div>
-              <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-700 px-3 py-1 rounded-lg">
-                <Users className="w-3 h-3 text-gray-600 dark:text-gray-300" />
-                <span className="text-sm font-bold text-gray-600 dark:text-gray-300">{sessao.quantidade_participantes}</span>
-              </div>
-            </div>
-          ))
+            )
+          })
         )}
       </div>
 

@@ -10,6 +10,7 @@ type PreparoSelect = {
   data_preparo: string
   mestre_preparo: string
   grau: string
+  quantidade_preparada: number
 }
 
 type ConsumoItem = {
@@ -27,12 +28,22 @@ export default function NovaSessao() {
 
   useEffect(() => {
     const fetchPreparos = async () => {
-      const { data } = await supabase
+      const { data: preparos } = await supabase
         .from('preparos')
-        .select('id, data_preparo, mestre_preparo, grau')
-        .eq('status', 'Disponível')
+        .select('id, data_preparo, mestre_preparo, grau, quantidade_preparada')
         .order('data_preparo', { ascending: false })
-      if (data) setPreparos(data)
+
+      const { data: consumos } = await supabase.from('consumos_sessao').select('id_preparo, quantidade_consumida')
+      const { data: saidas } = await supabase.from('saidas').select('preparo_id, quantidade')
+
+      if (preparos) {
+        const preparosComSaldo = preparos.filter(p => {
+          const consumido = consumos?.filter(c => c.id_preparo === p.id).reduce((acc, curr) => acc + (curr.quantidade_consumida || 0), 0) || 0
+          const saido = saidas?.filter(s => s.preparo_id === p.id).reduce((acc, curr) => acc + (curr.quantidade || 0), 0) || 0
+          return (p.quantidade_preparada - consumido - saido) > 0
+        })
+        setPreparos(preparosComSaldo)
+      }
     }
     fetchPreparos()
   }, [])
@@ -124,16 +135,16 @@ export default function NovaSessao() {
       alert('Sessão criada, mas erro ao salvar consumos: ' + erroConsumos.message)
     } else {
       alert('Sessão registrada com sucesso!')
-      router.push('/')
+      router.replace('/')
     }
   }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 pb-20 text-gray-900 dark:text-white font-sans transition-colors duration-300">
       <header className="flex items-center mb-6">
-        <Link href="/" className="p-2 bg-white dark:bg-gray-800 rounded-full shadow-sm mr-4 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+        <button type="button" onClick={() => router.back()} className="p-2 bg-white dark:bg-gray-800 rounded-full shadow-sm mr-4 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
           <ArrowLeft className="w-5 h-5 text-gray-500 dark:text-gray-300" />
-        </Link>
+        </button>
         <h1 className="text-xl font-bold tracking-tight">Nova Sessão</h1>
       </header>
 
@@ -189,7 +200,7 @@ export default function NovaSessao() {
               <label className="text-xs text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wider">Vegetal Servido</label>
             </div>
             <span className="text-xs font-mono text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900/30 px-2 py-1 rounded">
-              Total: {totalConsumido.toFixed(1)} L
+              Total: {totalConsumido.toFixed(2).replace('.', ',')} L
             </span>
           </div>
 

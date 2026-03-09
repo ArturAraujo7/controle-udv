@@ -47,7 +47,7 @@ export default function EditarSaida({ params }: { params: Promise<{ id: string }
 
       if (error) {
         alert('Saída não encontrada!')
-        router.push('/estoque')
+        router.replace('/estoque')
         return
       }
 

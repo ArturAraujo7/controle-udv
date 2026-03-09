@@ -54,16 +54,16 @@ export default function NovoPreparo() {
       alert('Erro ao salvar: ' + error.message)
     } else {
       alert(tipoEntrada === 'Local' ? 'Preparo registrado!' : 'Doação registrada!')
-      router.push('/estoque')
+      router.replace('/estoque')
     }
   }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 text-gray-900 dark:text-white transition-colors duration-300">
       <div className="flex items-center mb-6">
-        <Link href="/" className="p-2 bg-white dark:bg-gray-800 rounded-full shadow-sm mr-4 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+        <button type="button" onClick={() => router.back()} className="p-2 bg-white dark:bg-gray-800 rounded-full shadow-sm mr-4 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
           <ArrowLeft className="w-5 h-5 text-gray-500 dark:text-gray-300" />
-        </Link>
+        </button>
         <h1 className="text-xl font-bold">Entrada de Estoque</h1>
       </div>
 

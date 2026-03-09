@@ -57,7 +57,7 @@ export default function Perfil() {
             alert('Erro ao atualizar perfil: ' + error.message)
         } else {
             alert('Perfil atualizado com sucesso!')
-            router.push('/')
+            router.back()
         }
         setUpdating(false)
     }
@@ -73,9 +73,9 @@ export default function Perfil() {
     return (
         <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 pb-20 text-gray-900 dark:text-white transition-colors duration-300">
             <header className="flex items-center mb-6">
-                <Link href="/" className="p-2 bg-white dark:bg-gray-800 rounded-full shadow-sm mr-4 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                <button type="button" onClick={() => router.back()} className="p-2 bg-white dark:bg-gray-800 rounded-full shadow-sm mr-4 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
                     <ArrowLeft className="w-5 h-5 text-gray-500 dark:text-gray-300" />
-                </Link>
+                </button>
                 <h1 className="text-xl font-bold">Meu Perfil</h1>
             </header>
 

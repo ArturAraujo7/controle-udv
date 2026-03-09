@@ -138,9 +138,9 @@ export default function DetalheEstoque({ params }: { params: Promise<{ id: strin
 
       {/* Cabeçalho */}
       <div className="flex items-center gap-4 mb-6">
-        <Link href="/estoque" className="p-2 bg-white dark:bg-gray-800 rounded-full border border-gray-200 dark:border-gray-700 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+        <button type="button" onClick={() => router.back()} className="p-2 bg-white dark:bg-gray-800 rounded-full border border-gray-200 dark:border-gray-700 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition">
           <ArrowLeft className="w-5 h-5 text-gray-500 dark:text-gray-300" />
-        </Link>
+        </button>
         <div>
           <h1 className="text-xl font-bold">Detalhes do Vegetal</h1>
           <p className="text-xs text-gray-500 dark:text-gray-400">Lote #{id.slice(0, 6)}</p>
@@ -186,7 +186,7 @@ export default function DetalheEstoque({ params }: { params: Promise<{ id: strin
           <div>
             <p className="text-xs text-gray-500 dark:text-gray-400">Qtd. Atual</p>
             <p className="font-bold text-gray-900 dark:text-white text-lg">
-              {(preparo.quantidade_preparada - historico.reduce((acc, item) => acc + (Number(item.quantidade) || 0), 0)).toFixed(1)} L
+              {(preparo.quantidade_preparada - historico.reduce((acc, item) => acc + (Number(item.quantidade) || 0), 0)).toFixed(2).replace('.', ',')} L
             </p>
           </div>
         </div>
@@ -240,7 +240,7 @@ export default function DetalheEstoque({ params }: { params: Promise<{ id: strin
                   <div className={`flex items-center justify-end gap-1 font-bold ${item.isSaida ? 'text-red-600 dark:text-red-400' : 'text-blue-600 dark:text-blue-300'
                     }`}>
                     <Droplets className="w-3 h-3" />
-                    -{Number(item.quantidade).toFixed(1)} L
+                    -{Number(item.quantidade).toFixed(2).replace('.', ',')} L
                   </div>
                   <div className="text-xs text-gray-500 dark:text-gray-500 mt-1 flex items-center justify-end gap-1">
                     {item.isSaida ? (

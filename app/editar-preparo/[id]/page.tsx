@@ -34,7 +34,7 @@ export default function EditarPreparo({ params }: { params: Promise<{ id: string
 
       if (error) {
         alert('Preparo não encontrado!')
-        router.push('/estoque')
+        router.replace('/estoque')
         return
       }
 
@@ -75,7 +75,7 @@ export default function EditarPreparo({ params }: { params: Promise<{ id: string
 
     setSaving(false)
     if (error) alert('Erro: ' + error.message)
-    else { alert('Atualizado!'); router.push('/estoque') }
+    else { alert('Atualizado!'); router.back() }
   }
 
   const handleDelete = async () => {
@@ -88,8 +88,7 @@ export default function EditarPreparo({ params }: { params: Promise<{ id: string
         setSaving(false)
       } else {
         alert('Preparo excluído com sucesso!')
-        router.push('/estoque')
-        router.refresh() // Força atualização da lista ao voltar
+        router.back()
       }
     }
   }
@@ -100,9 +99,9 @@ export default function EditarPreparo({ params }: { params: Promise<{ id: string
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 text-gray-900 dark:text-white transition-colors duration-300">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center">
-          <Link href="/estoque" className="p-2 bg-white dark:bg-gray-800 rounded-full shadow-sm mr-4 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+          <button type="button" onClick={() => router.back()} className="p-2 bg-white dark:bg-gray-800 rounded-full shadow-sm mr-4 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
             <ArrowLeft className="w-5 h-5 text-gray-500 dark:text-gray-300" />
-          </Link>
+          </button>
           <h1 className="text-xl font-bold">Editar Estoque</h1>
         </div>
         <button onClick={handleDelete} className="p-2 text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 rounded-full hover:bg-red-100 dark:hover:bg-red-900/50 transition">

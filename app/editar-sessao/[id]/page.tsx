@@ -11,6 +11,7 @@ type PreparoSelect = {
   data_preparo: string
   mestre_preparo: string
   grau: string
+  quantidade_preparada: number
 }
 
 type ConsumoItem = {
@@ -55,22 +56,37 @@ export default function EditarSessao({ params }: { params: Promise<{ id: string 
   useEffect(() => {
     async function loadData() {
       // 1. Carrega Preparos disponíveis
-      const { data: dataPreparos } = await supabase.from('preparos').select('id, data_preparo, mestre_preparo, grau').eq('status', 'Disponível').order('data_preparo', { ascending: false })
-      if (dataPreparos) setPreparos(dataPreparos)
+      const { data: dataPreparos } = await supabase.from('preparos').select('id, data_preparo, mestre_preparo, grau, quantidade_preparada').order('data_preparo', { ascending: false })
 
       // 2. Carrega Sessão
       const { data: sessao, error } = await supabase.from('sessoes').select('*').eq('id', id).single()
       if (error) {
         alert('Sessão não encontrada!')
-        router.push('/sessoes')
+        router.replace('/sessoes')
         return
       }
 
-      // 3. Carrega Consumos Vinculados
-      const { data: dataConsumos } = await supabase
+      // 3. Carrega Consumos Vinculados e Saídas Globais (para cálculo de saldo)
+      const { data: dataConsumosSessao } = await supabase
         .from('consumos_sessao')
         .select('id_preparo, quantidade_consumida')
         .eq('id_sessao', id)
+
+      const { data: todosConsumos } = await supabase.from('consumos_sessao').select('id_preparo, quantidade_consumida')
+      const { data: todasSaidas } = await supabase.from('saidas').select('preparo_id, quantidade')
+
+      if (dataPreparos) {
+        const preparosComSaldo = dataPreparos.filter(p => {
+          const consumido = todosConsumos?.filter(c => c.id_preparo === p.id).reduce((acc, curr) => acc + (curr.quantidade_consumida || 0), 0) || 0
+          const saido = todasSaidas?.filter(s => s.preparo_id === p.id).reduce((acc, curr) => acc + (curr.quantidade || 0), 0) || 0
+          const saldo = p.quantidade_preparada - consumido - saido
+
+          // Manter na lista se tem saldo > 0 OU se já faz parte do consumo desta sessão (para não quebrar a UI ao editar)
+          const usadoNestaSessao = dataConsumosSessao?.some(c => c.id_preparo === p.id)
+          return saldo > 0 || usadoNestaSessao
+        })
+        setPreparos(preparosComSaldo)
+      }
 
       // Preenche o formulário
       const dataIso = new Date(sessao.data_realizacao)
@@ -85,8 +101,8 @@ export default function EditarSessao({ params }: { params: Promise<{ id: string 
       })
 
       // Preenche a lista de consumos (ou cria um vazio se não tiver nada)
-      if (dataConsumos && dataConsumos.length > 0) {
-        setConsumos(dataConsumos.map(c => ({
+      if (dataConsumosSessao && dataConsumosSessao.length > 0) {
+        setConsumos(dataConsumosSessao.map(c => ({
           id_preparo: String(c.id_preparo),
           quantidade: String(c.quantidade_consumida)
         })))
@@ -183,7 +199,7 @@ export default function EditarSessao({ params }: { params: Promise<{ id: string 
       alert('Erro ao salvar novos consumos: ' + erroInsert.message)
     } else {
       alert('Atualizado com sucesso!')
-      router.push('/sessoes')
+      router.back()
     }
   }
 
@@ -192,7 +208,7 @@ export default function EditarSessao({ params }: { params: Promise<{ id: string 
       setSaving(true)
       const { error } = await supabase.from('sessoes').delete().eq('id', id)
       if (error) alert('Erro: ' + error.message)
-      else router.push('/sessoes')
+      else router.back()
     }
   }
 
@@ -206,9 +222,9 @@ export default function EditarSessao({ params }: { params: Promise<{ id: string 
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 pb-20 text-gray-900 dark:text-white transition-colors duration-300">
       <header className="flex items-center justify-between mb-6">
         <div className="flex items-center">
-          <Link href="/sessoes" className="p-2 bg-white dark:bg-gray-800 rounded-full shadow-sm mr-4 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+          <button type="button" onClick={() => router.back()} className="p-2 bg-white dark:bg-gray-800 rounded-full shadow-sm mr-4 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
             <ArrowLeft className="w-5 h-5 text-gray-500 dark:text-gray-300" />
-          </Link>
+          </button>
           <h1 className="text-xl font-bold">Editar Sessão</h1>
         </div>
         <button
@@ -255,7 +271,7 @@ export default function EditarSessao({ params }: { params: Promise<{ id: string 
               <label className="text-xs text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wider">Vegetal Servido</label>
             </div>
             <span className="text-xs font-mono text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900/30 px-2 py-1 rounded">
-              Total: {totalConsumido.toFixed(1)} L
+              Total: {totalConsumido.toFixed(2).replace('.', ',')} L
             </span>
           </div>
 

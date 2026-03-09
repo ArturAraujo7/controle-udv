@@ -35,10 +35,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="pt-BR" suppressHydrationWarning>
-      <body className={`${inter.className} transition-colors duration-300 bg-background text-foreground`}>
+      <body className={`${inter.className} transition-colors duration-300 bg-gray-100 dark:bg-black text-foreground antialiased`}>
         <ThemeProvider>
           <AuthProvider>
-            {children}
+            <div className="max-w-5xl mx-auto min-h-screen sm:min-h-[calc(100vh-2rem)] sm:my-4 sm:rounded-3xl bg-gray-50 dark:bg-gray-900 shadow-2xl sm:border border-x-0 sm:border-x border-gray-200 dark:border-gray-800 relative overflow-hidden">
+              {children}
+            </div>
           </AuthProvider>
         </ThemeProvider>
       </body>

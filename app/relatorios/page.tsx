@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabaseClient'
 import Link from 'next/link'
 import { ArrowLeft, Calendar, BarChart3, Users, Droplet, Printer } from 'lucide-react'
 import { useReactToPrint } from 'react-to-print'
+import { useRouter } from 'next/navigation'
 
 
 
@@ -16,6 +17,7 @@ export default function Relatorios() {
         dirigente: string
     }
 
+    const router = useRouter()
     const [loading, setLoading] = useState(false)
     const [showSessoesDetails, setShowSessoesDetails] = useState(false)
     const componentRef = useRef<HTMLDivElement>(null)
@@ -118,9 +120,9 @@ export default function Relatorios() {
     return (
         <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 pb-20 text-gray-900 dark:text-white transition-colors duration-300">
             <header className="flex items-center gap-4 mb-8 pt-4 print:hidden">
-                <Link href="/" className="p-2 bg-white dark:bg-gray-800 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition border border-gray-200 dark:border-gray-700 shadow-sm">
+                <button type="button" onClick={() => router.back()} className="p-2 bg-white dark:bg-gray-800 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition border border-gray-200 dark:border-gray-700 shadow-sm">
                     <ArrowLeft className="w-6 h-6 text-gray-500 dark:text-gray-400" />
-                </Link>
+                </button>
                 <div className="flex-1">
                     <h1 className="text-2xl font-bold flex items-center gap-2">
                         <BarChart3 className="w-6 h-6 text-blue-600 dark:text-blue-400" />
@@ -191,7 +193,7 @@ export default function Relatorios() {
                             <div className="bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden print:bg-none print:bg-white print:border print:border-gray-300 print:text-black print:shadow-none print:break-inside-avoid">
                                 <div className="absolute right-0 top-0 p-4 opacity-20 print:hidden"><Droplet className="w-24 h-24" /></div>
                                 <p className="text-green-100 font-medium text-sm uppercase tracking-wider mb-1 print:text-gray-500">Total Consumido</p>
-                                <h3 className="text-4xl font-bold">{metrics.totalConsumido.toFixed(1)} <span className="text-lg font-normal">L</span></h3>
+                                <h3 className="text-4xl font-bold">{metrics.totalConsumido.toFixed(2).replace('.', ',')} <span className="text-lg font-normal">L</span></h3>
                                 <p className="text-green-100 text-xs mt-2 opacity-80 print:text-gray-400">Apenas consumo em sessões</p>
                             </div>
 
@@ -262,7 +264,7 @@ export default function Relatorios() {
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 print:grid-cols-3">
                                 <div className="print:border-l-4 print:border-blue-500 print:pl-4">
                                     <p className="text-xs text-gray-500 dark:text-gray-400 uppercase">Média p/ Sessão</p>
-                                    <p className="text-2xl font-bold text-gray-900 dark:text-white print:text-black">{metrics.mediaPorSessao.toFixed(2)} L</p>
+                                    <p className="text-2xl font-bold text-gray-900 dark:text-white print:text-black">{metrics.mediaPorSessao.toFixed(2).replace('.', ',')} L</p>
                                 </div>
                                 <div className="print:border-l-4 print:border-blue-500 print:pl-4">
                                     <p className="text-xs text-gray-500 dark:text-gray-400 uppercase">Per Capita (aprox)</p>
@@ -270,7 +272,7 @@ export default function Relatorios() {
                                 </div>
                                 <div className="print:border-l-4 print:border-blue-500 print:pl-4">
                                     <p className="text-xs text-gray-500 dark:text-gray-400 uppercase">Saídas Externas</p>
-                                    <p className="text-2xl font-bold text-blue-600 dark:text-blue-400 print:text-black">{metrics.totalSaidas.toFixed(1)} L</p>
+                                    <p className="text-2xl font-bold text-blue-600 dark:text-blue-400 print:text-black">{metrics.totalSaidas.toFixed(2).replace('.', ',')} L</p>
                                 </div>
                             </div>
                         </div>

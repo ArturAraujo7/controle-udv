@@ -8,8 +8,9 @@ import Link from 'next/link'
 type Preparo = {
   id: number
   data_preparo: string
-  mestre_preparo: string // CORRIGIDO: Era 'responsavel'
+  mestre_preparo: string
   grau: string
+  quantidade_preparada: number
 }
 
 export default function NovaSaida() {
@@ -27,13 +28,22 @@ export default function NovaSaida() {
 
   useEffect(() => {
     async function fetchPreparos() {
-      // CORRIGIDO: Agora buscando 'mestre_preparo'
-      const { data, error } = await supabase
+      const { data: preparos, error } = await supabase
         .from('preparos')
-        .select('id, data_preparo, mestre_preparo, grau')
+        .select('id, data_preparo, mestre_preparo, grau, quantidade_preparada')
         .order('data_preparo', { ascending: false })
 
-      if (data) setPreparos(data)
+      const { data: consumos } = await supabase.from('consumos_sessao').select('id_preparo, quantidade_consumida')
+      const { data: saidas } = await supabase.from('saidas').select('preparo_id, quantidade')
+
+      if (preparos) {
+        const preparosComSaldo = preparos.filter(p => {
+          const consumido = consumos?.filter(c => c.id_preparo === p.id).reduce((acc, curr) => acc + (curr.quantidade_consumida || 0), 0) || 0
+          const saido = saidas?.filter(s => s.preparo_id === p.id).reduce((acc, curr) => acc + (curr.quantidade || 0), 0) || 0
+          return (p.quantidade_preparada - consumido - saido) > 0
+        })
+        setPreparos(preparosComSaldo)
+      }
       if (error) console.error('Erro ao buscar preparos:', error)
     }
     fetchPreparos()
@@ -62,7 +72,7 @@ export default function NovaSaida() {
       alert('Erro ao salvar: ' + error.message)
       setLoading(false)
     } else {
-      router.push('/')
+      router.replace('/')
       router.refresh()
     }
   }
@@ -70,9 +80,9 @@ export default function NovaSaida() {
   return (
     <main className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 pb-20 text-gray-900 dark:text-white transition-colors duration-300">
       <header className="flex items-center gap-4 mb-8 pt-4">
-        <Link href="/" className="p-2 bg-white dark:bg-gray-800 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition border border-gray-200 dark:border-gray-700 shadow-sm">
+        <button type="button" onClick={() => router.back()} className="p-2 bg-white dark:bg-gray-800 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition border border-gray-200 dark:border-gray-700 shadow-sm">
           <ArrowLeft className="w-6 h-6 text-gray-500 dark:text-gray-400" />
-        </Link>
+        </button>
         <h1 className="text-2xl font-bold">Registrar Saída/Doação</h1>
       </header>
 

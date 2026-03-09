@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { ArrowLeft, Beaker, Plus, Truck, Droplet, Pencil, Search, Users } from 'lucide-react'
 
 type PreparoComSaldo = {
@@ -19,6 +20,7 @@ type PreparoComSaldo = {
 }
 
 export default function GerenciarEstoque() {
+  const router = useRouter()
   const [preparos, setPreparos] = useState<PreparoComSaldo[]>([])
   const [saldoTotal, setSaldoTotal] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -49,7 +51,7 @@ export default function GerenciarEstoque() {
         const totalConsumido = totalSessoes + totalSaidas
 
         const saldo = preparo.quantidade_preparada - totalConsumido
-        if (saldo > 0) somaTotal += saldo
+        somaTotal += saldo
 
         return { ...preparo, total_consumido: totalConsumido, saldo: saldo }
       }) || []
@@ -65,9 +67,9 @@ export default function GerenciarEstoque() {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 pb-20 text-gray-900 dark:text-white transition-colors duration-300">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center">
-          <Link href="/" className="p-2 bg-white dark:bg-gray-800 rounded-full shadow-sm mr-4 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+          <button type="button" onClick={() => router.back()} className="p-2 bg-white dark:bg-gray-800 rounded-full shadow-sm mr-4 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
             <ArrowLeft className="w-5 h-5 text-gray-500 dark:text-gray-300" />
-          </Link>
+          </button>
           <h1 className="text-xl font-bold">Estoque</h1>
         </div>
         <Link href="/novo-preparo" className="p-2 bg-green-600 rounded-full shadow-lg text-white hover:bg-green-700 active:scale-95 transition-all">
@@ -87,7 +89,7 @@ export default function GerenciarEstoque() {
             </div>
             <p className="text-sm text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wider mb-1">Saldo Total Disponível</p>
             <div className="flex items-baseline justify-center gap-1">
-              <span className="text-5xl font-bold text-gray-900 dark:text-white tracking-tight">{saldoTotal.toFixed(1)}</span>
+              <span className="text-5xl font-bold text-gray-900 dark:text-white tracking-tight">{saldoTotal.toFixed(2).replace('.', ',')}</span>
               <span className="text-xl text-gray-500 font-medium">Litros</span>
             </div>
           </div>
@@ -173,7 +175,7 @@ export default function GerenciarEstoque() {
 
                           <div className="mt-8"> {/* Espaço pra compensar o botão editar */}
                             <p className={`text-2xl font-bold ${isDoacao ? 'text-blue-600 dark:text-blue-100' : 'text-green-600 dark:text-green-50'}`}>
-                              {preparo.saldo.toFixed(1)} <span className="text-sm font-normal text-gray-500">L</span>
+                              {preparo.saldo.toFixed(2).replace('.', ',')} <span className="text-sm font-normal text-gray-500">L</span>
                             </p>
                             <p className="text-xs text-gray-500">restantes</p>
                           </div>
@@ -186,7 +188,7 @@ export default function GerenciarEstoque() {
                           Inicial: <strong className="text-gray-700 dark:text-gray-300">{preparo.quantidade_preparada} L</strong>
                         </div>
                         <div>
-                          Consumido: <strong className="text-gray-700 dark:text-gray-300">{preparo.total_consumido.toFixed(1)} L</strong>
+                          Consumido: <strong className="text-gray-700 dark:text-gray-300">{preparo.total_consumido.toFixed(2).replace('.', ',')} L</strong>
                         </div>
                       </div>
                     </Link> {/* Fim do Link principal */}
