@@ -31,7 +31,7 @@ type ConsumoDetalhado = {
 
 type Movimentacao = {
   id: string
-  tipo_movimento: 'entrada' | 'saida' | 'consumo'
+  tipo_movimento: 'entrada' | 'saida' | 'consumo' | 'historico'
   data: string
   titulo: string
   subtitulo: string
@@ -118,13 +118,15 @@ export default function Home() {
           const consumosDaSessao = consumos?.filter(c => c.id_sessao === s.id) || []
           const totalConsumidoNaSessao = consumosDaSessao.reduce((acc, curr) => acc + (curr.quantidade_consumida || 0), 0)
 
-          if (totalConsumidoNaSessao > 0) {
+          const isSessaoHistorica = s.quantidade_participantes === 0;
+
+          if (totalConsumidoNaSessao > 0 || isSessaoHistorica) {
             movimentos.push({
               id: `sessao-${s.id}`,
-              tipo_movimento: 'consumo',
+              tipo_movimento: isSessaoHistorica ? 'historico' : 'consumo',
               data: s.data_realizacao,
-              titulo: `Sessão: ${s.tipo || 'Sem Tipo'}`,
-              subtitulo: `${s.quantidade_participantes || 0} participantes`,
+              titulo: isSessaoHistorica ? `Registro: ${s.tipo || 'Sem Tipo'}` : `Sessão: ${s.tipo || 'Sem Tipo'}`,
+              subtitulo: isSessaoHistorica ? `Memória M. ${s.dirigente}` : `${s.quantidade_participantes || 0} participantes`,
               quantidade: totalConsumidoNaSessao,
               detalhesSessao: s
             })
@@ -272,6 +274,21 @@ export default function Home() {
           </div>
         </Link>
 
+        <Link href="/nova-sessao-historica" className="group">
+          <div className="bg-amber-600 p-4 rounded-xl shadow-lg flex items-center justify-between active:scale-95 transition-all">
+            <div className="flex items-center gap-4">
+              <div className="bg-white/20 p-2 rounded-lg backdrop-blur-sm">
+                <BookOpen className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h3 className="text-white font-bold">Registro Histórico</h3>
+                <p className="text-amber-100 text-xs">Sessões antigas s/ vegetal</p>
+              </div>
+            </div>
+            <ChevronRight className="text-white/50" />
+          </div>
+        </Link>
+
         <Link href="/nova-saida" className="group">
           <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 flex items-center justify-between active:scale-95 transition-all">
             <div className="flex items-center gap-4">
@@ -332,25 +349,28 @@ export default function Home() {
             const isEntrada = mov.tipo_movimento === 'entrada'
             const isConsumo = mov.tipo_movimento === 'consumo'
             const isSaida = mov.tipo_movimento === 'saida'
+            const isHistorico = mov.tipo_movimento === 'historico'
 
             return (
               <div
                 key={mov.id}
                 onClick={() => {
-                  if (isConsumo && mov.detalhesSessao) {
+                  if ((isConsumo || isHistorico) && mov.detalhesSessao) {
                     handleOpenModal(mov.detalhesSessao)
                   }
                 }}
-                className={`bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 flex items-center justify-between transition-all ${isConsumo ? 'active:scale-95 hover:bg-gray-50 dark:hover:bg-gray-750 cursor-pointer' : ''}`}
+                className={`bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 flex items-center justify-between transition-all ${(isConsumo || isHistorico) ? 'active:scale-95 hover:bg-gray-50 dark:hover:bg-gray-750 cursor-pointer' : ''}`}
               >
                 <div className="flex items-center gap-4">
                   <div className={`p-2 rounded-lg ${isEntrada ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400' :
                     isSaida ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400' :
-                      'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
+                      isHistorico ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400' :
+                        'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
                     }`}>
                     {isEntrada ? <Database className="w-5 h-5" /> :
                       isSaida ? <ArrowUpRight className="w-5 h-5" /> :
-                        <History className="w-5 h-5" />}
+                        isHistorico ? <BookOpen className="w-5 h-5" /> :
+                          <History className="w-5 h-5" />}
                   </div>
                   <div>
                     <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mb-1">
@@ -361,11 +381,17 @@ export default function Home() {
                   </div>
                 </div>
                 <div className="text-right">
-                  <span className={`text-sm font-bold ${isEntrada ? 'text-green-600 dark:text-green-400' :
-                    'text-red-500 dark:text-red-400'
-                    }`}>
-                    {isEntrada ? '+' : '-'}{mov.quantidade.toFixed(2).replace('.', ',')} <span className="text-[10px] font-normal">L</span>
-                  </span>
+                  {isHistorico ? (
+                    <span className="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider">
+                      Histórica
+                    </span>
+                  ) : (
+                    <span className={`text-sm font-bold ${isEntrada ? 'text-green-600 dark:text-green-400' :
+                      'text-red-500 dark:text-red-400'
+                      }`}>
+                      {isEntrada ? '+' : '-'}{mov.quantidade.toFixed(2).replace('.', ',')} <span className="text-[10px] font-normal">L</span>
+                    </span>
+                  )}
                 </div>
               </div>
             )
@@ -387,7 +413,11 @@ export default function Home() {
                 </h2>
                 <div className="flex items-center gap-2 mt-2 text-sm text-gray-500 dark:text-gray-400">
                   <Users className="w-4 h-4" />
-                  <span>{selectedSession.quantidade_participantes} participantes</span>
+                  {selectedSession.quantidade_participantes === 0 ? (
+                    <span>Registro Histórico (S/ Participantes)</span>
+                  ) : (
+                    <span>{selectedSession.quantidade_participantes} participantes</span>
+                  )}
                 </div>
               </div>
               <button onClick={handleCloseModal} className="p-2 bg-gray-200 dark:bg-gray-700 rounded-full hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
@@ -433,43 +463,53 @@ export default function Home() {
               </div>
 
               {/* Lista de Consumo */}
-              <div>
-                <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-3">
-                  <Droplet className="w-5 h-5 text-green-600 dark:text-green-500" />
-                  O que foi servido
-                </h3>
+              {selectedSession.quantidade_participantes === 0 ? (
+                <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 p-6 rounded-xl text-center">
+                  <BookOpen className="w-8 h-8 text-amber-500 dark:text-amber-600 mx-auto mb-3" />
+                  <h3 className="font-bold text-amber-800 dark:text-amber-400 mb-1">Registro de Memória Institucional</h3>
+                  <p className="text-sm text-amber-700/80 dark:text-amber-500/80">
+                    Sessão histórica inserida sem registro quantitativo de participantes ou consumo de vegetal.
+                  </p>
+                </div>
+              ) : (
+                <div>
+                  <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-3">
+                    <Droplet className="w-5 h-5 text-green-600 dark:text-green-500" />
+                    O que foi servido
+                  </h3>
 
-                {loadingDetails ? (
-                  <div className="space-y-3">
-                    <div className="h-16 bg-gray-100 dark:bg-gray-700 rounded-xl animate-pulse"></div>
-                    <div className="h-16 bg-gray-100 dark:bg-gray-700 rounded-xl animate-pulse"></div>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {sessionConsumos.length > 0 ? (
-                      sessionConsumos.map((item) => (
-                        <div key={item.id} className="bg-green-50 dark:bg-green-900/10 border border-green-100 dark:border-green-900/30 p-4 rounded-xl flex justify-between items-center">
-                          <div>
-                            <p className="font-bold text-gray-900 dark:text-white">
-                              {item.preparos?.mestre_preparo || 'Mestre Desconhecido'}
-                            </p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                              {item.preparos?.data_preparo ? new Date(item.preparos.data_preparo).toLocaleDateString('pt-BR') : '-'} • {item.preparos?.grau || '-'}
-                            </p>
+                  {loadingDetails ? (
+                    <div className="space-y-3">
+                      <div className="h-16 bg-gray-100 dark:bg-gray-700 rounded-xl animate-pulse"></div>
+                      <div className="h-16 bg-gray-100 dark:bg-gray-700 rounded-xl animate-pulse"></div>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {sessionConsumos.length > 0 ? (
+                        sessionConsumos.map((item) => (
+                          <div key={item.id} className="bg-green-50 dark:bg-green-900/10 border border-green-100 dark:border-green-900/30 p-4 rounded-xl flex justify-between items-center">
+                            <div>
+                              <p className="font-bold text-gray-900 dark:text-white">
+                                {item.preparos?.mestre_preparo || 'Mestre Desconhecido'}
+                              </p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                {item.preparos?.data_preparo ? new Date(item.preparos.data_preparo).toLocaleDateString('pt-BR') : '-'} • {item.preparos?.grau || '-'}
+                              </p>
+                            </div>
+                            <div className="text-right">
+                              <span className="block text-xl font-bold text-green-700 dark:text-green-400">
+                                {item.quantidade_consumida} <span className="text-sm font-normal">L</span>
+                              </span>
+                            </div>
                           </div>
-                          <div className="text-right">
-                            <span className="block text-xl font-bold text-green-700 dark:text-green-400">
-                              {item.quantidade_consumida} <span className="text-sm font-normal">L</span>
-                            </span>
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <p className="text-center text-gray-400 italic py-4">Nenhum registro de consumo encontrado.</p>
-                    )}
-                  </div>
-                )}
-              </div>
+                        ))
+                      ) : (
+                        <p className="text-center text-gray-400 italic py-4">Nenhum registro de consumo encontrado.</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Botão de Editar */}
               <div className="pt-2">

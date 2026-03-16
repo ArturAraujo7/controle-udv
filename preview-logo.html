@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Preview Logo Guardião</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            font-family: system-ui, -apple-system, sans-serif;
+            transition: background-color 0.3s;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2rem;
+            text-align: center;
+        }
+        .logo-box {
+            padding: 3rem;
+            border-radius: 2rem;
+            box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+        }
+        .light {
+            background-color: #f8fafc;
+            color: #0f172a;
+        }
+        .light .logo-box {
+            background-color: #ffffff;
+        }
+        .dark {
+            background-color: #020617;
+            color: #f8fafc;
+        }
+        .dark .logo-box {
+            background-color: #0f172a;
+            box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.5);
+        }
+        .controls {
+            display: flex;
+            gap: 1rem;
+        }
+        button {
+            padding: 0.75rem 1.5rem;
+            border-radius: 9999px;
+            border: none;
+            font-weight: bold;
+            cursor: pointer;
+            background: #d97706; /* Dourado */
+            color: white;
+            transition: opacity 0.2s;
+        }
+        button:hover {
+            opacity: 0.9;
+        }
+        .brand-name {
+            font-size: 2.5rem;
+            font-weight: 800;
+            letter-spacing: -0.05em;
+            margin-top: 1rem;
+            background: linear-gradient(to right, #d97706, #fbbf24);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .brand-subtitle {
+            font-size: 1rem;
+            font-weight: 500;
+            color: #0284c7; /* Celeste */
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+        }
+    </style>
+</head>
+<body class="light" id="body">
+    <div class="container">
+        
+        <div class="logo-box">
+            <!-- INÍCIO DO SVG DO LOGO -->
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="160" height="160">
+                <defs>
+                    <linearGradient id="goldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#FDE68A" /> <!-- gold-200 -->
+                        <stop offset="50%" stop-color="#F59E0B" /> <!-- gold-500 -->
+                        <stop offset="100%" stop-color="#B45309" /> <!-- gold-700 -->
+                    </linearGradient>
+                    <linearGradient id="skyGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#7DD3FC" /> <!-- sky-300 -->
+                        <stop offset="100%" stop-color="#0284C7" /> <!-- sky-600 -->
+                    </linearGradient>
+                    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+                        <feGaussianBlur stdDeviation="4" result="blur" />
+                        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                    </filter>
+                </defs>
+
+                <!-- Escudo Base / Moldura Externa (O Guardião) -->
+                <path d="M50 5 
+                         C80 5, 90 20, 90 35 
+                         C90 65, 65 90, 50 95 
+                         C35 90, 10 65, 10 35 
+                         C10 20, 20 5, 50 5 Z" 
+                      fill="none" 
+                      stroke="url(#goldGradient)" 
+                      stroke-width="6" 
+                      stroke-linejoin="round" />
+                
+                <!-- Escudo Interno (Camada de Reforço) -->
+                <path d="M50 16 
+                         C72 16, 78 26, 78 38 
+                         C78 60, 60 78, 50 83 
+                         C40 78, 22 60, 22 38 
+                         C22 26, 28 16, 50 16 Z" 
+                      fill="none" 
+                      stroke="url(#goldGradient)" 
+                      stroke-width="2" 
+                      opacity="0.6" />
+
+                <!-- O Centro / A Luz / A Gota Celeste -->
+                <path d="M50 28 
+                         C60 38, 65 48, 65 55 
+                         C65 65, 58 70, 50 70 
+                         C42 70, 35 65, 35 55 
+                         C35 48, 40 38, 50 28 Z" 
+                      fill="url(#skyGradient)" />
+                
+                <!-- Brilho Central / Estrela da Luz (Dourado de novo) -->
+                <path d="M50 40 
+                         L52 50 
+                         L62 52 
+                         L52 54 
+                         L50 64 
+                         L48 54 
+                         L38 52 
+                         L48 50 Z" 
+                      fill="#FFFFFF" 
+                      filter="url(#glow)"
+                      opacity="0.9"/>
+            </svg>
+            <!-- FIM DO SVG -->
+            
+            <div class="brand-name">GUARDIÃO</div>
+            <div class="brand-subtitle">Controle UDV</div>
+        </div>
+
+        <div class="controls">
+            <button onclick="document.getElementById('body').className = 'light'">Modo Claro</button>
+            <button onclick="document.getElementById('body').className = 'dark'" style="background: #1e293b; border: 1px solid #334155;">Modo Escuro</button>
+        </div>
+    </div>
+</body>
+</html>

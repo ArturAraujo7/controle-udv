@@ -165,15 +165,24 @@ export default function HistoricoSessoes() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-                <div className="flex items-center gap-2">
-                  <Users className="w-4 h-4 text-blue-500 dark:text-blue-400" />
-                  <span className="text-sm font-medium text-gray-600 dark:text-gray-300">{sessao.quantidade_participantes} pessoas</span>
-                </div>
-                <div className="flex items-center gap-2 justify-end">
-                  <Droplet className="w-4 h-4 text-green-600 dark:text-green-500" />
-                  <span className="text-sm font-bold text-gray-900 dark:text-white">{sessao.quantidade_consumida} L</span>
-                </div>
+              <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+                {sessao.quantidade_participantes === 0 ? (
+                  <div className="flex items-center justify-center gap-2 text-amber-600 dark:text-amber-500 bg-amber-50 dark:bg-amber-900/10 p-2 rounded-lg border border-amber-100 dark:border-amber-900/30">
+                    <BookOpen className="w-4 h-4" />
+                    <span className="text-xs font-bold uppercase tracking-wider">Registro Histórico</span>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="flex items-center gap-2">
+                      <Users className="w-4 h-4 text-blue-500 dark:text-blue-400" />
+                      <span className="text-sm font-medium text-gray-600 dark:text-gray-300">{sessao.quantidade_participantes} pessoas</span>
+                    </div>
+                    <div className="flex items-center gap-2 justify-end">
+                      <Droplet className="w-4 h-4 text-green-600 dark:text-green-500" />
+                      <span className="text-sm font-bold text-gray-900 dark:text-white">{sessao.quantidade_consumida} L</span>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           ))}
@@ -194,7 +203,11 @@ export default function HistoricoSessoes() {
                 </h2>
                 <div className="flex items-center gap-2 mt-2 text-sm text-gray-500 dark:text-gray-400">
                   <Users className="w-4 h-4" />
-                  <span>{selectedSession.quantidade_participantes} participantes</span>
+                  {selectedSession.quantidade_participantes === 0 ? (
+                    <span>Registro Histórico (S/ Participantes)</span>
+                  ) : (
+                    <span>{selectedSession.quantidade_participantes} participantes</span>
+                  )}
                 </div>
               </div>
               <button onClick={handleCloseModal} className="p-2 bg-gray-200 dark:bg-gray-700 rounded-full hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
@@ -240,43 +253,53 @@ export default function HistoricoSessoes() {
               </div>
 
               {/* Lista de Consumo */}
-              <div>
-                <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-3">
-                  <Droplet className="w-5 h-5 text-green-600 dark:text-green-500" />
-                  O que foi servido
-                </h3>
+              {selectedSession.quantidade_participantes === 0 ? (
+                <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 p-6 rounded-xl text-center">
+                  <BookOpen className="w-8 h-8 text-amber-500 dark:text-amber-600 mx-auto mb-3" />
+                  <h3 className="font-bold text-amber-800 dark:text-amber-400 mb-1">Registro de Memória Institucional</h3>
+                  <p className="text-sm text-amber-700/80 dark:text-amber-500/80">
+                    Sessão histórica inserida sem registro quantitativo de participantes ou consumo de vegetal.
+                  </p>
+                </div>
+              ) : (
+                <div>
+                  <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-3">
+                    <Droplet className="w-5 h-5 text-green-600 dark:text-green-500" />
+                    O que foi servido
+                  </h3>
 
-                {loadingDetails ? (
-                  <div className="space-y-3">
-                    <div className="h-16 bg-gray-100 dark:bg-gray-700 rounded-xl animate-pulse"></div>
-                    <div className="h-16 bg-gray-100 dark:bg-gray-700 rounded-xl animate-pulse"></div>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {sessionConsumos.length > 0 ? (
-                      sessionConsumos.map((item) => (
-                        <div key={item.id} className="bg-green-50 dark:bg-green-900/10 border border-green-100 dark:border-green-900/30 p-4 rounded-xl flex justify-between items-center">
-                          <div>
-                            <p className="font-bold text-gray-900 dark:text-white">
-                              {item.preparos?.mestre_preparo || 'Mestre Desconhecido'}
-                            </p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                              {item.preparos?.data_preparo ? new Date(item.preparos.data_preparo).toLocaleDateString('pt-BR') : '-'} • {item.preparos?.grau || '-'}
-                            </p>
+                  {loadingDetails ? (
+                    <div className="space-y-3">
+                      <div className="h-16 bg-gray-100 dark:bg-gray-700 rounded-xl animate-pulse"></div>
+                      <div className="h-16 bg-gray-100 dark:bg-gray-700 rounded-xl animate-pulse"></div>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {sessionConsumos.length > 0 ? (
+                        sessionConsumos.map((item) => (
+                          <div key={item.id} className="bg-green-50 dark:bg-green-900/10 border border-green-100 dark:border-green-900/30 p-4 rounded-xl flex justify-between items-center">
+                            <div>
+                              <p className="font-bold text-gray-900 dark:text-white">
+                                {item.preparos?.mestre_preparo || 'Mestre Desconhecido'}
+                              </p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                {item.preparos?.data_preparo ? new Date(item.preparos.data_preparo).toLocaleDateString('pt-BR') : '-'} • {item.preparos?.grau || '-'}
+                              </p>
+                            </div>
+                            <div className="text-right">
+                              <span className="block text-xl font-bold text-green-700 dark:text-green-400">
+                                {item.quantidade_consumida} <span className="text-sm font-normal">L</span>
+                              </span>
+                            </div>
                           </div>
-                          <div className="text-right">
-                            <span className="block text-xl font-bold text-green-700 dark:text-green-400">
-                              {item.quantidade_consumida} <span className="text-sm font-normal">L</span>
-                            </span>
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <p className="text-center text-gray-400 italic py-4">Nenhum registro de consumo encontrado.</p>
-                    )}
-                  </div>
-                )}
-              </div>
+                        ))
+                      ) : (
+                        <p className="text-center text-gray-400 italic py-4">Nenhum registro de consumo encontrado.</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Botão de Editar */}
               <div className="pt-2">
