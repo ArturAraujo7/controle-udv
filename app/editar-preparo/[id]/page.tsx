@@ -113,20 +113,20 @@ export default function EditarPreparo({ params }: { params: Promise<{ id: string
 
         {/* Seletor de Tipo (apenas visual ou editável se quiser mudar o tipo depois) */}
         <div className="flex bg-white dark:bg-gray-800 p-1 rounded-xl mb-6 border border-gray-200 dark:border-gray-700 opacity-50 pointer-events-none"> {/* Desabilitei mudança de tipo pra evitar confusão, mas pode habilitar tirando pointer-events-none */}
-          <button type="button" className={`flex-1 py-2 rounded-lg text-sm font-bold ${tipoEntrada === 'Local' ? 'bg-green-600 text-white shadow-md' : 'text-gray-500 dark:text-gray-400'}`}>Produção Local</button>
-          <button type="button" className={`flex-1 py-2 rounded-lg text-sm font-bold ${tipoEntrada === 'Doação' ? 'bg-blue-600 text-white shadow-md' : 'text-gray-500 dark:text-gray-400'}`}>Doação Recebida</button>
+          <button type="button" className={`flex-1 py-2 rounded-lg text-sm font-bold ${tipoEntrada === 'Local' ? 'bg-gold-600 text-white shadow-md' : 'text-gray-500 dark:text-gray-400'}`}>Produção Local</button>
+          <button type="button" className={`flex-1 py-2 rounded-lg text-sm font-bold ${tipoEntrada === 'Doação' ? 'bg-celestial-600 text-white shadow-md' : 'text-gray-500 dark:text-gray-400'}`}>Doação Recebida</button>
         </div>
 
         {tipoEntrada === 'Doação' && (
-          <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl border border-blue-100 dark:border-blue-800/50 space-y-4">
-            <div className="flex items-center gap-2 mb-2"><Truck className="w-5 h-5 text-blue-500 dark:text-blue-400" /><label className="text-sm font-bold text-blue-700 dark:text-blue-100">Dados do Recebimento</label></div>
-            <div><label className="text-xs text-blue-600 dark:text-blue-200 font-medium block mb-1">Chegada</label><input type="date" className="w-full bg-white dark:bg-gray-800 rounded-lg p-2 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 outline-none dark:[color-scheme:dark]" value={formData.data_chegada} onChange={e => setFormData({ ...formData, data_chegada: e.target.value })} /></div>
-            <div><label className="text-xs text-blue-600 dark:text-blue-200 font-medium block mb-1">Origem</label><input type="text" className="w-full bg-white dark:bg-gray-800 rounded-lg p-2 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 outline-none" value={formData.nucleo_origem} onChange={e => setFormData({ ...formData, nucleo_origem: e.target.value })} /></div>
+          <div className="bg-celestial-50 dark:bg-celestial-900/20 p-4 rounded-xl border border-celestial-100 dark:border-celestial-800/50 space-y-4">
+            <div className="flex items-center gap-2 mb-2"><Truck className="w-5 h-5 text-celestial-500 dark:text-celestial-400" /><label className="text-sm font-bold text-celestial-700 dark:text-celestial-100">Dados do Recebimento</label></div>
+            <div><label className="text-xs text-celestial-600 dark:text-celestial-200 font-medium block mb-1">Chegada</label><input type="date" className="w-full bg-white dark:bg-gray-800 rounded-lg p-2 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 outline-none dark:[color-scheme:dark]" value={formData.data_chegada} onChange={e => setFormData({ ...formData, data_chegada: e.target.value })} /></div>
+            <div><label className="text-xs text-celestial-600 dark:text-celestial-200 font-medium block mb-1">Origem</label><input type="text" className="w-full bg-white dark:bg-gray-800 rounded-lg p-2 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 outline-none" value={formData.nucleo_origem} onChange={e => setFormData({ ...formData, nucleo_origem: e.target.value })} /></div>
           </div>
         )}
 
         <div className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 space-y-4">
-          <div className="flex items-center gap-2 mb-2 border-b border-gray-100 dark:border-gray-700 pb-2"><Beaker className="w-5 h-5 text-green-600 dark:text-green-500" /><label className="text-sm font-bold text-gray-900 dark:text-gray-200">Dados do Vegetal</label></div>
+          <div className="flex items-center gap-2 mb-2 border-b border-gray-100 dark:border-gray-700 pb-2"><Beaker className="w-5 h-5 text-gold-600 dark:text-gold-500" /><label className="text-sm font-bold text-gray-900 dark:text-gray-200">Dados do Vegetal</label></div>
           <div><label className="text-xs text-gray-500 dark:text-gray-400 font-medium block mb-1">Data Preparo</label><input type="date" className="w-full bg-transparent font-semibold outline-none text-gray-900 dark:text-white dark:[color-scheme:dark]" value={formData.data_preparo} onChange={e => setFormData({ ...formData, data_preparo: e.target.value })} /></div>
           <div><label className="text-xs text-gray-500 dark:text-gray-400 font-medium block mb-1">Mestre</label><input type="text" className="w-full bg-transparent font-semibold outline-none text-gray-900 dark:text-white" value={formData.mestre_preparo} onChange={e => setFormData({ ...formData, mestre_preparo: e.target.value })} /></div>
 
@@ -136,7 +136,7 @@ export default function EditarPreparo({ params }: { params: Promise<{ id: string
               <input
                 type="text"
                 placeholder="Ex: Seringal Novo"
-                className="w-full bg-transparent border-b border-gray-200 dark:border-gray-700 pb-1 outline-none text-gray-900 dark:text-white text-sm placeholder-gray-400 dark:placeholder-gray-600 focus:border-green-500 transition-colors"
+                className="w-full bg-transparent border-b border-gray-200 dark:border-gray-700 pb-1 outline-none text-gray-900 dark:text-white text-sm placeholder-gray-400 dark:placeholder-gray-600 focus:border-gold-500 transition-colors"
                 value={formData.procedencia_mariri}
                 onChange={e => setFormData({ ...formData, procedencia_mariri: e.target.value })}
               />
@@ -146,7 +146,7 @@ export default function EditarPreparo({ params }: { params: Promise<{ id: string
               <input
                 type="text"
                 placeholder="Ex: Plantio Local"
-                className="w-full bg-transparent border-b border-gray-200 dark:border-gray-700 pb-1 outline-none text-gray-900 dark:text-white text-sm placeholder-gray-400 dark:placeholder-gray-600 focus:border-green-500 transition-colors"
+                className="w-full bg-transparent border-b border-gray-200 dark:border-gray-700 pb-1 outline-none text-gray-900 dark:text-white text-sm placeholder-gray-400 dark:placeholder-gray-600 focus:border-gold-500 transition-colors"
                 value={formData.procedencia_chacrona}
                 onChange={e => setFormData({ ...formData, procedencia_chacrona: e.target.value })}
               />
@@ -159,7 +159,7 @@ export default function EditarPreparo({ params }: { params: Promise<{ id: string
           </div>
         </div>
 
-        <button type="submit" disabled={saving} className="w-full bg-green-600 text-white py-4 rounded-xl font-bold text-lg hover:bg-green-700 transition-all flex items-center justify-center gap-2 mt-4 shadow-lg hover:shadow-green-900/20">
+        <button type="submit" disabled={saving} className="w-full bg-gold-600 text-white py-4 rounded-xl font-bold text-lg hover:bg-gold-700 transition-all flex items-center justify-center gap-2 mt-4 shadow-lg hover:shadow-gold-900/20">
           {saving ? 'Salvando...' : <><Save className="w-5 h-5" /> Salvar Alterações</>}
         </button>
       </form>

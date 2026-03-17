@@ -256,7 +256,7 @@ export default function EditarSessao({ params }: { params: Promise<{ id: string 
           <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar mask-fade-right">
             {tiposSessao.map(tipo => (
               <button key={tipo} type="button" onClick={() => setFormData({ ...formData, tipo })}
-                className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all border ${formData.tipo === tipo ? 'bg-blue-600 text-white border-blue-500 shadow-lg shadow-blue-900/20' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'}`}>
+                className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all border ${formData.tipo === tipo ? 'bg-celestial-600 text-white border-celestial-500 shadow-lg shadow-celestial-900/20' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'}`}>
                 {tipo}
               </button>
             ))}
@@ -267,10 +267,10 @@ export default function EditarSessao({ params }: { params: Promise<{ id: string 
         <section className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm relative overflow-hidden">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <Beaker className="w-4 h-4 text-green-600 dark:text-green-500" />
+              <Beaker className="w-4 h-4 text-gold-600 dark:text-gold-500" />
               <label className="text-xs text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wider">Vegetal Servido</label>
             </div>
-            <span className="text-xs font-mono text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900/30 px-2 py-1 rounded">
+            <span className="text-xs font-mono text-gold-600 dark:text-gold-400 bg-gold-100 dark:bg-gold-900/30 px-2 py-1 rounded">
               Total: {totalConsumido.toFixed(2).replace('.', ',')} L
             </span>
           </div>
@@ -280,7 +280,7 @@ export default function EditarSessao({ params }: { params: Promise<{ id: string 
               <div key={index} className="flex gap-2 items-start animate-in fade-in slide-in-from-top-1 duration-200">
                 <div className="flex-1">
                   <select
-                    className="w-full bg-gray-50 dark:bg-gray-900/50 outline-none font-medium py-2 px-3 rounded-lg border border-gray-200 dark:border-gray-600 text-sm text-gray-900 dark:text-white focus:border-green-500 transition-colors appearance-none"
+                    className="w-full bg-gray-50 dark:bg-gray-900/50 outline-none font-medium py-2 px-3 rounded-lg border border-gray-200 dark:border-gray-600 text-sm text-gray-900 dark:text-white focus:border-gold-500 transition-colors appearance-none"
                     value={item.id_preparo}
                     onChange={e => updateConsumo(index, 'id_preparo', e.target.value)}
                   >
@@ -297,7 +297,7 @@ export default function EditarSessao({ params }: { params: Promise<{ id: string 
                     type="number"
                     step="0.1"
                     placeholder="Qtd"
-                    className="w-full bg-gray-50 dark:bg-gray-900/50 outline-none font-medium py-2 px-2 rounded-lg border border-gray-200 dark:border-gray-600 text-sm text-gray-900 dark:text-white focus:border-green-500 transition-colors text-center"
+                    className="w-full bg-gray-50 dark:bg-gray-900/50 outline-none font-medium py-2 px-2 rounded-lg border border-gray-200 dark:border-gray-600 text-sm text-gray-900 dark:text-white focus:border-gold-500 transition-colors text-center"
                     value={item.quantidade}
                     onChange={e => updateConsumo(index, 'quantidade', e.target.value)}
                   />
@@ -318,7 +318,7 @@ export default function EditarSessao({ params }: { params: Promise<{ id: string 
           <button
             type="button"
             onClick={addConsumo}
-            className="mt-4 text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300 flex items-center gap-1 py-2 px-3 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors w-full justify-center border border-dashed border-blue-200 dark:border-blue-900/50"
+            className="mt-4 text-xs font-medium text-celestial-600 dark:text-celestial-400 hover:text-celestial-500 dark:hover:text-celestial-300 flex items-center gap-1 py-2 px-3 rounded-lg hover:bg-celestial-50 dark:hover:bg-celestial-900/20 transition-colors w-full justify-center border border-dashed border-celestial-200 dark:border-celestial-900/50"
           >
             <Plus className="w-3 h-3" /> Adicionar outro preparo
           </button>
@@ -343,7 +343,7 @@ export default function EditarSessao({ params }: { params: Promise<{ id: string 
           </div>
 
           <div className="bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm flex items-center gap-3">
-            <div className="p-2 bg-gray-100 dark:bg-gray-700/50 rounded-lg"><Mic className="w-4 h-4 text-blue-600 dark:text-blue-500" /></div>
+            <div className="p-2 bg-gray-100 dark:bg-gray-700/50 rounded-lg"><Mic className="w-4 h-4 text-celestial-600 dark:text-celestial-500" /></div>
             <div className="flex-1">
               <label className="text-[10px] text-gray-500 font-medium block uppercase">Explanação</label>
               <input type="text" className="w-full bg-transparent outline-none font-medium text-sm text-gray-900 dark:text-white" value={formData.explanador} onChange={e => setFormData({ ...formData, explanador: e.target.value })} />
@@ -362,7 +362,7 @@ export default function EditarSessao({ params }: { params: Promise<{ id: string 
         <button
           type="submit"
           disabled={saving}
-          className="w-full bg-gradient-to-r from-blue-600 to-blue-500 text-white py-4 rounded-xl font-bold text-lg hover:from-blue-500 hover:to-blue-400 transition-all flex items-center justify-center gap-2 mt-6 shadow-lg hover:shadow-blue-900/30 active:scale-[0.98]"
+          className="w-full bg-gradient-to-r from-celestial-600 to-celestial-500 text-white py-4 rounded-xl font-bold text-lg hover:from-celestial-500 hover:to-celestial-400 transition-all flex items-center justify-center gap-2 mt-6 shadow-lg hover:shadow-celestial-900/30 active:scale-[0.98]"
         >
           {saving ? 'Salvando...' : <><Save className="w-5 h-5" /> Salvar Alterações</>}
         </button>

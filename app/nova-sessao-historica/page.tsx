@@ -3,9 +3,11 @@ import { useState } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, Save, User, BookOpen, Mic } from 'lucide-react'
+import { useAuth } from '@/components/AuthProvider'
 
 export default function NovaSessaoHistorica() {
   const router = useRouter()
+  const { session } = useAuth()
   const [loading, setLoading] = useState(false)
 
   const [formData, setFormData] = useState({
@@ -25,7 +27,7 @@ export default function NovaSessaoHistorica() {
 
     const dataCompleta = `${formData.data_realizacao}T${formData.hora}:00`
 
-    const { data: { user } } = await supabase.auth.getUser()
+    const user = session?.user
 
     // Cria a Sessão apenas
     const { error: erroSessao } = await supabase
@@ -52,15 +54,15 @@ export default function NovaSessaoHistorica() {
   }
 
   return (
-    <div className="min-h-screen bg-amber-50 dark:bg-amber-950/20 p-4 pb-20 text-gray-900 dark:text-white font-sans transition-colors duration-300">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 pb-20 text-gray-900 dark:text-white font-sans transition-colors duration-300">
       <header className="flex flex-col mb-6 pt-2">
         <div className="flex items-center">
-          <button type="button" onClick={() => router.back()} className="p-2 bg-white dark:bg-gray-800 rounded-full shadow-sm mr-4 border border-amber-200 dark:border-amber-900/50 hover:bg-amber-100 dark:hover:bg-amber-900/30 transition">
-            <ArrowLeft className="w-5 h-5 text-amber-700 dark:text-amber-500" />
+          <button type="button" onClick={() => router.back()} className="p-2 bg-white dark:bg-gray-800 rounded-full shadow-sm mr-4 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+            <ArrowLeft className="w-5 h-5 text-gray-500 dark:text-gray-300" />
           </button>
           <div>
-            <h1 className="text-xl font-bold tracking-tight text-amber-900 dark:text-amber-100">Registro Histórico</h1>
-            <p className="text-xs text-amber-700 dark:text-amber-500">Sessão da Memória (Sem vegetal/participantes)</p>
+            <h1 className="text-xl font-bold tracking-tight text-gray-900 dark:text-white">Registro Histórico</h1>
+            <p className="text-xs text-gray-500 dark:text-gray-400">Registro Histórico do DMC</p>
           </div>
         </div>
       </header>
@@ -69,8 +71,8 @@ export default function NovaSessaoHistorica() {
 
         {/* Bloco 1: Data e Hora */}
         <section className="grid grid-cols-2 gap-4">
-          <div className="bg-white dark:bg-gray-800 p-3 rounded-xl border border-amber-200 dark:border-amber-900/30 shadow-sm">
-            <label className="text-xs text-amber-700 dark:text-amber-500 font-medium block mb-1 uppercase tracking-wider">Data</label>
+          <div className="bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-200 dark:border-gray-700/50 shadow-sm">
+            <label className="text-xs text-gray-500 dark:text-gray-400 font-medium block mb-1 uppercase tracking-wider">Data</label>
             <input
               type="date"
               className="w-full bg-transparent font-semibold outline-none text-gray-900 dark:text-white dark:[color-scheme:dark] text-sm"
@@ -79,8 +81,8 @@ export default function NovaSessaoHistorica() {
               required
             />
           </div>
-          <div className="bg-white dark:bg-gray-800 p-3 rounded-xl border border-amber-200 dark:border-amber-900/30 shadow-sm">
-            <label className="text-xs text-amber-700 dark:text-amber-500 font-medium block mb-1 uppercase tracking-wider">Hora</label>
+          <div className="bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-200 dark:border-gray-700/50 shadow-sm">
+            <label className="text-xs text-gray-500 dark:text-gray-400 font-medium block mb-1 uppercase tracking-wider">Hora</label>
             <input
               type="time"
               className="w-full bg-transparent font-semibold outline-none text-gray-900 dark:text-white dark:[color-scheme:dark] text-sm"
@@ -93,7 +95,7 @@ export default function NovaSessaoHistorica() {
 
         {/* Bloco 2: Tipo de Sessão */}
         <section>
-          <label className="text-xs text-amber-700 dark:text-amber-500 font-medium block mb-3 ml-1 uppercase tracking-wider">Tipo de Sessão</label>
+          <label className="text-xs text-gray-500 dark:text-gray-400 font-medium block mb-3 ml-1 uppercase tracking-wider">Tipo de Sessão</label>
           <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar mask-fade-right">
             {tiposSessao.map(tipo => (
               <button
@@ -101,8 +103,8 @@ export default function NovaSessaoHistorica() {
                 type="button"
                 onClick={() => setFormData({ ...formData, tipo })}
                 className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all border ${formData.tipo === tipo
-                  ? 'bg-amber-600 text-white border-amber-500 shadow-amber-900/20 shadow-lg'
-                  : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-amber-200 dark:border-amber-900/30 hover:bg-amber-50 dark:hover:bg-amber-900/20 hover:text-amber-900 dark:hover:text-amber-200'
+                  ? 'bg-gold-600 text-white border-gold-500 shadow-gold-900/20 shadow-lg'
+                  : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gold-600 dark:hover:text-gold-400'
                   }`}
               >
                 {tipo}
@@ -113,10 +115,10 @@ export default function NovaSessaoHistorica() {
 
         {/* Bloco 4: Detalhes da Sessão */}
         <section className="space-y-3">
-          <div className="bg-white dark:bg-gray-800 p-3 rounded-xl border border-amber-200 dark:border-amber-900/30 shadow-sm flex items-center gap-3">
-            <div className="p-2 bg-amber-50 dark:bg-amber-900/20 rounded-lg"><User className="w-4 h-4 text-amber-600 dark:text-amber-500" /></div>
+          <div className="bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-200 dark:border-gray-700/50 shadow-sm flex items-center gap-3">
+            <div className="p-2 bg-gray-50 dark:bg-gray-700/30 rounded-lg"><User className="w-4 h-4 text-gold-600 dark:text-gold-500" /></div>
             <div className="flex-1">
-              <label className="text-[10px] text-amber-700/70 dark:text-amber-500/70 font-medium block uppercase">Dirigente</label>
+              <label className="text-[10px] text-gray-500 dark:text-gray-400 font-medium block uppercase">Dirigente</label>
               <input
                 type="text"
                 placeholder="Nome do Mestre"
@@ -128,10 +130,10 @@ export default function NovaSessaoHistorica() {
             </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 p-3 rounded-xl border border-amber-200 dark:border-amber-900/30 shadow-sm flex items-center gap-3">
-            <div className="p-2 bg-amber-50 dark:bg-amber-900/20 rounded-lg"><BookOpen className="w-4 h-4 text-amber-600 dark:text-amber-500" /></div>
+          <div className="bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-200 dark:border-gray-700/50 shadow-sm flex items-center gap-3">
+            <div className="p-2 bg-gray-50 dark:bg-gray-700/30 rounded-lg"><BookOpen className="w-4 h-4 text-gold-600 dark:text-gold-500" /></div>
             <div className="flex-1">
-              <label className="text-[10px] text-amber-700/70 dark:text-amber-500/70 font-medium block uppercase">Leitura (Opcional)</label>
+              <label className="text-[10px] text-gray-500 dark:text-gray-400 font-medium block uppercase">Leitura (Opcional)</label>
               <input
                 type="text"
                 placeholder="Quem leu?"
@@ -142,10 +144,10 @@ export default function NovaSessaoHistorica() {
             </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 p-3 rounded-xl border border-amber-200 dark:border-amber-900/30 shadow-sm flex items-center gap-3">
-            <div className="p-2 bg-amber-50 dark:bg-amber-900/20 rounded-lg"><Mic className="w-4 h-4 text-amber-600 dark:text-amber-500" /></div>
+          <div className="bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-200 dark:border-gray-700/50 shadow-sm flex items-center gap-3">
+            <div className="p-2 bg-gray-50 dark:bg-gray-700/30 rounded-lg"><Mic className="w-4 h-4 text-gold-600 dark:text-gold-500" /></div>
             <div className="flex-1">
-              <label className="text-[10px] text-amber-700/70 dark:text-amber-500/70 font-medium block uppercase">Explanação (Opcional)</label>
+              <label className="text-[10px] text-gray-500 dark:text-gray-400 font-medium block uppercase">Explanação (Opcional)</label>
               <input
                 type="text"
                 placeholder="Quem explanou?"
@@ -160,7 +162,7 @@ export default function NovaSessaoHistorica() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-gradient-to-r from-amber-600 to-orange-600 text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:shadow-amber-900/30 hover:from-amber-500 hover:to-orange-500 transition-all flex items-center justify-center gap-2 mt-6 active:scale-[0.98]"
+          className="w-full bg-gradient-to-r from-gold-500 to-gold-600 text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:shadow-gold-900/20 hover:from-gold-400 hover:to-gold-500 transition-all flex items-center justify-center gap-2 mt-6 active:scale-[0.98]"
         >
           {loading ? (
             <span className="animate-pulse">Registrando...</span>

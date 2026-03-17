@@ -131,7 +131,7 @@ export default function EditarSaida({ params }: { params: Promise<{ id: string }
           <input
             type="date"
             required
-            className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none dark:[color-scheme:dark]"
+            className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 text-gray-900 dark:text-white focus:ring-2 focus:ring-celestial-500 outline-none dark:[color-scheme:dark]"
             value={formData.data_saida}
             onChange={e => setFormData({ ...formData, data_saida: e.target.value })}
           />
@@ -141,7 +141,7 @@ export default function EditarSaida({ params }: { params: Promise<{ id: string }
           <label className="block text-sm text-gray-500 dark:text-gray-400 mb-2">Origem (Qual Preparo?)</label>
           <select
             required
-            className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none appearance-none"
+            className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 text-gray-900 dark:text-white focus:ring-2 focus:ring-celestial-500 outline-none appearance-none"
             value={formData.preparo_id}
             onChange={e => setFormData({ ...formData, preparo_id: e.target.value })}
           >
@@ -159,7 +159,7 @@ export default function EditarSaida({ params }: { params: Promise<{ id: string }
           <input
             type="text"
             required
-            className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none placeholder-gray-400 dark:placeholder-gray-500"
+            className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 text-gray-900 dark:text-white focus:ring-2 focus:ring-celestial-500 outline-none placeholder-gray-400 dark:placeholder-gray-500"
             value={formData.destino}
             onChange={e => setFormData({ ...formData, destino: e.target.value })}
           />
@@ -172,7 +172,7 @@ export default function EditarSaida({ params }: { params: Promise<{ id: string }
               type="number"
               step="0.01"
               required
-              className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none placeholder-gray-400 dark:placeholder-gray-500"
+              className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 text-gray-900 dark:text-white focus:ring-2 focus:ring-celestial-500 outline-none placeholder-gray-400 dark:placeholder-gray-500"
               value={formData.quantidade}
               onChange={e => setFormData({ ...formData, quantidade: e.target.value })}
             />
@@ -183,7 +183,7 @@ export default function EditarSaida({ params }: { params: Promise<{ id: string }
         <div>
           <label className="block text-sm text-gray-500 dark:text-gray-400 mb-2">Observações (Opcional)</label>
           <textarea
-            className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none min-h-[100px] placeholder-gray-400 dark:placeholder-gray-500"
+            className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 text-gray-900 dark:text-white focus:ring-2 focus:ring-celestial-500 outline-none min-h-[100px] placeholder-gray-400 dark:placeholder-gray-500"
             value={formData.observacoes}
             onChange={e => setFormData({ ...formData, observacoes: e.target.value })}
           />
@@ -192,7 +192,7 @@ export default function EditarSaida({ params }: { params: Promise<{ id: string }
         <button
           type="submit"
           disabled={saving}
-          className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-xl shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+          className="w-full bg-celestial-600 hover:bg-celestial-500 text-white font-bold py-4 rounded-xl shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
         >
           {saving ? 'Salvando...' : (
             <>

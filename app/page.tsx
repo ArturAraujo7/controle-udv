@@ -2,10 +2,12 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabaseClient'
-import { Plus, Database, History, Droplet, ChevronRight, Users, LogOut, ArrowUpRight, BarChart3, User, BookOpen, Mic, X } from 'lucide-react'
+import { Plus, Database, History, GlassWater, ChevronRight, Users, LogOut, ArrowUpRight, BarChart3, User, BookOpen, Mic, X } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { ChangelogModal } from '@/components/ChangelogModal'
+import { Logo } from '@/components/Logo'
+import { useAuth } from '@/components/AuthProvider'
 
 type Sessao = {
   id: number
@@ -40,6 +42,7 @@ type Movimentacao = {
 }
 
 export default function Home() {
+  const { session } = useAuth()
   const router = useRouter()
   const [estoqueAtual, setEstoqueAtual] = useState<number>(0)
   const [totalSessoes, setTotalSessoes] = useState<number>(0)
@@ -54,7 +57,7 @@ export default function Home() {
   useEffect(() => {
     async function fetchData() {
       // 1. Verifica se usuario tem nome definido (Forçar Cadastro)
-      const { data: { user } } = await supabase.auth.getUser()
+      const user = session?.user
       if (user) {
         const { data: profile } = await supabase
           .from('profiles')
@@ -156,7 +159,7 @@ export default function Home() {
       setLoading(false)
     }
     fetchData()
-  }, [])
+  }, [session?.user?.id, router])
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
@@ -201,9 +204,14 @@ export default function Home() {
       <ChangelogModal />
       {/* Cabeçalho */}
       <header className="flex justify-between items-center mb-8 pt-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Controle UDV</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400">Núcleo Jardim Real</p>
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 flex-shrink-0">
+            <Logo className="w-full h-full drop-shadow-md" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-gold-600 to-gold-400 dark:from-gold-400 dark:to-gold-200 tracking-tight">GUARDIÃO</h1>
+            <p className="text-xs font-semibold text-celestial-600 dark:text-celestial-400 uppercase tracking-widest">Controle & Memória</p>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <ThemeToggle />
@@ -227,54 +235,96 @@ export default function Home() {
       {/* Cards de Resumo */}
       <div className="grid grid-cols-2 gap-4 mb-8">
         <Link href="/estoque">
-          <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 h-full relative overflow-hidden active:scale-95 transition-all">
-            <div className="absolute right-0 top-0 opacity-10 transform translate-x-2 -translate-y-2">
-              <Droplet className="w-24 h-24 text-green-600 dark:text-green-400" />
+          <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-sm border border-gold-200 dark:border-gold-900/50 h-full relative overflow-hidden active:scale-95 transition-all group hover:border-gold-400 dark:hover:border-gold-700">
+            <div className="absolute right-0 top-0 opacity-10 transform translate-x-2 -translate-y-2 group-hover:scale-110 transition-transform">
+              <GlassWater className="w-24 h-24 text-gold-600 dark:text-gold-500" />
             </div>
-            <div className="flex items-center gap-2 mb-2 text-green-600 dark:text-green-400">
-              <Droplet className="w-5 h-5" />
+            <div className="flex items-center gap-2 mb-2 text-gold-600 dark:text-gold-500">
+              <GlassWater className="w-5 h-5" />
               <span className="font-semibold text-sm">Estoque</span>
             </div>
-            <p className="text-3xl font-bold text-gray-900 dark:text-white">
-              {loading ? '...' : estoqueAtual.toFixed(2).replace('.', ',')} <span className="text-sm text-gray-500 dark:text-gray-400 font-normal">L</span>
+            <p className="text-3xl font-black text-slate-900 dark:text-white">
+              {loading ? '...' : estoqueAtual.toFixed(2).replace('.', ',')} <span className="text-sm text-slate-500 dark:text-slate-400 font-medium">L</span>
             </p>
-            <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">Disponível hoje</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Disponível hoje</p>
           </div>
         </Link>
 
         <Link href="/sessoes">
-          <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 h-full active:scale-95 transition-all">
-            <div className="flex items-center gap-2 mb-2 text-blue-600 dark:text-blue-400">
+          <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-sm border border-celestial-200 dark:border-celestial-900/50 h-full relative overflow-hidden active:scale-95 transition-all group hover:border-celestial-400 dark:hover:border-celestial-700">
+            <div className="absolute right-0 top-0 opacity-10 transform translate-x-2 -translate-y-2 group-hover:scale-110 transition-transform">
+              <History className="w-24 h-24 text-celestial-600 dark:text-celestial-500" />
+            </div>
+            <div className="flex items-center gap-2 mb-2 text-celestial-600 dark:text-celestial-500">
               <History className="w-5 h-5" />
               <span className="font-semibold text-sm">Sessões</span>
             </div>
-            <p className="text-3xl font-bold text-gray-900 dark:text-white">
+            <p className="text-3xl font-black text-slate-900 dark:text-white">
               {loading ? '...' : totalSessoes}
             </p>
-            <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">Realizadas este ano</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Realizadas este ano</p>
           </div>
         </Link>
       </div>
 
       {/* Ações */}
-      <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 px-1">Ações</h2>
-      <div className="grid grid-cols-1 gap-3 mb-8">
+      <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-4 px-1">Ações</h2>
+      <div className="grid grid-cols-2 gap-3 mb-8">
+
+        {/* Linha 1: Nova Sessão */}
         <Link href="/nova-sessao" className="group">
-          <div className="bg-green-600 p-4 rounded-xl shadow-lg flex items-center justify-between active:scale-95 transition-all">
-            <div className="flex items-center gap-4">
-              <div className="bg-white/20 p-2 rounded-lg backdrop-blur-sm">
-                <Plus className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h3 className="text-white font-bold">Nova Sessão</h3>
-                <p className="text-green-100 text-xs">Registrar ata e consumo</p>
-              </div>
+          <div className="bg-gradient-to-br from-gold-600 to-gold-500 p-4 rounded-xl shadow-lg shadow-gold-900/20 flex flex-col justify-between active:scale-95 transition-all border border-gold-400/50 h-full min-h-[110px]">
+            <div className="w-10 h-10 bg-white/20 rounded-lg backdrop-blur-sm flex items-center justify-center shadow-inner mb-2">
+              <Plus className="w-5 h-5 text-white" />
             </div>
-            <ChevronRight className="text-white/50" />
+            <div>
+              <h3 className="text-white font-bold leading-tight">Sessão</h3>
+              <p className="text-gold-100 text-[10px] font-medium leading-tight mt-0.5">Registrar ata</p>
+            </div>
           </div>
         </Link>
 
-        <Link href="/nova-sessao-historica" className="group">
+        {/* Linha 1: Novo Preparo */}
+        <Link href="/novo-preparo" className="group">
+          <div className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col justify-between active:scale-95 transition-all hover:bg-slate-50 dark:hover:bg-slate-750 h-full min-h-[110px]">
+            <div className="w-10 h-10 bg-gold-50 dark:bg-gold-900/30 rounded-lg flex items-center justify-center mb-2">
+              <Database className="w-5 h-5 text-gold-600 dark:text-gold-400" />
+            </div>
+            <div>
+              <h3 className="text-slate-900 dark:text-white font-bold leading-tight">Preparo</h3>
+              <p className="text-slate-500 dark:text-slate-400 text-[10px] leading-tight mt-0.5">Nova entrada</p>
+            </div>
+          </div>
+        </Link>
+
+        {/* Linha 2: Saída / Doação */}
+        <Link href="/nova-saida" className="group">
+          <div className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col justify-between active:scale-95 transition-all hover:bg-slate-50 dark:hover:bg-slate-750 h-full min-h-[110px]">
+            <div className="w-10 h-10 bg-red-50 dark:bg-red-900/30 rounded-lg flex items-center justify-center mb-2">
+              <ArrowUpRight className="w-5 h-5 text-red-600 dark:text-red-400" />
+            </div>
+            <div>
+              <h3 className="text-slate-900 dark:text-white font-bold leading-tight">Saída</h3>
+              <p className="text-slate-500 dark:text-slate-400 text-[10px] leading-tight mt-0.5">Registrar doação</p>
+            </div>
+          </div>
+        </Link>
+
+        {/* Linha 2: Relatórios */}
+        <Link href="/relatorios" className="group">
+          <div className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col justify-between active:scale-95 transition-all hover:bg-slate-50 dark:hover:bg-slate-750 h-full min-h-[110px]">
+            <div className="w-10 h-10 bg-celestial-50 dark:bg-celestial-900/30 rounded-lg flex items-center justify-center mb-2">
+              <BarChart3 className="w-5 h-5 text-celestial-600 dark:text-celestial-400" />
+            </div>
+            <div>
+              <h3 className="text-slate-900 dark:text-white font-bold leading-tight">Relatórios</h3>
+              <p className="text-slate-500 dark:text-slate-400 text-[10px] leading-tight mt-0.5">Estatísticas gerais</p>
+            </div>
+          </div>
+        </Link>
+
+        {/* Linha 3: Registro Histórico (Full Width) */}
+        <Link href="/nova-sessao-historica" className="group col-span-2">
           <div className="bg-amber-600 p-4 rounded-xl shadow-lg flex items-center justify-between active:scale-95 transition-all">
             <div className="flex items-center gap-4">
               <div className="bg-white/20 p-2 rounded-lg backdrop-blur-sm">
@@ -282,55 +332,10 @@ export default function Home() {
               </div>
               <div>
                 <h3 className="text-white font-bold">Registro Histórico</h3>
-                <p className="text-amber-100 text-xs">Sessões antigas s/ vegetal</p>
+                <p className="text-amber-100 text-xs">Sessões que aconteceram antes de 2026</p>
               </div>
             </div>
             <ChevronRight className="text-white/50" />
-          </div>
-        </Link>
-
-        <Link href="/nova-saida" className="group">
-          <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 flex items-center justify-between active:scale-95 transition-all">
-            <div className="flex items-center gap-4">
-              <div className="bg-red-100 dark:bg-red-900/30 p-2 rounded-lg">
-                <ArrowUpRight className="w-6 h-6 text-red-600 dark:text-red-400" />
-              </div>
-              <div>
-                <h3 className="text-gray-900 dark:text-white font-bold">Saída / Doação</h3>
-                <p className="text-gray-500 dark:text-gray-400 text-xs">Registrar saída externa</p>
-              </div>
-            </div>
-            <ChevronRight className="text-gray-400 dark:text-gray-600" />
-          </div>
-        </Link>
-
-        <Link href="/novo-preparo" className="group">
-          <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 flex items-center justify-between active:scale-95 transition-all">
-            <div className="flex items-center gap-4">
-              <div className="bg-green-100 dark:bg-green-900/30 p-2 rounded-lg">
-                <Database className="w-6 h-6 text-green-600 dark:text-green-400" />
-              </div>
-              <div>
-                <h3 className="text-gray-900 dark:text-white font-bold">Novo Preparo</h3>
-                <p className="text-gray-500 dark:text-gray-400 text-xs">Cadastrar entrada de vegetal</p>
-              </div>
-            </div>
-            <ChevronRight className="text-gray-400 dark:text-gray-600" />
-          </div>
-        </Link>
-
-        <Link href="/relatorios" className="group">
-          <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 flex items-center justify-between active:scale-95 transition-all">
-            <div className="flex items-center gap-4">
-              <div className="bg-blue-100 dark:bg-blue-900/30 p-2 rounded-lg">
-                <BarChart3 className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-              </div>
-              <div>
-                <h3 className="text-gray-900 dark:text-white font-bold">Relatórios</h3>
-                <p className="text-gray-500 dark:text-gray-400 text-xs">Estatísticas e Médias</p>
-              </div>
-            </div>
-            <ChevronRight className="text-gray-400 dark:text-gray-600" />
           </div>
         </Link>
       </div>
@@ -362,10 +367,10 @@ export default function Home() {
                 className={`bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 flex items-center justify-between transition-all ${(isConsumo || isHistorico) ? 'active:scale-95 hover:bg-gray-50 dark:hover:bg-gray-750 cursor-pointer' : ''}`}
               >
                 <div className="flex items-center gap-4">
-                  <div className={`p-2 rounded-lg ${isEntrada ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400' :
-                    isSaida ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400' :
-                      isHistorico ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400' :
-                        'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
+                  <div className={`p-2 rounded-xl border ${isEntrada ? 'bg-gold-50 border-gold-100 dark:bg-gold-900/20 dark:border-gold-900/50 text-gold-600 dark:text-gold-400' :
+                    isSaida ? 'bg-red-50 border-red-100 dark:bg-red-900/20 dark:border-red-900/50 text-red-600 dark:text-red-400' :
+                      isHistorico ? 'bg-amber-50 border-amber-100 dark:bg-amber-900/20 dark:border-amber-900/50 text-amber-600 dark:text-amber-400' :
+                        'bg-celestial-50 border-celestial-100 dark:bg-celestial-900/20 dark:border-celestial-900/50 text-celestial-600 dark:text-celestial-400'
                     }`}>
                     {isEntrada ? <Database className="w-5 h-5" /> :
                       isSaida ? <ArrowUpRight className="w-5 h-5" /> :
@@ -386,7 +391,7 @@ export default function Home() {
                       Histórica
                     </span>
                   ) : (
-                    <span className={`text-sm font-bold ${isEntrada ? 'text-green-600 dark:text-green-400' :
+                    <span className={`text-sm font-bold ${isEntrada ? 'text-gold-600 dark:text-gold-400' :
                       'text-red-500 dark:text-red-400'
                       }`}>
                       {isEntrada ? '+' : '-'}{mov.quantidade.toFixed(2).replace('.', ',')} <span className="text-[10px] font-normal">L</span>
@@ -407,7 +412,7 @@ export default function Home() {
             {/* Header do Modal */}
             <div className="bg-gray-50 dark:bg-gray-900/50 p-6 border-b border-gray-100 dark:border-gray-700 flex justify-between items-start">
               <div>
-                <p className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-1">{selectedSession.tipo}</p>
+                <p className="text-xs font-bold text-celestial-600 dark:text-celestial-400 uppercase tracking-widest mb-1">{selectedSession.tipo}</p>
                 <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
                   {new Date(selectedSession.data_realizacao).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
                 </h2>
@@ -431,7 +436,7 @@ export default function Home() {
               {/* Grid de Pessoas */}
               <div className="grid grid-cols-1 gap-4">
                 <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700/30 rounded-xl border border-gray-100 dark:border-gray-700/50">
-                  <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg text-blue-600 dark:text-blue-400">
+                  <div className="p-2 bg-celestial-100 dark:bg-celestial-900/30 rounded-lg text-celestial-600 dark:text-celestial-400">
                     <User className="w-5 h-5" />
                   </div>
                   <div>
@@ -474,7 +479,7 @@ export default function Home() {
               ) : (
                 <div>
                   <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-3">
-                    <Droplet className="w-5 h-5 text-green-600 dark:text-green-500" />
+                    <GlassWater className="w-5 h-5 text-gold-600 dark:text-gold-500" />
                     O que foi servido
                   </h3>
 
@@ -487,7 +492,7 @@ export default function Home() {
                     <div className="space-y-3">
                       {sessionConsumos.length > 0 ? (
                         sessionConsumos.map((item) => (
-                          <div key={item.id} className="bg-green-50 dark:bg-green-900/10 border border-green-100 dark:border-green-900/30 p-4 rounded-xl flex justify-between items-center">
+                          <div key={item.id} className="bg-gold-50 dark:bg-gold-900/10 border border-gold-100 dark:border-gold-900/30 p-4 rounded-xl flex justify-between items-center">
                             <div>
                               <p className="font-bold text-gray-900 dark:text-white">
                                 {item.preparos?.mestre_preparo || 'Mestre Desconhecido'}
@@ -497,7 +502,7 @@ export default function Home() {
                               </p>
                             </div>
                             <div className="text-right">
-                              <span className="block text-xl font-bold text-green-700 dark:text-green-400">
+                              <span className="block text-xl font-bold text-gold-700 dark:text-gold-400">
                                 {item.quantidade_consumida} <span className="text-sm font-normal">L</span>
                               </span>
                             </div>

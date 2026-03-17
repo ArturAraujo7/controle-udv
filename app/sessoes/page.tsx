@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Users, Droplet, Search, X, User, BookOpen, Mic } from 'lucide-react'
+import { ArrowLeft, Users, GlassWater, Search, X, User, BookOpen, Mic } from 'lucide-react'
 
 type Sessao = {
   id: number
@@ -124,7 +124,7 @@ export default function HistoricoSessoes() {
             </div>
             <input
               type="text"
-              className="block w-full pl-10 pr-3 py-3 border border-gray-200 dark:border-gray-700 rounded-xl leading-5 bg-white dark:bg-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500/50 focus:border-green-500 transition-all text-gray-900 dark:text-white"
+              className="block w-full pl-10 pr-3 py-3 border border-gray-200 dark:border-gray-700 rounded-xl leading-5 bg-white dark:bg-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gold-500/50 focus:border-gold-500 transition-all text-gray-900 dark:text-white"
               placeholder="Buscar por dirigente, tipo ou data..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -141,11 +141,11 @@ export default function HistoricoSessoes() {
             <div
               key={sessao.id}
               onClick={() => handleOpenModal(sessao)}
-              className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm cursor-pointer hover:shadow-md hover:border-blue-300 dark:hover:border-blue-700 transition-all"
+              className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm cursor-pointer hover:shadow-md hover:border-celestial-300 dark:hover:border-celestial-700 transition-all"
             >
               <div className="flex justify-between items-start mb-2">
                 <div>
-                  <span className="text-xs font-bold text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900/30 px-2 py-1 rounded-md uppercase tracking-wide">
+                  <span className="text-xs font-bold text-gold-600 dark:text-gold-400 bg-gold-100 dark:bg-gold-900/30 px-2 py-1 rounded-md uppercase tracking-wide">
                     {sessao.tipo}
                   </span>
                   <h3 className="font-bold text-gray-900 dark:text-white mt-2 text-lg">
@@ -174,11 +174,11 @@ export default function HistoricoSessoes() {
                 ) : (
                   <div className="grid grid-cols-2 gap-2">
                     <div className="flex items-center gap-2">
-                      <Users className="w-4 h-4 text-blue-500 dark:text-blue-400" />
+                      <Users className="w-4 h-4 text-celestial-500 dark:text-celestial-400" />
                       <span className="text-sm font-medium text-gray-600 dark:text-gray-300">{sessao.quantidade_participantes} pessoas</span>
                     </div>
                     <div className="flex items-center gap-2 justify-end">
-                      <Droplet className="w-4 h-4 text-green-600 dark:text-green-500" />
+                      <GlassWater className="w-4 h-4 text-gold-600 dark:text-gold-500" />
                       <span className="text-sm font-bold text-gray-900 dark:text-white">{sessao.quantidade_consumida} L</span>
                     </div>
                   </div>
@@ -197,7 +197,7 @@ export default function HistoricoSessoes() {
             {/* Header do Modal */}
             <div className="bg-gray-50 dark:bg-gray-900/50 p-6 border-b border-gray-100 dark:border-gray-700 flex justify-between items-start">
               <div>
-                <p className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-1">{selectedSession.tipo}</p>
+                <p className="text-xs font-bold text-celestial-600 dark:text-celestial-400 uppercase tracking-widest mb-1">{selectedSession.tipo}</p>
                 <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
                   {new Date(selectedSession.data_realizacao).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
                 </h2>
@@ -221,7 +221,7 @@ export default function HistoricoSessoes() {
               {/* Grid de Pessoas */}
               <div className="grid grid-cols-1 gap-4">
                 <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700/30 rounded-xl border border-gray-100 dark:border-gray-700/50">
-                  <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg text-blue-600 dark:text-blue-400">
+                  <div className="p-2 bg-celestial-100 dark:bg-celestial-900/30 rounded-lg text-celestial-600 dark:text-celestial-400">
                     <User className="w-5 h-5" />
                   </div>
                   <div>
@@ -264,7 +264,7 @@ export default function HistoricoSessoes() {
               ) : (
                 <div>
                   <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-3">
-                    <Droplet className="w-5 h-5 text-green-600 dark:text-green-500" />
+                    <GlassWater className="w-5 h-5 text-gold-600 dark:text-gold-500" />
                     O que foi servido
                   </h3>
 
@@ -277,7 +277,7 @@ export default function HistoricoSessoes() {
                     <div className="space-y-3">
                       {sessionConsumos.length > 0 ? (
                         sessionConsumos.map((item) => (
-                          <div key={item.id} className="bg-green-50 dark:bg-green-900/10 border border-green-100 dark:border-green-900/30 p-4 rounded-xl flex justify-between items-center">
+                          <div key={item.id} className="bg-gold-50 dark:bg-gold-900/10 border border-gold-100 dark:border-gold-900/30 p-4 rounded-xl flex justify-between items-center">
                             <div>
                               <p className="font-bold text-gray-900 dark:text-white">
                                 {item.preparos?.mestre_preparo || 'Mestre Desconhecido'}
@@ -287,7 +287,7 @@ export default function HistoricoSessoes() {
                               </p>
                             </div>
                             <div className="text-right">
-                              <span className="block text-xl font-bold text-green-700 dark:text-green-400">
+                              <span className="block text-xl font-bold text-gold-700 dark:text-gold-400">
                                 {item.quantidade_consumida} <span className="text-sm font-normal">L</span>
                               </span>
                             </div>

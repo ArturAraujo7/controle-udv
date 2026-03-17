@@ -25,8 +25,10 @@ export default function Login() {
       setError(error.message)
       setLoading(false)
     } else {
-      router.push('/')
-      router.refresh()
+      // Usando window.location força o recarregamento total da página, 
+      // garantindo que os cookies da sessão Supabase recém injetados
+      // sejam validados pelo middleware antes do app renderizar a Auth Wall.
+      window.location.href = '/'
     }
   }
 
@@ -40,8 +42,8 @@ export default function Login() {
         </div>
 
         <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-green-100 dark:bg-green-900/50 rounded-full flex items-center justify-center mx-auto mb-4 border border-green-200 dark:border-green-700/50">
-            <Leaf className="w-8 h-8 text-green-600 dark:text-green-400" />
+          <div className="w-16 h-16 bg-gold-100 dark:bg-gold-900/50 rounded-full flex items-center justify-center mx-auto mb-4 border border-gold-200 dark:border-gold-700/50">
+            <Leaf className="w-8 h-8 text-gold-600 dark:text-gold-400" />
           </div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Controle UDV</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Núcleo Jardim Real</p>
@@ -56,7 +58,7 @@ export default function Login() {
                 type="email"
                 required
                 placeholder="seu@email.com"
-                className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl py-2.5 pl-10 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 focus:border-green-500 focus:ring-1 focus:ring-green-500 outline-none transition-all"
+                className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl py-2.5 pl-10 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 focus:border-gold-500 focus:ring-1 focus:ring-gold-500 outline-none transition-all"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
@@ -71,7 +73,7 @@ export default function Login() {
                 type="password"
                 required
                 placeholder="••••••••"
-                className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl py-2.5 pl-10 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 focus:border-green-500 focus:ring-1 focus:ring-green-500 outline-none transition-all"
+                className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl py-2.5 pl-10 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 focus:border-gold-500 focus:ring-1 focus:ring-gold-500 outline-none transition-all"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
@@ -87,7 +89,7 @@ export default function Login() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-xl transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2 mt-2"
+            className="w-full bg-gold-600 hover:bg-gold-700 text-white font-bold py-3 rounded-xl transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2 mt-2"
           >
             {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Entrar'}
           </button>

@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, Save, User } from 'lucide-react'
+import { useAuth } from '@/components/AuthProvider'
 import Link from 'next/link'
 
 export default function Perfil() {
@@ -10,23 +11,20 @@ export default function Perfil() {
     const [loading, setLoading] = useState(true)
     const [updating, setUpdating] = useState(false)
     const [fullName, setFullName] = useState('')
-    const [userId, setUserId] = useState<string | null>(null)
+    const { session } = useAuth()
+    const userId = session?.user?.id || null
 
     useEffect(() => {
         async function getProfile() {
-            const { data: { user } } = await supabase.auth.getUser()
-
-            if (!user) {
-                router.push('/')
+            if (!session?.user?.id) {
+                setLoading(false)
                 return
             }
-
-            setUserId(user.id)
 
             const { data } = await supabase
                 .from('profiles')
                 .select('full_name')
-                .eq('id', user.id)
+                .eq('id', session.user.id)
                 .single()
 
             if (data) {
@@ -37,7 +35,7 @@ export default function Perfil() {
         }
 
         getProfile()
-    }, [router])
+    }, [session?.user?.id])
 
     const handleUpdate = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -81,7 +79,7 @@ export default function Perfil() {
 
             <div className="max-w-md mx-auto">
                 <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 mb-6 flex flex-col items-center">
-                    <div className="w-20 h-20 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center text-blue-600 dark:text-blue-400 mb-4">
+                    <div className="w-20 h-20 bg-celestial-100 dark:bg-celestial-900/30 rounded-full flex items-center justify-center text-celestial-600 dark:text-celestial-400 mb-4">
                         <User className="w-10 h-10" />
                     </div>
                     <p className="text-sm text-gray-500 dark:text-gray-400 font-mono bg-gray-100 dark:bg-gray-700 px-3 py-1 rounded-full">
@@ -99,7 +97,7 @@ export default function Perfil() {
                             value={fullName}
                             onChange={(e) => setFullName(e.target.value)}
                             placeholder="Seu nome completo"
-                            className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900/50 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all"
+                            className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900/50 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-celestial-500/50 focus:border-celestial-500 transition-all"
                         />
                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
                             Este nome aparecerá no histórico das sessões que você criou.
@@ -109,7 +107,7 @@ export default function Perfil() {
                     <button
                         type="submit"
                         disabled={updating}
-                        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl shadow-lg shadow-blue-900/20 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                        className="w-full bg-celestial-600 hover:bg-celestial-700 text-white font-bold py-3 px-4 rounded-xl shadow-lg shadow-celestial-900/20 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
                     >
                         {updating ? 'Salvando...' : <><Save className="w-5 h-5" /> Salvar Perfil</>}
                     </button>

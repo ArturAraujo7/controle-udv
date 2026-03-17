@@ -26,12 +26,12 @@ export function ChangelogModal() {
             <div className="bg-white dark:bg-gray-800 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 border border-gray-100 dark:border-gray-700">
 
                 {/* Header */}
-                <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-6 text-white relative overflow-hidden">
+                <div className="bg-gradient-to-r from-celestial-600 to-indigo-600 p-6 text-white relative overflow-hidden">
                     <div className="absolute top-0 right-0 p-4 opacity-10">
                         <Layout className="w-32 h-32 transform rotate-12 translate-x-8 -translate-y-8" />
                     </div>
                     <h2 className="text-2xl font-bold relative z-10">Novidades! 🎉</h2>
-                    <p className="text-blue-100 text-sm relative z-10 mt-1">Confira o que mudou nesta atualização.</p>
+                    <p className="text-celestial-100 text-sm relative z-10 mt-1">Confira o que mudou nesta atualização.</p>
                     <button
                         onClick={handleClose}
                         className="absolute top-4 right-4 text-white/70 hover:text-white bg-white/10 hover:bg-white/20 rounded-full p-1 transition-colors z-20"
@@ -54,8 +54,8 @@ export function ChangelogModal() {
                     </div>
 
                     <div className="flex gap-4">
-                        <div className="bg-blue-100 dark:bg-blue-900/30 p-2 rounded-xl h-fit">
-                            <FileText className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                        <div className="bg-celestial-100 dark:bg-celestial-900/30 p-2 rounded-xl h-fit">
+                            <FileText className="w-6 h-6 text-celestial-600 dark:text-celestial-400" />
                         </div>
                         <div>
                             <h3 className="font-bold text-gray-900 dark:text-white">Relatórios & PDF</h3>
@@ -64,8 +64,8 @@ export function ChangelogModal() {
                     </div>
 
                     <div className="flex gap-4">
-                        <div className="bg-green-100 dark:bg-green-900/30 p-2 rounded-xl h-fit">
-                            <Search className="w-6 h-6 text-green-600 dark:text-green-400" />
+                        <div className="bg-gold-100 dark:bg-gold-900/30 p-2 rounded-xl h-fit">
+                            <Search className="w-6 h-6 text-gold-600 dark:text-gold-400" />
                         </div>
                         <div>
                             <h3 className="font-bold text-gray-900 dark:text-white">Busca Inteligente</h3>
@@ -99,7 +99,7 @@ export function ChangelogModal() {
                 <div className="p-4 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
                     <button
                         onClick={handleClose}
-                        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition-colors shadow-lg shadow-blue-900/20"
+                        className="w-full bg-celestial-600 hover:bg-celestial-700 text-white font-bold py-3 rounded-xl transition-colors shadow-lg shadow-celestial-900/20"
                     >
                         Entendi, vamos lá! 🚀
                     </button>

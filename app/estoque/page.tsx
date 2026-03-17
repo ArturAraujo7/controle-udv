@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Beaker, Plus, Truck, Droplet, Pencil, Search, Users } from 'lucide-react'
+import { ArrowLeft, Beaker, Plus, Truck, GlassWater, Pencil, Search, Users } from 'lucide-react'
 
 type PreparoComSaldo = {
   id: number
@@ -72,7 +72,7 @@ export default function GerenciarEstoque() {
           </button>
           <h1 className="text-xl font-bold">Estoque</h1>
         </div>
-        <Link href="/novo-preparo" className="p-2 bg-green-600 rounded-full shadow-lg text-white hover:bg-green-700 active:scale-95 transition-all">
+        <Link href="/novo-preparo" className="p-2 bg-gold-600 rounded-full shadow-lg text-white hover:bg-gold-700 active:scale-95 transition-all">
           <Plus className="w-5 h-5" />
         </Link>
       </div>
@@ -85,7 +85,7 @@ export default function GerenciarEstoque() {
           {/* CARD DESTAQUE TOTAL */}
           <div className="bg-white dark:bg-gradient-to-br dark:from-gray-800 dark:to-gray-900 p-6 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-lg text-center relative overflow-hidden">
             <div className="absolute top-0 right-0 p-4 opacity-5">
-              <Droplet className="w-32 h-32 text-green-600 dark:text-white" />
+              <GlassWater className="w-32 h-32 text-gold-600 dark:text-white" />
             </div>
             <p className="text-sm text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wider mb-1">Saldo Total Disponível</p>
             <div className="flex items-baseline justify-center gap-1">
@@ -103,7 +103,7 @@ export default function GerenciarEstoque() {
             </div>
             <input
               type="text"
-              className="block w-full pl-10 pr-3 py-3 border border-gray-200 dark:border-gray-700 rounded-xl leading-5 bg-white dark:bg-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500/50 focus:border-green-500 transition-all text-gray-900 dark:text-white"
+              className="block w-full pl-10 pr-3 py-3 border border-gray-200 dark:border-gray-700 rounded-xl leading-5 bg-white dark:bg-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gold-500/50 focus:border-gold-500 transition-all text-gray-900 dark:text-white"
               placeholder="Buscar por mestre, núcleo ou grau..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -124,11 +124,11 @@ export default function GerenciarEstoque() {
                 const isDoacao = preparo.tipo === 'Doação'
 
                 return (
-                  <div key={preparo.id} className={`bg-white dark:bg-gray-800 rounded-xl shadow-sm border ${isDoacao ? 'border-blue-200 dark:border-blue-900/50' : 'border-green-200 dark:border-green-900/30'} relative overflow-hidden group`}>
+                  <div key={preparo.id} className={`bg-white dark:bg-gray-800 rounded-xl shadow-sm border ${isDoacao ? 'border-celestial-200 dark:border-celestial-900/50' : 'border-gold-200 dark:border-gold-900/30'} relative overflow-hidden group`}>
 
                     {/* Barra de Progresso */}
                     <div
-                      className={`absolute bottom-0 left-0 h-1 transition-all duration-1000 ${isDoacao ? 'bg-blue-500' : 'bg-green-500'}`}
+                      className={`absolute bottom-0 left-0 h-1 transition-all duration-1000 ${isDoacao ? 'bg-celestial-500' : 'bg-gold-500'}`}
                       style={{ width: `${(preparo.saldo / preparo.quantidade_preparada) * 100}%` }}
                     />
 
@@ -137,7 +137,7 @@ export default function GerenciarEstoque() {
                       <div className="flex justify-between items-start mb-3">
                         <div>
                           {/* Badge de Tipo */}
-                          <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase mb-2 ${isDoacao ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400' : 'bg-green-100 dark:bg-green-900/40 text-green-600 dark:text-green-400'
+                          <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase mb-2 ${isDoacao ? 'bg-celestial-100 dark:bg-celestial-900/40 text-celestial-600 dark:text-celestial-400' : 'bg-gold-100 dark:bg-gold-900/40 text-gold-600 dark:text-gold-400'
                             }`}>
                             {isDoacao ? <Truck className="w-3 h-3" /> : <Beaker className="w-3 h-3" />}
                             {isDoacao ? 'Doação Externa' : 'Produção Local'}
@@ -152,7 +152,7 @@ export default function GerenciarEstoque() {
                               {new Date(preparo.data_preparo).toLocaleDateString('pt-BR')} • Grau {preparo.grau}
                             </span>
                             {isDoacao && (
-                              <span className="text-xs text-blue-500/70 dark:text-blue-300/70 mt-0.5">
+                              <span className="text-xs text-celestial-500/70 dark:text-celestial-300/70 mt-0.5">
                                 Resp: M. {preparo.mestre_preparo}
                               </span>
                             )}
@@ -168,13 +168,13 @@ export default function GerenciarEstoque() {
                         <div className="text-right flex flex-col items-end gap-2">
                           {/* Botão Editar (Absolute pra não conflitar com o Link principal) */}
                           <object className="absolute top-4 right-2 z-10"> {/* Object/div trick to prevent nesting links */}
-                            <Link href={`/editar-preparo/${preparo.id}`} className="p-2 text-gray-400 dark:text-gray-500 hover:text-green-600 dark:hover:text-white transition-colors">
+                            <Link href={`/editar-preparo/${preparo.id}`} className="p-2 text-gray-400 dark:text-gray-500 hover:text-gold-600 dark:hover:text-white transition-colors">
                               <Pencil className="w-4 h-4" />
                             </Link>
                           </object>
 
                           <div className="mt-8"> {/* Espaço pra compensar o botão editar */}
-                            <p className={`text-2xl font-bold ${isDoacao ? 'text-blue-600 dark:text-blue-100' : 'text-green-600 dark:text-green-50'}`}>
+                            <p className={`text-2xl font-bold ${isDoacao ? 'text-celestial-600 dark:text-celestial-100' : 'text-gold-600 dark:text-gold-50'}`}>
                               {preparo.saldo.toFixed(2).replace('.', ',')} <span className="text-sm font-normal text-gray-500">L</span>
                             </p>
                             <p className="text-xs text-gray-500">restantes</p>

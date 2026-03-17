@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
 import { ArrowLeft, Save } from 'lucide-react'
 import Link from 'next/link'
+import { useAuth } from '@/components/AuthProvider'
 
 type Preparo = {
   id: number
@@ -15,6 +16,7 @@ type Preparo = {
 
 export default function NovaSaida() {
   const router = useRouter()
+  const { session } = useAuth()
   const [loading, setLoading] = useState(false)
   const [preparos, setPreparos] = useState<Preparo[]>([])
 
@@ -53,7 +55,7 @@ export default function NovaSaida() {
     e.preventDefault()
     setLoading(true)
 
-    const { data: { user } } = await supabase.auth.getUser()
+    const user = session?.user
 
     const { error } = await supabase
       .from('saidas')
@@ -93,7 +95,7 @@ export default function NovaSaida() {
           <input
             type="date"
             required
-            className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none dark:[color-scheme:dark]"
+            className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 text-gray-900 dark:text-white focus:ring-2 focus:ring-celestial-500 outline-none dark:[color-scheme:dark]"
             value={formData.data_saida}
             onChange={e => setFormData({ ...formData, data_saida: e.target.value })}
           />
@@ -103,7 +105,7 @@ export default function NovaSaida() {
           <label className="block text-sm text-gray-500 dark:text-gray-400 mb-2">Origem (Qual Preparo?)</label>
           <select
             required
-            className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none appearance-none"
+            className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 text-gray-900 dark:text-white focus:ring-2 focus:ring-celestial-500 outline-none appearance-none"
             value={formData.preparo_id}
             onChange={e => setFormData({ ...formData, preparo_id: e.target.value })}
           >
@@ -122,7 +124,7 @@ export default function NovaSaida() {
             type="text"
             required
             placeholder="Ex: Núcleo Mestre Gabriel..."
-            className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none placeholder-gray-400 dark:placeholder-gray-500"
+            className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 text-gray-900 dark:text-white focus:ring-2 focus:ring-celestial-500 outline-none placeholder-gray-400 dark:placeholder-gray-500"
             value={formData.destino}
             onChange={e => setFormData({ ...formData, destino: e.target.value })}
           />
@@ -136,7 +138,7 @@ export default function NovaSaida() {
               step="0.01"
               required
               placeholder="0.00"
-              className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none placeholder-gray-400 dark:placeholder-gray-500"
+              className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 text-gray-900 dark:text-white focus:ring-2 focus:ring-celestial-500 outline-none placeholder-gray-400 dark:placeholder-gray-500"
               value={formData.quantidade}
               onChange={e => setFormData({ ...formData, quantidade: e.target.value })}
             />
@@ -147,7 +149,7 @@ export default function NovaSaida() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-4 rounded-xl shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full bg-gold-600 hover:bg-gold-500 text-white font-bold py-4 rounded-xl shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading ? 'Salvando...' : (
             <>

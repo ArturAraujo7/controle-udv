@@ -155,7 +155,7 @@ export default function DetalheEstoque({ params }: { params: Promise<{ id: strin
 
         <div className="flex justify-between items-start mb-4">
           <div>
-            <span className={`text-xs font-bold px-2 py-1 rounded-full border ${preparo.status === 'Disponível' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800' :
+            <span className={`text-xs font-bold px-2 py-1 rounded-full border ${preparo.status === 'Disponível' ? 'bg-gold-100 dark:bg-gold-900/30 text-gold-700 dark:text-gold-400 border-gold-200 dark:border-gold-800' :
               preparo.status === 'Esgotado' ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800' :
                 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800'
               }`}>
@@ -164,7 +164,7 @@ export default function DetalheEstoque({ params }: { params: Promise<{ id: strin
           </div>
           <Link
             href={`/editar-preparo/${id}`}
-            className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300 font-bold underline"
+            className="text-xs text-celestial-600 dark:text-celestial-400 hover:text-celestial-500 dark:hover:text-celestial-300 font-bold underline"
           >
             Editar
           </Link>
@@ -222,12 +222,12 @@ export default function DetalheEstoque({ params }: { params: Promise<{ id: strin
             >
               <div className={`p-4 rounded-xl border flex justify-between items-center transition-all shadow-sm hover:shadow-md ${item.isSaida
                 ? 'bg-red-50 dark:bg-gray-800/50 border-red-100 dark:border-red-900/30 group-hover:border-red-400 dark:group-hover:border-red-500/50'
-                : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 group-hover:border-blue-300 dark:group-hover:border-blue-500/50'
+                : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 group-hover:border-celestial-300 dark:group-hover:border-celestial-500/50'
                 }`}>
                 <div>
                   <div className="flex items-center gap-2 mb-1">
                     {item.isSaida && <span className="text-[10px] font-bold bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 px-1.5 py-0.5 rounded">SAÍDA</span>}
-                    <p className="font-bold text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-300 transition-colors">{item.titulo}</p>
+                    <p className="font-bold text-gray-900 dark:text-white group-hover:text-celestial-600 dark:group-hover:text-celestial-300 transition-colors">{item.titulo}</p>
                   </div>
 
                   <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
@@ -237,7 +237,7 @@ export default function DetalheEstoque({ params }: { params: Promise<{ id: strin
                 </div>
 
                 <div className="text-right">
-                  <div className={`flex items-center justify-end gap-1 font-bold ${item.isSaida ? 'text-red-600 dark:text-red-400' : 'text-blue-600 dark:text-blue-300'
+                  <div className={`flex items-center justify-end gap-1 font-bold ${item.isSaida ? 'text-red-600 dark:text-red-400' : 'text-celestial-600 dark:text-celestial-300'
                     }`}>
                     <Droplets className="w-3 h-3" />
                     -{Number(item.quantidade).toFixed(2).replace('.', ',')} L

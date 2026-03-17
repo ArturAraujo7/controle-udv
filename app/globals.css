@@ -4,13 +4,13 @@
 
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f8fafc; /* slate-50 */
+  --foreground: #0f172a; /* slate-900 */
 }
 
 .dark {
-  --background: #0a0a0a;
-  --foreground: #ededed;
+  --background: #020617; /* slate-950 */
+  --foreground: #f8fafc; /* slate-50 */
 }
 
 body {
