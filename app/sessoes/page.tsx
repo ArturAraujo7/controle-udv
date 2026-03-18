@@ -303,7 +303,7 @@ export default function HistoricoSessoes() {
 
               {/* Botão de Editar */}
               <div className="pt-2">
-                <Link href={`/editar-sessao/${selectedSession.id}`} className="block w-full text-center py-3 rounded-xl bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-medium transition-colors">
+                <Link href={selectedSession.quantidade_participantes === 0 ? `/editar-sessao-historica/${selectedSession.id}` : `/editar-sessao/${selectedSession.id}`} className="block w-full text-center py-3 rounded-xl bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-medium transition-colors">
                   Editar Dados da Sessão
                 </Link>
                 {selectedSession.user_id && (

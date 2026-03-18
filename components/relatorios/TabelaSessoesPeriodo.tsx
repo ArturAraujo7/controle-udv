@@ -14,11 +14,11 @@ export function TabelaSessoesPeriodo({ sessoes, loading, anoSelecionado }: Tabel
 
   const handlePrint = useReactToPrint({
     contentRef: tableRef,
-    documentTitle: `Relatorio_Sessoes_Liturgicas_${anoSelecionado}`,
+    documentTitle: `Relatorio_Sessoes_${anoSelecionado}`,
   })
 
-  // Sessões Reais apenas
-  const sessoesFiltradas = sessoes.filter(s => s.quantidade_participantes > 0)
+  // Todas as Sessões (Reais e Históricas)
+  const sessoesFiltradas = sessoes
   // Ordenar crescente para o relatório
   const sessoesOrdenadas = [...sessoesFiltradas].sort((a, b) => new Date(a.data_realizacao).getTime() - new Date(b.data_realizacao).getTime())
 
@@ -50,7 +50,7 @@ export function TabelaSessoesPeriodo({ sessoes, loading, anoSelecionado }: Tabel
     <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700/60 shadow-sm overflow-hidden flex flex-col">
       <div className="p-4 border-b border-gray-100 dark:border-gray-700/50 flex justify-between items-center bg-gray-50/50 dark:bg-gray-800/50">
         <div>
-          <h3 className="font-bold text-gray-900 dark:text-white">Relatório Litúrgico ({anoSelecionado})</h3>
+          <h3 className="font-bold text-gray-900 dark:text-white">Relatório de Sessões ({anoSelecionado})</h3>
           <p className="text-[10px] text-gray-500 uppercase tracking-widest mt-1">Sessões Oficiais Realizadas</p>
         </div>
         <button
@@ -65,7 +65,7 @@ export function TabelaSessoesPeriodo({ sessoes, loading, anoSelecionado }: Tabel
         <div ref={tableRef} className="print:p-8 print:bg-white print:text-black min-w-[800px]">
           {/* Header exclusivo de impressão */}
           <div className="hidden print:block mb-8 border-b-2 border-black pb-4">
-            <h1 className="text-2xl font-bold uppercase tracking-tight">Registro de Sessões Litúrgicas</h1>
+            <h1 className="text-2xl font-bold uppercase tracking-tight">Registro de Sessões</h1>
             <div className="flex justify-between text-sm mt-2 text-gray-600">
               <p>Centro Espírita Beneficente União do Vegetal - Núcleo Jardim Real</p>
               <p className="font-bold">Período: {anoSelecionado}</p>

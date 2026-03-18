@@ -16,7 +16,6 @@ export function GraficoSessoesPorMes({ sessoes, loading }: { sessoes: RelatorioS
     
     // Contar APENAS SESSÕES REAIS
     sessoes
-      .filter(s => s.quantidade_participantes > 0)
       .forEach(sessao => {
         const data = new Date(sessao.data_realizacao)
         const mesIndex = data.getMonth() // 0 to 11
@@ -78,7 +77,6 @@ export function GraficoSessoesTipo({ sessoes, loading }: { sessoes: RelatorioSes
     const mapa = new Map<string, number>()
     
     sessoes
-      .filter(s => s.quantidade_participantes > 0)
       .forEach(sessao => {
         const tipo = sessao.tipo || 'Outro'
         mapa.set(tipo, (mapa.get(tipo) || 0) + 1)

@@ -88,11 +88,29 @@ export default function EditarSessao({ params }: { params: Promise<{ id: string 
         setPreparos(preparosComSaldo)
       }
 
+      // Extrai data e hora ignorando conversões de fuso horário que o objeto Date faz
+      let dateVal = ''
+      let timeVal = ''
+      if (sessao.data_realizacao) {
+        const dateTimeStr = sessao.data_realizacao
+        if (dateTimeStr.includes('T')) {
+          const parts = dateTimeStr.split('T')
+          dateVal = parts[0]
+          timeVal = parts[1].substring(0, 5)
+        } else if (dateTimeStr.includes(' ')) {
+          const parts = dateTimeStr.split(' ')
+          dateVal = parts[0]
+          timeVal = parts[1].substring(0, 5)
+        } else {
+          dateVal = dateTimeStr
+          timeVal = '20:00' // fallback
+        }
+      }
+
       // Preenche o formulário
-      const dataIso = new Date(sessao.data_realizacao)
       setFormData({
-        data_realizacao: dataIso.toISOString().split('T')[0],
-        hora: dataIso.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+        data_realizacao: dateVal,
+        hora: timeVal,
         tipo: sessao.tipo,
         dirigente: sessao.dirigente,
         explanador: sessao.explanador || '',

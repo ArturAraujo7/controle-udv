@@ -13,14 +13,14 @@ interface ListaFuncaoLiturgicaProps {
 export function ListaFuncaoLiturgica({ titulo, sessoes, funcaoKey, loading }: ListaFuncaoLiturgicaProps) {
   const [copied, setCopied] = useState(false)
 
-  // Extrai as sessões REAIS (com participantes)
+  // Inclui as sessões históricas e reais
   const ranking = useMemo(() => {
-    const sessoesReais = sessoes.filter(s => s.quantidade_participantes > 0)
+    const sessoesSelecionadas = sessoes
     
     // Contagem de frequência
     const map = new Map<string, number>()
     
-    sessoesReais.forEach(sessao => {
+    sessoesSelecionadas.forEach(sessao => {
       const nomeOriginal = sessao[funcaoKey]
       // Ignora se for null, undefined, vazio ou "—" (traço)
       if (nomeOriginal && nomeOriginal.trim() !== '' && nomeOriginal.trim() !== '—') {

@@ -114,8 +114,8 @@ export default function RelatoriosPage() {
             
             <ResumoCard 
               titulo="Sessões" 
-              valor={loading ? '--' : totalSessoes} 
-              subtitulo={`Realizadas (${anoSelecionado})`} 
+              valor={loading ? '--' : sessoes.length} 
+              subtitulo={`Totais do Período`} 
               icone={<BookOpen className="w-12 h-12 text-gray-900 dark:text-gray-100 opacity-5" />} 
             />
             
@@ -155,9 +155,9 @@ export default function RelatoriosPage() {
             </div>
           </div>
 
-          {/* Seção 4: Relatório Litúrgico (O Ouro do Dashboard) */}
+          {/* Seção 4: Relatório de Sessões (O Ouro do Dashboard) */}
           <h2 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-celestial-600 to-celestial-400 print:text-black mt-8 mb-4">
-            Relatório Litúrgico & Escalas
+            Relatório de Sessões & Escalas
           </h2>
           
           <TabelaSessoesPeriodo 
