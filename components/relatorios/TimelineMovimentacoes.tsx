@@ -115,8 +115,8 @@ export function TimelineMovimentacoes({ sessoes, preparos, saidas, consumos, loa
   const itensPaginados = movimentacoes.slice((paginaAtual - 1) * itensPorPagina, paginaAtual * itensPorPagina)
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700/60 shadow-sm overflow-hidden flex flex-col h-full print:border-gray-300 print:shadow-none print:break-inside-avoid">
-       <div className="p-4 border-b border-gray-100 dark:border-gray-700/50 bg-gray-50/50 dark:bg-gray-800/50">
+    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700/60 shadow-sm overflow-hidden print:overflow-visible flex flex-col print:block h-full print:border-none print:shadow-none">
+       <div className="p-4 border-b border-gray-100 dark:border-gray-700/50 bg-gray-50/50 dark:bg-gray-800/50 print:hidden">
         <h3 className="font-bold text-gray-900 dark:text-white print:text-black">Rastreabilidade</h3>
         <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mt-0.5">Timeline consolidada</p>
       </div>
@@ -124,7 +124,7 @@ export function TimelineMovimentacoes({ sessoes, preparos, saidas, consumos, loa
       <div className="p-4 flex-1">
         <div className="space-y-4 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-gray-200 dark:before:via-gray-700 before:to-transparent">
           {itensPaginados.map((item) => (
-            <div key={item.id} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
+            <div key={item.id} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active print:break-inside-avoid">
               
               {/* Icon Marker */}
               <div className="flex items-center justify-center w-10 h-10 rounded-full border-4 border-white dark:border-gray-800 bg-celestial-500 text-white shadow-sm shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10 print:border-gray-300">

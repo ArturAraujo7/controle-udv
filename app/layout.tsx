@@ -7,13 +7,13 @@ import AuthProvider from '@/components/AuthProvider'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'Controle UDV',
-  description: 'Gestão de Estoque e Sessões',
+  title: 'Guardião',
+  description: 'Controle UDV • Jardim Real',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'Controle UDV',
+    title: 'Guardião',
   },
   formatDetection: {
     telephone: false,

@@ -19,19 +19,42 @@ export function ListaFuncaoLiturgica({ titulo, sessoes, funcaoKey, loading }: Li
     
     // Contagem de frequência
     const map = new Map<string, number>()
+    // Armazena o melhor nome para exibição (o mais recente ou o que contém o grau mais alto)
+    const displayMap = new Map<string, string>()
     
     sessoesSelecionadas.forEach(sessao => {
       const nomeOriginal = sessao[funcaoKey]
       // Ignora se for null, undefined, vazio ou "—" (traço)
       if (nomeOriginal && nomeOriginal.trim() !== '' && nomeOriginal.trim() !== '—') {
-        const nomeUpper = nomeOriginal.trim().toUpperCase() // case insensitive
-        map.set(nomeUpper, (map.get(nomeUpper) || 0) + 1)
+        // Divide o nome caso haja mais de um (separados por / ou ,)
+        const nomes = nomeOriginal.split(/[/,]/).map(n => n.trim()).filter(n => n !== '')
+        
+        nomes.forEach(nome => {
+          // Remove prefixos comuns (M., C., I., Cons., etc) ignorando case
+          const nomeSemTitulo = nome.replace(/^(M\.|C\.|I\.|Cons\.)\s*/i, '').trim()
+          const nomeUpper = nomeSemTitulo.toUpperCase() // case insensitive
+          
+          map.set(nomeUpper, (map.get(nomeUpper) || 0) + 1)
+          
+          // Lógica para manter o nome de exibição mais adequado:
+          // Como as sessões vêm da mais recente para a mais antiga, o primeiro nome lido é sempre o grau mais atual.
+          const titleRegex = /^(M\.|C\.|I\.|Cons\.)\s*/i
+          const currentDisplay = displayMap.get(nomeUpper) || ''
+          
+          // Se não existe, ou se existe mas o gravado não tem título e a iteração atual possui título (ex: esqueceu de botar o grau na sessão atual)
+          if (!displayMap.has(nomeUpper) || (!titleRegex.test(currentDisplay) && titleRegex.test(nome))) {
+            displayMap.set(nomeUpper, nome)
+          }
+        })
       }
     })
 
     // Converte mapa para Array ordenado (Descendente)
     return Array.from(map.entries())
-      .map(([nome, contagem]) => ({ nome, contagem }))
+      .map(([nomeNormalized, contagem]) => ({ 
+        nome: displayMap.get(nomeNormalized) || nomeNormalized, // Usa o nome com título para o ranking
+        contagem 
+      }))
       .sort((a, b) => b.contagem - a.contagem)
   }, [sessoes, funcaoKey])
 
@@ -77,7 +100,7 @@ export function ListaFuncaoLiturgica({ titulo, sessoes, funcaoKey, loading }: Li
               return (
                 <li 
                   key={index} 
-                  className={`flex justify-between items-center px-5 py-3 ${isFirst ? 'bg-gold-50/30 dark:bg-gold-900/10' : ''}`}
+                  className={`flex justify-between items-center px-5 py-3 print:break-inside-avoid ${isFirst ? 'bg-gold-50/30 dark:bg-gold-900/10' : ''}`}
                 >
                   <div className="flex items-center gap-3">
                     {/* Badge da posição */}

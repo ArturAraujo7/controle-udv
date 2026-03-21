@@ -33,9 +33,9 @@ export function GraficoSessoesPorMes({ sessoes, loading }: { sessoes: RelatorioS
   if (loading) return <div className="h-[250px] w-full bg-gray-100 dark:bg-gray-800 animate-pulse rounded-lg"></div>
 
   return (
-    <div className="h-[250px] w-full print:h-[200px]">
+    <div className="h-[280px] w-full print:h-[280px]">
       <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={dadosGrafico} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+        <LineChart data={dadosGrafico} margin={{ top: 10, right: 10, left: -20, bottom: 15 }}>
           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#374151" opacity={0.2} />
           <XAxis 
             dataKey="nome" 
@@ -83,7 +83,7 @@ export function GraficoSessoesTipo({ sessoes, loading }: { sessoes: RelatorioSes
       })
 
     return Array.from(mapa.entries())
-        .map(([name, value]) => ({ name, value }))
+        .map(([name, value]) => ({ name: `${name} (${value})`, value }))
         .sort((a,b) => b.value - a.value)
   }, [sessoes])
 
@@ -92,7 +92,7 @@ export function GraficoSessoesTipo({ sessoes, loading }: { sessoes: RelatorioSes
   const COLORS = [GOLD_COLOR, BLUE_COLOR, EMERALD_COLOR, AMBER_COLOR, '#64748b', '#ec4899', '#8b5cf6']
 
   return (
-    <div className="h-[250px] w-full print:h-[200px]">
+    <div className="h-[280px] w-full print:h-[280px]">
       <ResponsiveContainer width="100%" height="100%">
         <PieChart>
           <Pie

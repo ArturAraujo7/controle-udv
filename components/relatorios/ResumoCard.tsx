@@ -11,7 +11,7 @@ interface ResumoCardProps {
 export function ResumoCard({ titulo, valor, subtitulo, icone, destaque = false }: ResumoCardProps) {
   if (destaque) {
     return (
-      <div className="bg-gradient-to-br from-gold-600 to-amber-700 rounded-xl p-5 text-white shadow-lg shadow-gold-900/10 relative overflow-hidden print:bg-none print:bg-white print:border print:border-gray-300 print:text-black print:shadow-none print:break-inside-avoid">
+      <div className="h-full bg-gradient-to-br from-gold-600 to-amber-700 rounded-xl p-5 text-white shadow-lg shadow-gold-900/10 relative overflow-hidden print:bg-none print:bg-white print:border print:border-gray-300 print:text-black print:shadow-none print:break-inside-avoid">
         <div className="absolute -right-4 -top-4 p-4 opacity-10 print:hidden scale-150">
           {icone}
         </div>
@@ -25,7 +25,7 @@ export function ResumoCard({ titulo, valor, subtitulo, icone, destaque = false }
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-200 dark:border-gray-700/60 shadow-sm relative overflow-hidden print:border-gray-300 print:shadow-none print:break-inside-avoid">
+    <div className="h-full bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-200 dark:border-gray-700/60 shadow-sm relative overflow-hidden print:border-gray-300 print:shadow-none print:break-inside-avoid">
       <div className="absolute right-0 top-0 p-4 opacity-5 print:hidden">
         {icone}
       </div>

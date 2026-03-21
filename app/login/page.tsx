@@ -2,7 +2,8 @@
 import { useState } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 import { useRouter } from 'next/navigation'
-import { Lock, Mail, Loader2, Leaf } from 'lucide-react'
+import { Lock, Mail, Loader2 } from 'lucide-react'
+import { Logo } from '@/components/Logo'
 
 export default function Login() {
   const router = useRouter()
@@ -37,16 +38,16 @@ export default function Login() {
       <div className="w-full max-w-sm bg-white dark:bg-gray-800 rounded-2xl p-8 border border-gray-200 dark:border-gray-700 shadow-2xl relative overflow-hidden transition-all">
 
         {/* Decorativo */}
-        <div className="absolute top-0 right-0 p-8 opacity-5">
-          <Leaf size={120} className="text-gray-900 dark:text-white" />
+        <div className="absolute -top-10 -right-10 p-8 opacity-[0.03] dark:opacity-[0.05] pointer-events-none">
+          <Logo className="w-64 h-64 grayscale" />
         </div>
 
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-gold-100 dark:bg-gold-900/50 rounded-full flex items-center justify-center mx-auto mb-4 border border-gold-200 dark:border-gold-700/50">
-            <Leaf className="w-8 h-8 text-gold-600 dark:text-gold-400" />
+        <div className="text-center mb-8 relative z-10">
+          <div className="w-24 h-24 mx-auto mb-2 flex items-center justify-center">
+            <Logo className="w-full h-full drop-shadow-2xl" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Controle UDV</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Núcleo Jardim Real</p>
+          <h1 className="text-3xl font-black bg-clip-text text-transparent bg-gradient-to-r from-gold-600 to-amber-700 dark:from-gold-400 dark:to-amber-500 tracking-tight">Guardião</h1>
+          <p className="text-xs font-bold text-sky-700 dark:text-sky-400 mt-1 uppercase tracking-widest">Controle UDV • Jardim Real</p>
         </div>
 
         <form onSubmit={handleLogin} className="space-y-4 relative z-10">

@@ -42,8 +42,13 @@ export default function RelatoriosPage() {
   
   // Médias
   const mediaPorSessao = totalSessoes > 0 ? totalConsumido / totalSessoes : 0
+  const mediaParticipantesSessao = totalSessoes > 0 ? totalParticipantes / totalSessoes : 0
+  const mediaPerCapita = totalParticipantes > 0 ? (totalConsumido * 1000) / totalParticipantes : 0
 
   const AnosParaFiltro = ['Todos', currentYear, (parseInt(currentYear) - 1).toString(), (parseInt(currentYear) - 2).toString()]
+
+  // Condição para mostrar dados de vegetal (estoque, consumo, preparo)
+  const mostrarDadosVegetal = anoSelecionado === 'Todos' || parseInt(anoSelecionado) >= 2026;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 pb-20 text-gray-900 dark:text-white transition-colors duration-300">
@@ -86,31 +91,34 @@ export default function RelatoriosPage() {
         </button>
       </div>
 
-      <div ref={componentRef} className="print:p-8 print:bg-white print:text-black">
+      <style dangerouslySetInnerHTML={{ __html: `
+        @media print {
+          @page { margin: 15mm; }
+        }
+      `}} />
+      <div ref={componentRef} className="print:p-0 print:bg-white print:text-black">
         {/* Print Header */}
-        <div className="hidden print:flex justify-between items-end border-b-2 border-black pb-4 mb-8">
-            <div>
-              <h1 className="text-3xl font-black uppercase">Relatório Analítico DMC</h1>
-              <p className="font-bold text-gray-500 uppercase mt-1">Núcleo Jardim Real</p>
-            </div>
-            <div className="text-right">
-              <p className="text-sm font-bold uppercase">Período de Referência</p>
-              <h2 className="text-xl font-bold">{anoSelecionado === 'Todos' ? 'Histórico Completo' : anoSelecionado}</h2>
-            </div>
+        <div className="hidden print:flex flex-col items-center justify-center border-b print:border-gray-300 pb-5 mb-8 gap-3">
+            <img src="/PDF/header.svg" alt="Cabeçalho Guardião" className="h-16 w-auto drop-shadow-sm" />
+            <p className="text-[10px] font-medium uppercase tracking-widest print:text-gray-400">
+              Período de Referência: <span className="font-bold print:text-gray-600">{anoSelecionado === 'Todos' ? 'Histórico Completo' : anoSelecionado}</span>
+            </p>
         </div>
 
         <div className="space-y-6">
           {/* Seção 2: Resumo Rápido */}
-          <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-            <div className="col-span-2 lg:col-span-1">
-              <ResumoCard 
-                titulo="Estoque Atual" 
-                valor={`${estoqueAtual.toFixed(2).replace('.', ',')} L`} 
-                subtitulo="Estoque real no momento" 
-                icone={<Droplets className="w-12 h-12 text-gold-500/20" />} 
-                destaque 
-              />
-            </div>
+          <div className={`grid grid-cols-2 ${mostrarDadosVegetal ? 'lg:grid-cols-5' : 'lg:grid-cols-2'} gap-3`}>
+            {mostrarDadosVegetal && (
+              <div className="col-span-2 lg:col-span-1 h-full">
+                <ResumoCard 
+                  titulo="Estoque Atual" 
+                  valor={`${estoqueAtual.toFixed(2).replace('.', ',')} L`} 
+                  subtitulo="Estoque real no momento" 
+                  icone={<Droplets className="w-12 h-12 text-gold-500/20" />} 
+                  destaque 
+                />
+              </div>
+            )}
             
             <ResumoCard 
               titulo="Sessões" 
@@ -120,51 +128,57 @@ export default function RelatoriosPage() {
             />
             
             <ResumoCard 
-              titulo="Participantes" 
-              valor={loading ? '--' : totalParticipantes} 
-              subtitulo="Público acumulado" 
+              titulo={anoSelecionado === 'Todos' ? "Média de Participantes" : "Participantes"} 
+              valor={loading ? '--' : (anoSelecionado === 'Todos' ? Math.round(mediaParticipantesSessao) : totalParticipantes)} 
+              subtitulo={anoSelecionado === 'Todos' ? "Por sessão oficial" : "Público acumulado"} 
               icone={<Users className="w-12 h-12 text-gray-900 dark:text-gray-100 opacity-5" />} 
             />
             
-            <ResumoCard 
-              titulo="Total Consumido" 
-              valor={loading ? '--' : `${totalConsumido.toFixed(2).replace('.', ',')} L`} 
-              subtitulo={`Média ${mediaPorSessao.toFixed(2).replace('.', ',')}L/Sessão`} 
-              icone={<Droplets className="w-12 h-12 text-gray-900 dark:text-gray-100 opacity-5" />} 
-            />
-            
-            <ResumoCard 
-              titulo="Preparo & Doação" 
-              valor={loading ? '--' : `${totalPreparado.toFixed(2).replace('.', ',')} L`} 
-              subtitulo={`Enviados: ${totalSaidas.toFixed(2).replace('.', ',')} L`} 
-              icone={<Layers className="w-12 h-12 text-gray-900 dark:text-gray-100 opacity-5" />} 
-            />
+            {mostrarDadosVegetal && (
+              <>
+                <ResumoCard 
+                  titulo={anoSelecionado === 'Todos' ? "Média de Consumo" : "Total Consumido"} 
+                  valor={loading ? '--' : (anoSelecionado === 'Todos' ? `${mediaPorSessao.toFixed(2).replace('.', ',')} L` : `${totalConsumido.toFixed(2).replace('.', ',')} L`)} 
+                  subtitulo={anoSelecionado === 'Todos' ? "Volume médio por sessão" : `Média ${mediaPorSessao.toFixed(2).replace('.', ',')}L/Sessão`} 
+                  icone={<Droplets className="w-12 h-12 text-gray-900 dark:text-gray-100 opacity-5" />} 
+                />
+                
+                <ResumoCard 
+                  titulo="Consumo Per Capita" 
+                  valor={loading ? '--' : `${mediaPerCapita.toFixed(0)} ml`} 
+                  subtitulo={`Média por participante`} 
+                  icone={<Droplets className="w-12 h-12 text-gray-900 dark:text-gray-100 opacity-5" />} 
+                />
+              </>
+            )}
           </div>
 
           <hr className="my-8 border-gray-200 dark:border-gray-800 print:hidden"/>
 
           {/* Seção 3: Sessões Gráficos */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700/60 shadow-sm print:border-gray-300 print:shadow-none print:break-inside-avoid">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 print:flex print:justify-center print:break-inside-avoid">
+            <div className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700/60 shadow-sm print:hidden">
               <h3 className="font-bold text-gray-900 dark:text-white uppercase text-xs mb-4 tracking-wider print:text-black">Sessões por Mês</h3>
               <GraficoSessoesPorMes sessoes={sessoes} loading={loading} />
             </div>
-            <div className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700/60 shadow-sm print:border-gray-300 print:shadow-none print:break-inside-avoid">
+            <div className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700/60 shadow-sm print:border-gray-300 print:shadow-none print:break-inside-avoid print:w-[75%] print:text-center">
               <h3 className="font-bold text-gray-900 dark:text-white uppercase text-xs mb-4 tracking-wider print:text-black">Tipos de Sessão</h3>
               <GraficoSessoesTipo sessoes={sessoes} loading={loading} />
             </div>
           </div>
 
           {/* Seção 4: Relatório de Sessões (O Ouro do Dashboard) */}
-          <h2 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-celestial-600 to-celestial-400 print:text-black mt-8 mb-4">
+          <h2 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-celestial-600 to-celestial-400 print:hidden mt-8 mb-4">
             Relatório de Sessões & Escalas
           </h2>
           
-          <TabelaSessoesPeriodo 
-             sessoes={sessoes} 
-             loading={loading} 
-             anoSelecionado={anoSelecionado} 
-          />
+          <div className="print:break-before-page">
+            <TabelaSessoesPeriodo 
+               sessoes={sessoes} 
+               loading={loading} 
+               anoSelecionado={anoSelecionado} 
+            />
+          </div>
 
           {/* Três Quadros Litúrgicos */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
@@ -175,18 +189,22 @@ export default function RelatoriosPage() {
 
           <hr className="my-8 border-gray-200 dark:border-gray-800 print:hidden"/>
 
-          {/* Seção 6: Rastreabilidade / Movimentações */}
-          <h2 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-emerald-600 to-emerald-400 print:text-black mt-8 mb-4">
-            Extrato de Rastreabilidade
-          </h2>
+          {mostrarDadosVegetal && (
+            <>
+              {/* Seção 6: Rastreabilidade / Movimentações */}
+              <h2 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-emerald-600 to-emerald-400 print:text-black mt-8 mb-4 print:mt-6 print:mb-2">
+                Extrato de Rastreabilidade
+              </h2>
 
-          <TimelineMovimentacoes 
-             sessoes={sessoes}
-             preparos={preparos}
-             saidas={saidas}
-             consumos={consumos}
-             loading={loading}
-          />
+              <TimelineMovimentacoes 
+                 sessoes={sessoes}
+                 preparos={preparos}
+                 saidas={saidas}
+                 consumos={consumos}
+                 loading={loading}
+              />
+            </>
+          )}
         </div>
       </div>
     </div>

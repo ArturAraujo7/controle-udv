@@ -47,8 +47,8 @@ export function TabelaSessoesPeriodo({ sessoes, loading, anoSelecionado }: Tabel
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700/60 shadow-sm overflow-hidden flex flex-col">
-      <div className="p-4 border-b border-gray-100 dark:border-gray-700/50 flex justify-between items-center bg-gray-50/50 dark:bg-gray-800/50">
+    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700/60 shadow-sm overflow-hidden print:overflow-visible flex flex-col print:block print:border-none print:shadow-none">
+      <div className="p-4 border-b border-gray-100 dark:border-gray-700/50 flex justify-between items-center bg-gray-50/50 dark:bg-gray-800/50 print:hidden">
         <div>
           <h3 className="font-bold text-gray-900 dark:text-white">Relatório de Sessões ({anoSelecionado})</h3>
           <p className="text-[10px] text-gray-500 uppercase tracking-widest mt-1">Sessões Oficiais Realizadas</p>
@@ -62,7 +62,7 @@ export function TabelaSessoesPeriodo({ sessoes, loading, anoSelecionado }: Tabel
       </div>
 
       <div className="overflow-x-auto print:overflow-visible">
-        <div ref={tableRef} className="print:p-8 print:bg-white print:text-black min-w-[800px]">
+        <div ref={tableRef} className="print:p-0 print:bg-white print:text-black w-full min-w-[800px] print:min-w-[auto]">
           {/* Header exclusivo de impressão */}
           <div className="hidden print:block mb-8 border-b-2 border-black pb-4">
             <h1 className="text-2xl font-bold uppercase tracking-tight">Registro de Sessões</h1>
@@ -85,7 +85,7 @@ export function TabelaSessoesPeriodo({ sessoes, loading, anoSelecionado }: Tabel
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-700/50 print:divide-gray-300">
               {sessoesOrdenadas.map((sessao) => (
-                <tr key={sessao.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-700/30 transition-colors print:hover:bg-transparent">
+                <tr key={sessao.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-700/30 transition-colors print:hover:bg-transparent print:break-inside-avoid">
                   <td className="py-3 px-4 whitespace-nowrap tabular-nums">{new Date(sessao.data_realizacao).toLocaleDateString('pt-BR')}</td>
                   <td className="py-3 px-4 whitespace-nowrap">
                     <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border ${getBadgeColor(sessao.tipo)} print:border-gray-400 print:text-black print:bg-transparent`}>
