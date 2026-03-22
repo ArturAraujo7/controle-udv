@@ -64,9 +64,7 @@ export default function NovaSaida() {
           data_saida: formData.data_saida,
           quantidade: parseFloat(formData.quantidade),
           destino: formData.destino,
-          preparo_id: parseInt(formData.preparo_id),
-          observacoes: formData.observacoes,
-          user_id: user?.id
+          preparo_id: parseInt(formData.preparo_id)
         }
       ])
 
