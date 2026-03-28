@@ -108,6 +108,7 @@ export default function NovaSessao() {
         tipo: formData.tipo,
         dirigente: formData.dirigente,
         explanador: formData.explanador,
+        leitor_documentos: formData.leitor_documentos,
         quantidade_participantes: Number(formData.quantidade_participantes),
         user_id: user?.id // Rastreamento de usuário
       }])
