@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Save, User } from 'lucide-react'
+import { ArrowLeft, Save, User, ShieldCheck } from 'lucide-react'
 import { useAuth } from '@/components/AuthProvider'
 import Link from 'next/link'
 
@@ -11,7 +11,7 @@ export default function Perfil() {
     const [loading, setLoading] = useState(true)
     const [updating, setUpdating] = useState(false)
     const [fullName, setFullName] = useState('')
-    const { session } = useAuth()
+    const { session, profile } = useAuth()
     const userId = session?.user?.id || null
 
     useEffect(() => {
@@ -85,6 +85,9 @@ export default function Perfil() {
                     <p className="text-sm text-gray-500 dark:text-gray-400 font-mono bg-gray-100 dark:bg-gray-700 px-3 py-1 rounded-full">
                         ID: {userId?.slice(0, 8)}...
                     </p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-2 font-medium uppercase tracking-wider">
+                        Cargo: <span className="text-gold-600 dark:text-gold-500 font-bold">{profile?.role || 'mestre'}</span>
+                    </p>
                 </div>
 
                 <form onSubmit={handleUpdate} className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 space-y-6">
@@ -112,6 +115,21 @@ export default function Perfil() {
                         {updating ? 'Salvando...' : <><Save className="w-5 h-5" /> Salvar Perfil</>}
                     </button>
                 </form>
+
+                {profile?.role === 'admin' && (
+                    <div className="mt-8">
+                        <Link 
+                            href="/admin/usuarios"
+                            className="w-full bg-white dark:bg-gray-800 border border-gold-200 dark:border-gold-900/50 text-gold-700 dark:text-gold-500 font-bold py-4 px-4 rounded-2xl shadow-sm hover:shadow-md hover:border-gold-300 dark:hover:border-gold-800 transition-all flex items-center justify-center gap-3 active:scale-[0.98]"
+                        >
+                            <ShieldCheck className="w-6 h-6" />
+                            <span>Gerenciar Usuários & Cargos</span>
+                        </Link>
+                        <p className="text-[10px] text-gray-400 text-center mt-3 uppercase tracking-widest font-medium">
+                            Acesso administrativo restrito
+                        </p>
+                    </div>
+                )}
             </div>
         </div>
     )

@@ -39,11 +39,7 @@ export function Logo({ className = "w-10 h-10" }: LogoProps) {
 
       {/* Escudo externo — forma heráldica clássica */}
       <path
-        d="M50 6
-           C50 6, 82 8, 88 28
-           C94 48, 80 72, 50 94
-           C20 72, 6 48, 12 28
-           C18 8, 50 6, 50 6 Z"
+        d="M50 6 C50 6, 82 8, 88 28 C94 48, 80 72, 50 94 C20 72, 6 48, 12 28 C18 8, 50 6, 50 6 Z"
         fill="none"
         stroke="url(#goldGradient)"
         strokeWidth="5.5"
@@ -53,11 +49,7 @@ export function Logo({ className = "w-10 h-10" }: LogoProps) {
 
       {/* Escudo interno — detalhe elegante */}
       <path
-        d="M50 15
-           C50 15, 76 17, 81 32
-           C86 48, 74 68, 50 84
-           C26 68, 14 48, 19 32
-           C24 17, 50 15, 50 15 Z"
+        d="M50 15 C50 15, 76 17, 81 32 C86 48, 74 68, 50 84 C26 68, 14 48, 19 32 C24 17, 50 15, 50 15 Z"
         fill="none"
         stroke="#F59E0B"
         strokeWidth="1"
@@ -66,11 +58,7 @@ export function Logo({ className = "w-10 h-10" }: LogoProps) {
 
       {/* Gota do Vegetal (Hoasca) — símbolo central */}
       <path
-        d="M50 24
-           C57 33, 66 44, 66 56
-           C66 67, 59 74, 50 74
-           C41 74, 34 67, 34 56
-           C34 44, 43 33, 50 24 Z"
+        d="M50 24 C57 33, 66 44, 66 56 C66 67, 59 74, 50 74 C41 74, 34 67, 34 56 C34 44, 43 33, 50 24 Z"
         fill="url(#skyGradient)"
       />
 
