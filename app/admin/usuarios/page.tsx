@@ -29,18 +29,27 @@ export default function AdminUsuarios() {
 
   // 2. Fetch all users
   const fetchUsers = async () => {
-    setLoading(true)
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('id, full_name, email, role')
-      .order('full_name', { ascending: true })
+    try {
+      if (!profile || profile.role !== 'admin') {
+        router.push('/')
+        return
+      }
 
-    if (error) {
-      console.error('Erro ao buscar usuários:', error.message)
-    } else {
-      setProfiles(data as UserProfile[])
+      setLoading(true)
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, full_name, email, role')
+        .order('full_name', { ascending: true })
+
+      if (error) throw error
+      if (data) setProfiles(data as UserProfile[])
+    } catch (err: unknown) {
+      console.error('Erro ao buscar usuários:', err)
+      const errorMsg = err instanceof Error ? err.message : 'Falha ao carregar lista'
+      alert(errorMsg)
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   useEffect(() => {

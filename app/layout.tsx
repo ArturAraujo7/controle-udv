@@ -28,6 +28,8 @@ export const viewport: Viewport = {
   userScalable: false,
 }
 
+import { AIChatWidget } from '@/components/AIChatWidget'
+
 export default function RootLayout({
   children,
 }: {
@@ -41,6 +43,7 @@ export default function RootLayout({
             <div className="max-w-5xl mx-auto min-h-screen sm:min-h-[calc(100vh-2rem)] sm:my-4 sm:rounded-3xl bg-gray-50 dark:bg-gray-900 shadow-2xl sm:border border-x-0 sm:border-x border-gray-200 dark:border-gray-800 relative overflow-hidden">
               {children}
             </div>
+            <AIChatWidget />
           </AuthProvider>
         </ThemeProvider>
       </body>
