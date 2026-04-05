@@ -2,7 +2,7 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabaseClient'
-import { Plus, Database, History, GlassWater, ChevronRight, Users, LogOut, ArrowUpRight, BarChart3, User, BookOpen, Mic, X } from 'lucide-react'
+import { Plus, Database, History, GlassWater, ChevronRight, Users, LogOut, ArrowUpRight, BarChart3, User, BookOpen, Mic, X, Bell } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { ChangelogModal } from '@/components/ChangelogModal'
@@ -42,7 +42,7 @@ type Movimentacao = {
 }
 
 export default function Home() {
-  const { session } = useAuth()
+  const { session, profile } = useAuth()
   const router = useRouter()
   const [estoqueAtual, setEstoqueAtual] = useState<number>(0)
   const [totalSessoes, setTotalSessoes] = useState<number>(0)
@@ -215,6 +215,15 @@ export default function Home() {
         </div>
         <div className="flex items-center gap-2">
           <ThemeToggle />
+          {profile?.role === 'admin' && (
+            <Link
+              href="/atividades"
+              className="w-10 h-10 bg-white dark:bg-gray-800 rounded-full flex items-center justify-center border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 transition shadow-sm"
+              title="Registro de Atividades (Admin)"
+            >
+              <Bell className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+            </Link>
+          )}
           <Link
             href="/perfil"
             className="w-10 h-10 bg-white dark:bg-gray-800 rounded-full flex items-center justify-center border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 transition shadow-sm"
