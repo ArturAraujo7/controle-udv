@@ -16,6 +16,7 @@ ALTER TABLE public.activity_logs ENABLE ROW LEVEL SECURITY;
 
 -- Admins / Super Admins policy (allowing superadmin or admin based on your RBAC, fallback to default auth)
 -- Let's make it viewable by authenticated users for now or rely on specific claims:
+DROP POLICY IF EXISTS "Admins can view activity logs" ON public.activity_logs;
 CREATE POLICY "Admins can view activity logs" 
     ON public.activity_logs 
     FOR SELECT 
