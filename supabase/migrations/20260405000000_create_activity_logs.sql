@@ -37,19 +37,27 @@ BEGIN
 
     -- Determine action and build an automatic message
     IF (TG_OP = 'INSERT') THEN
-        v_msg := 'Novo registro criado na tabela ' || TG_TABLE_NAME || ' (ID: ' || NEW.id || ')';
+        IF (TG_TABLE_NAME = 'sessoes') THEN
+            v_msg := 'Nova sessão registrada (' || NEW.tipo || ')';
+        ELSIF (TG_TABLE_NAME = 'preparos') THEN
+            v_msg := 'Novo preparo registrado (' || NEW.grau || ' - ' || NEW.mestre_preparo || ')';
+        ELSIF (TG_TABLE_NAME = 'saidas') THEN
+            v_msg := 'Nova saída logada para ' || NEW.destino;
+        ELSE
+            v_msg := 'Ação adicionada em ' || TG_TABLE_NAME;
+        END IF;
+
         INSERT INTO public.activity_logs (user_id, acao, tabela_afetada, registro_id, dados_novos, mensagem_automatica)
         VALUES (current_uid, TG_OP, TG_TABLE_NAME, NEW.id, row_to_json(NEW)::jsonb, v_msg);
         RETURN NEW;
         
     ELSIF (TG_OP = 'UPDATE') THEN
-        -- Check specific logic for nice messages (e.g., preparos vs sessoes)
         IF (TG_TABLE_NAME = 'preparos') THEN
-            v_msg := 'Estoque de preparo atualizado (ID: ' || NEW.id || ') de ' || OLD.quantidade_preparada || ' para ' || NEW.quantidade_preparada;
+            v_msg := 'Estoque de preparo modificado (' || NEW.grau || ' - ' || NEW.mestre_preparo || ')';
         ELSIF (TG_TABLE_NAME = 'sessoes') THEN
-            v_msg := 'Sessão alterada: dirigente mudou ou detalhes atualizaram (Data: ' || NEW.data_realizacao || ')';
+            v_msg := 'Detalhes da Sessão modificados (' || NEW.tipo || ')';
         ELSE
-            v_msg := 'Registro atualizado na tabela ' || TG_TABLE_NAME || ' (ID: ' || NEW.id || ')';
+            v_msg := 'Registro atualizado em ' || TG_TABLE_NAME;
         END IF;
 
         INSERT INTO public.activity_logs (user_id, acao, tabela_afetada, registro_id, dados_antigos, dados_novos, mensagem_automatica)
@@ -57,7 +65,14 @@ BEGIN
         RETURN NEW;
         
     ELSIF (TG_OP = 'DELETE') THEN
-        v_msg := 'Registro removido da tabela ' || TG_TABLE_NAME || ' (ID: ' || OLD.id || ')';
+        IF (TG_TABLE_NAME = 'sessoes') THEN
+            v_msg := 'Sessão apagada (' || OLD.tipo || ')';
+        ELSIF (TG_TABLE_NAME = 'preparos') THEN
+            v_msg := 'Preparo deletado (' || OLD.grau || ' - ' || OLD.mestre_preparo || ')';
+        ELSE
+            v_msg := 'Registro removido em ' || TG_TABLE_NAME;
+        END IF;
+
         INSERT INTO public.activity_logs (user_id, acao, tabela_afetada, registro_id, dados_antigos, mensagem_automatica)
         VALUES (current_uid, TG_OP, TG_TABLE_NAME, OLD.id, row_to_json(OLD)::jsonb, v_msg);
         RETURN OLD;
