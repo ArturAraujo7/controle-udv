@@ -43,18 +43,25 @@ export async function POST(req: Request) {
 
     // O sistema funciona muito melhor (reduz alucinação do modelo Flash)
     // ao receber dados formatados e simplificados invés de JSON bruto com ISO Strings.
+    // Calcular os consumos totais por sessão para já entregar mastigado para a inteligência
+    const consumosPorSessao = (consumosReq.data || []).reduce((acc: any, c: any) => {
+      acc[c.id_sessao] = (acc[c.id_sessao] || 0) + Number(c.quantidade_consumida || 0);
+      return acc;
+    }, {});
+
     const sessoesContext = (sessoesReq.data || []).map(s => {
       const dataStr = new Date(s.data_realizacao).toLocaleDateString('pt-BR')
-      return `[ID da Sessão: ${s.id}] -> Data: ${dataStr} | Tipo de Sessão: ${s.tipo} | Qtd Pessoas: ${s.quantidade_participantes || 0} | Mestre Dirigente: ${s.dirigente || '-'} | Leu os Documentos: ${s.leitor_documentos || '-'} | Fez a Explanação: ${s.explanador || '-'}`
+      const totalConsumido = Number(consumosPorSessao[s.id] || 0).toFixed(2).replace('.', ',')
+      return `[ID da Sessão: ${s.id}] -> Data: ${dataStr} | Tipo de Sessão: ${s.tipo} | Qtd Pessoas: ${s.quantidade_participantes || 0} | Total Consumido: ${totalConsumido} Litros | Mestre Dirigente: ${s.dirigente || '-'} | Leu os Documentos: ${s.leitor_documentos || '-'} | Fez a Explanação: ${s.explanador || '-'}`
     }).join('\n')
 
     const preparosContext = (preparosReq.data || []).map(p => {
       const dataStr = new Date(p.data_preparo).toLocaleDateString('pt-BR')
-      return `Preparo ID:${p.id} | Data:${dataStr} | Mestre:${p.mestre_preparo} | Grau:${p.grau} | Qtd:${p.quantidade_preparada}L`
+      return `Preparo ID:${p.id} | Data:${dataStr} | Mestre:${p.mestre_preparo} | Grau:${p.grau} | Qtd:${Number(p.quantidade_preparada || 0).toFixed(2)}L`
     }).join('\n')
 
-    const consumosContext = (consumosReq.data || []).map(c => `Sessão ID:${c.id_sessao} consumiu ${c.quantidade_consumida}L do Preparo ID:${c.id_preparo}`).join('\n')
-    const saidasContext = (saidasReq.data || []).map(s => `Saída ID:${s.id} | Data:${new Date(s.data_saida).toLocaleDateString('pt-BR')} | Destino:${s.destino} | Qtd:${s.quantidade}L`).join('\n')
+    const consumosContext = (consumosReq.data || []).map(c => `Sessão ID:${c.id_sessao} consumiu ${Number(c.quantidade_consumida || 0).toFixed(2)}L do Preparo ID:${c.id_preparo}`).join('\n')
+    const saidasContext = (saidasReq.data || []).map(s => `Saída ID:${s.id} | Data:${new Date(s.data_saida).toLocaleDateString('pt-BR')} | Destino:${s.destino} | Qtd:${Number(s.quantidade || 0).toFixed(2)}L`).join('\n')
 
     const genAI = new GoogleGenerativeAI(apiKey)
     const model = genAI.getGenerativeModel({ model: 'gemini-flash-lite-latest' })
@@ -73,6 +80,7 @@ REGRAS ESTRITAS DE LEITURA DOS DADOS ABAIXO (MUITO IMPORTANTE):
 4. Para a "última vez", localize a PRIMEIRA VEZ que o nome aparece descendo a lista na coluna "Leu os Documentos:", pois já organizei do mais recente pro mais antigo.
 5. Retorne a "Data" que antecede o nome naquela EXATA linha. Se disser uma data de outra linha, você fracassou estruturalmente.
 6. NUNCA explique o seu raciocínio, nem como encontrou os dados, entregue apenas a resposta final e de forma simpática.
+7. ABSOLUTAMENTE NUNCA mencione o número de "ID" de uma Sessão, Preparo ou Consumo para o usuário. Quando for falar de uma sessão, responda algo como: "Na sessão de <Tipo de Sessão> realizada na data <Data>, ..." omitindo o ID interno.
 
 === SESSOES ===
 ${sessoesContext}

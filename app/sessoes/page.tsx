@@ -54,7 +54,7 @@ export default function HistoricoSessoes() {
       // 4. Calcula o total por sessão e adiciona nome do usuário
       const sessoesComConsumo = dadosSessoes?.map((sessao) => {
         const consumosDaSessao = dadosConsumos?.filter(c => c.id_sessao === sessao.id) || []
-        const totalConsumido = consumosDaSessao.reduce((acc: number, curr) => acc + (curr.quantidade_consumida || 0), 0)
+        const totalConsumido = Number(consumosDaSessao.reduce((acc: number, curr) => acc + Number(curr.quantidade_consumida || 0), 0).toFixed(2))
         const profile = profiles?.find((p) => p.id === sessao.user_id)
 
         return {
@@ -179,7 +179,7 @@ export default function HistoricoSessoes() {
                     </div>
                     <div className="flex items-center gap-2 justify-end">
                       <GlassWater className="w-4 h-4 text-gold-600 dark:text-gold-500" />
-                      <span className="text-sm font-bold text-gray-900 dark:text-white">{sessao.quantidade_consumida} L</span>
+                      <span className="text-sm font-bold text-gray-900 dark:text-white">{Number(sessao.quantidade_consumida).toFixed(2).replace('.', ',')} L</span>
                     </div>
                   </div>
                 )}
@@ -288,7 +288,7 @@ export default function HistoricoSessoes() {
                             </div>
                             <div className="text-right">
                               <span className="block text-xl font-bold text-gold-700 dark:text-gold-400">
-                                {item.quantidade_consumida} <span className="text-sm font-normal">L</span>
+                                {Number(item.quantidade_consumida).toFixed(2).replace('.', ',')} <span className="text-sm font-normal">L</span>
                               </span>
                             </div>
                           </div>
