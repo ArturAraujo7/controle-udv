@@ -222,8 +222,8 @@ export default function GestaoMembros() {
 
       {/* Modal / Slide-over (simplified for mobile) */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 dark:bg-black/80 backdrop-blur-sm animate-in fade-in duration-200" onClick={handleCloseModal}>
-          <div className="bg-white dark:bg-gray-800 w-full max-w-md sm:rounded-2xl rounded-t-2xl shadow-2xl overflow-hidden animate-in sm:zoom-in-95 slide-in-from-bottom duration-200" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 dark:bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200" onClick={handleCloseModal}>
+          <div className="bg-white dark:bg-gray-800 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
             <div className="bg-gray-50 dark:bg-gray-900/50 p-6 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
               <h2 className="text-lg font-bold text-gray-900 dark:text-white">
                 {editingMembro ? 'Editar Membro' : 'Registrar Novo Cadastro'}
