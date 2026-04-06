@@ -332,6 +332,22 @@ export default function Home() {
           </div>
         </Link>
 
+        {/* Linha 3: Membros (Full Width) */}
+        <Link href="/membros" className="group col-span-2">
+          <div className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 flex items-center justify-between active:scale-95 transition-all hover:bg-slate-50 dark:hover:bg-slate-750">
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 bg-slate-100 dark:bg-slate-700 rounded-lg flex items-center justify-center">
+                <Users className="w-5 h-5 text-slate-600 dark:text-slate-300" />
+              </div>
+              <div>
+                <h3 className="text-slate-900 dark:text-white font-bold leading-tight">Dados da Irmandade</h3>
+                <p className="text-slate-500 dark:text-slate-400 text-xs mt-0.5">Administrar irmandade e visitantes</p>
+              </div>
+            </div>
+            <ChevronRight className="text-gray-400 dark:text-gray-500" />
+          </div>
+        </Link>
+
         {/* Linha 3: Registro Histórico (Full Width) */}
         <Link href="/nova-sessao-historica" className="group col-span-2">
           <div className="bg-amber-600 p-4 rounded-xl shadow-lg flex items-center justify-between active:scale-95 transition-all">
