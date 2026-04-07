@@ -187,7 +187,7 @@ export default function GestaoMembros() {
                   </div>
                   <div className="min-w-0 flex-1">
                     <h3 className="font-bold text-gray-900 dark:text-white text-sm sm:text-base leading-tight truncate">
-                      {membro.nome_exibicao ? `${membro.nome_exibicao} (${membro.nome})` : membro.nome}
+                      {membro.nome}
                     </h3>
                     <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mt-1">
                       <span className="text-xs text-gray-600 dark:text-gray-400 font-medium">
