@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 export type Membro = {
   id: number
   nome: string
+  nome_exibicao?: string | null
   grau: string
   tipo_vinculo: 'Local' | 'Visitante'
   nucleo_origem: string | null
@@ -28,6 +29,7 @@ export default function GestaoMembros() {
   // Form State
   const [formData, setFormData] = useState({
     nome: '',
+    nome_exibicao: '',
     grau: 'Sócio',
     tipo_vinculo: 'Local' as 'Local' | 'Visitante',
     nucleo_origem: '',
@@ -41,7 +43,7 @@ export default function GestaoMembros() {
       .from('membros')
       .select('*')
       .order('nome', { ascending: true })
-    
+
     if (data) {
       setMembros(data)
     } else {
@@ -60,6 +62,7 @@ export default function GestaoMembros() {
       setEditingMembro(membro)
       setFormData({
         nome: membro.nome,
+        nome_exibicao: membro.nome_exibicao || '',
         grau: membro.grau || 'Sócio',
         tipo_vinculo: membro.tipo_vinculo,
         nucleo_origem: membro.nucleo_origem || '',
@@ -69,6 +72,7 @@ export default function GestaoMembros() {
       setEditingMembro(null)
       setFormData({
         nome: '',
+        nome_exibicao: '',
         grau: 'Sócio',
         tipo_vinculo: 'Local',
         nucleo_origem: '',
@@ -90,6 +94,7 @@ export default function GestaoMembros() {
     try {
       const payload = {
         nome: formData.nome,
+        nome_exibicao: formData.nome_exibicao,
         grau: formData.grau,
         tipo_vinculo: formData.tipo_vinculo,
         nucleo_origem: formData.tipo_vinculo === 'Visitante' ? formData.nucleo_origem : null,
@@ -112,7 +117,7 @@ export default function GestaoMembros() {
         if (error) throw error
         alert('Membro cadastrado com sucesso!')
       }
-      
+
       handleCloseModal()
       fetchMembros()
     } catch (error: any) {
@@ -122,8 +127,9 @@ export default function GestaoMembros() {
     }
   }
 
-  const filteredMembros = membros.filter(m => 
-    m.nome.toLowerCase().includes(searchTerm.toLowerCase()) || 
+  const filteredMembros = membros.filter(m =>
+    m.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (m.nome_exibicao && m.nome_exibicao.toLowerCase().includes(searchTerm.toLowerCase())) ||
     (m.grau && m.grau.toLowerCase().includes(searchTerm.toLowerCase()))
   )
 
@@ -138,7 +144,7 @@ export default function GestaoMembros() {
           </button>
           <h1 className="text-xl font-bold">Gestão de Membros</h1>
         </div>
-        <button 
+        <button
           onClick={() => handleOpenModal()}
           className="flex items-center gap-2 bg-gold-600 hover:bg-gold-700 text-white px-4 py-2 rounded-xl font-medium shadow-sm transition-all text-sm"
         >
@@ -181,18 +187,17 @@ export default function GestaoMembros() {
                   </div>
                   <div className="min-w-0 flex-1">
                     <h3 className="font-bold text-gray-900 dark:text-white text-sm sm:text-base leading-tight truncate">
-                      {membro.nome}
+                      {membro.nome_exibicao ? `${membro.nome_exibicao} (${membro.nome})` : membro.nome}
                     </h3>
                     <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mt-1">
                       <span className="text-xs text-gray-600 dark:text-gray-400 font-medium">
                         {membro.grau || 'Sócio'}
                       </span>
                       <span className="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600"></span>
-                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md uppercase tracking-wide ${
-                        membro.tipo_vinculo === 'Local' 
-                          ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-500' 
-                          : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
-                      }`}>
+                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md uppercase tracking-wide ${membro.tipo_vinculo === 'Local'
+                        ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-500'
+                        : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
+                        }`}>
                         {membro.tipo_vinculo}
                       </span>
                       {membro.tipo_vinculo === 'Visitante' && membro.nucleo_origem && (
@@ -207,7 +212,7 @@ export default function GestaoMembros() {
                   </div>
                 </div>
                 <div className="pl-2 flex-shrink-0">
-                  <button 
+                  <button
                     onClick={() => handleOpenModal(membro)}
                     className="text-gold-600 hover:text-gold-700 dark:text-gold-500 dark:hover:text-gold-400 text-xs sm:text-sm font-bold tracking-wide px-3 sm:px-4 py-2 bg-gold-50 dark:bg-gold-900/20 active:bg-gold-100 dark:active:bg-gold-900/40 rounded-xl transition-all"
                   >
@@ -234,7 +239,7 @@ export default function GestaoMembros() {
             </div>
 
             <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
-              
+
               <div className="space-y-4">
                 {/* Nome */}
                 <div>
@@ -247,7 +252,22 @@ export default function GestaoMembros() {
                     value={formData.nome}
                     onChange={e => setFormData({ ...formData, nome: e.target.value })}
                     className="w-full p-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-900 focus:ring-2 focus:ring-gold-500/50 focus:border-gold-500 outline-none transition"
-                    placeholder="Ex: João da Silva"
+                    placeholder="Nome completo do sócio"
+                  />
+                </div>
+
+                {/* Nome de Exibição */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Nome de Exibição
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.nome_exibicao}
+                    onChange={e => setFormData({ ...formData, nome_exibicao: e.target.value })}
+                    className="w-full p-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-900 focus:ring-2 focus:ring-gold-500/50 focus:border-gold-500 outline-none transition"
+                    placeholder="O nome pelo qual é chamado"
                   />
                 </div>
 
@@ -300,7 +320,7 @@ export default function GestaoMembros() {
                     />
                   </div>
                 )}
-                
+
                 {/* Status Ativo (apenas edição) */}
                 {editingMembro && (
                   <div className="flex items-center gap-2 pt-2">
