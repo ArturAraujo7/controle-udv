@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import { ArrowLeft, Save, Users, User, Beaker, BookOpen, Mic, Plus, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 import { useAuth } from '@/components/AuthProvider'
+import { SeletorMembro, MembroSimples } from '@/app/components/SeletorMembro'
+import { SeletorMultiploMembro } from '@/app/components/SeletorMultiploMembro'
 
 type PreparoSelect = {
   id: number
@@ -25,11 +27,15 @@ export default function NovaSessao() {
   const [loading, setLoading] = useState(false)
   const [preparos, setPreparos] = useState<PreparoSelect[]>([])
 
+  // Lista de membros carregada do banco
+  const [membros, setMembros] = useState<MembroSimples[]>([])
+
   // Estado para a lista de consumos
   const [consumos, setConsumos] = useState<ConsumoItem[]>([{ id_preparo: '', quantidade: '' }])
 
   useEffect(() => {
-    const fetchPreparos = async () => {
+    const fetchData = async () => {
+      // 1. Fetch Preparos
       const { data: preparos } = await supabase
         .from('preparos')
         .select('id, data_preparo, mestre_preparo, grau, quantidade_preparada')
@@ -46,17 +52,27 @@ export default function NovaSessao() {
         })
         setPreparos(preparosComSaldo)
       }
+
+      // 2. Fetch Membros
+      const { data: membrosDB } = await supabase
+        .from('membros')
+        .select('*')
+        .order('nome')
+      if (membrosDB) {
+        setMembros(membrosDB as MembroSimples[])
+      }
     }
-    fetchPreparos()
+    fetchData()
   }, [])
 
   const [formData, setFormData] = useState({
     data_realizacao: new Date().toISOString().split('T')[0],
     hora: '20:00',
     tipo: 'Escala',
-    dirigente: '',
-    explanador: '',
-    leitor_documentos: '',
+    dirigentes: [] as { id: number | null, nome: string }[],
+    tipo_delegacao: 'Transmissão da Assistência',
+    explanador: { id: null as number | null, nome: '' },
+    leitor_documentos: { id: null as number | null, nome: '' },
     quantidade_participantes: '',
   })
 
@@ -81,7 +97,13 @@ export default function NovaSessao() {
     setConsumos(newConsumos)
   }
 
-  // Calcula o total consumido para exibição (opcional) ou validação
+  const handleMembroAdicionado = (novoMembro: MembroSimples) => {
+    // Reordenando a lista na memória após inserção rápida
+    const novaLista = [...membros, novoMembro].sort((a, b) => a.nome.localeCompare(b.nome))
+    setMembros(novaLista)
+  }
+
+  // Calcula o total consumido para exibição ou validação
   const totalConsumido = consumos.reduce((acc, item) => acc + (Number(item.quantidade) || 0), 0)
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -97,7 +119,6 @@ export default function NovaSessao() {
     }
 
     const dataCompleta = `${formData.data_realizacao}T${formData.hora}:00`
-
     const user = session?.user
 
     // 1. Cria a Sessão
@@ -106,11 +127,16 @@ export default function NovaSessao() {
       .insert([{
         data_realizacao: dataCompleta,
         tipo: formData.tipo,
-        dirigente: formData.dirigente,
-        explanador: formData.explanador,
-        leitor_documentos: formData.leitor_documentos,
+        dirigente: formData.dirigentes.map(d => d.nome).join(' / '),
+        dirigente_id: formData.dirigentes[0]?.id || null,
+        dirigente_2_id: formData.dirigentes[1]?.id || null,
+        tipo_delegacao: formData.dirigentes.length > 1 ? formData.tipo_delegacao : null,
+        explanador: formData.explanador.nome,
+        explanador_id: formData.explanador.id,
+        leitor_documentos: formData.leitor_documentos.nome,
+        leitor_documentos_id: formData.leitor_documentos.id,
         quantidade_participantes: Number(formData.quantidade_participantes),
-        user_id: user?.id // Rastreamento de usuário
+        user_id: user?.id
       }])
       .select()
       .single()
@@ -260,45 +286,79 @@ export default function NovaSessao() {
         </section>
 
         {/* Bloco 4: Detalhes da Sessão */}
-        <section className="space-y-3">
-          <div className="bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm flex items-center gap-3">
-            <div className="p-2 bg-gray-100 dark:bg-gray-700/50 rounded-lg"><User className="w-4 h-4 text-gray-500 dark:text-gray-400" /></div>
-            <div className="flex-1">
-              <label className="text-[10px] text-gray-500 font-medium block uppercase">Dirigente</label>
-              <input
-                type="text"
-                placeholder="Nome do Mestre"
-                className="w-full bg-transparent outline-none font-medium text-sm placeholder-gray-400 dark:placeholder-gray-600 text-gray-900 dark:text-white"
-                value={formData.dirigente}
-                onChange={e => setFormData({ ...formData, dirigente: e.target.value })}
-              />
+        <section className="space-y-4">
+          <div className="bg-white dark:bg-gray-800 p-3 pt-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm flex flex-col gap-3">
+            <div className="flex items-start gap-3 w-full">
+              <div className="p-2 bg-gray-100 dark:bg-gray-700/50 rounded-lg mt-1"><User className="w-4 h-4 text-gray-500 dark:text-gray-400" /></div>
+              <div className="flex-1 w-full flex flex-col gap-3">
+                <div>
+                  <label className="text-[10px] text-gray-500 font-medium block uppercase mb-1.5">Mestre Dirigente</label>
+                  <SeletorMultiploMembro
+                    placeholder="Quem dirigiu?"
+                    value={formData.dirigentes}
+                    onChange={(val) => setFormData({ ...formData, dirigentes: val })}
+                    membros={membros}
+                    onMembroAdicionado={handleMembroAdicionado}
+                    max={2}
+                  />
+                </div>
+              </div>
             </div>
+            {formData.dirigentes.length > 1 && (
+              <div className="mt-2 p-3 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-lg animate-in fade-in zoom-in-95">
+                <label className="text-[10px] text-gray-500 font-medium block uppercase mb-2">Classificação da Delegação</label>
+                <div className="flex flex-col gap-2">
+                  <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="delegacao"
+                      value="Transmissão da Assistência"
+                      checked={formData.tipo_delegacao === 'Transmissão da Assistência'}
+                      onChange={e => setFormData({ ...formData, tipo_delegacao: e.target.value })}
+                      className="text-gold-600 dark:text-gold-500 focus:ring-gold-500"
+                    />
+                    Transmissão da Assistência
+                  </label>
+                  <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="delegacao"
+                      value="Transmissão da Representação"
+                      checked={formData.tipo_delegacao === 'Transmissão da Representação'}
+                      onChange={e => setFormData({ ...formData, tipo_delegacao: e.target.value })}
+                      className="text-gold-600 dark:text-gold-500 focus:ring-gold-500"
+                    />
+                    Transmissão da Representação
+                  </label>
+                </div>
+              </div>
+            )}
           </div>
 
-          <div className="bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm flex items-center gap-3">
-            <div className="p-2 bg-gray-100 dark:bg-gray-700/50 rounded-lg"><BookOpen className="w-4 h-4 text-yellow-600 dark:text-yellow-500" /></div>
-            <div className="flex-1">
-              <label className="text-[10px] text-gray-500 font-medium block uppercase">Leitura</label>
-              <input
-                type="text"
+          <div className="bg-white dark:bg-gray-800 p-3 pt-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm flex items-start gap-3">
+            <div className="p-2 bg-gray-100 dark:bg-gray-700/50 rounded-lg mt-1"><BookOpen className="w-4 h-4 text-yellow-600 dark:text-yellow-500" /></div>
+            <div className="flex-1 w-full">
+              <label className="text-[10px] text-gray-500 font-medium block uppercase mb-1.5">Leitor de Documentos</label>
+              <SeletorMembro
                 placeholder="Quem leu?"
-                className="w-full bg-transparent outline-none font-medium text-sm placeholder-gray-400 dark:placeholder-gray-600 text-gray-900 dark:text-white"
                 value={formData.leitor_documentos}
-                onChange={e => setFormData({ ...formData, leitor_documentos: e.target.value })}
+                onChange={(val) => setFormData({ ...formData, leitor_documentos: val })}
+                membros={membros}
+                onMembroAdicionado={handleMembroAdicionado}
               />
             </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm flex items-center gap-3">
-            <div className="p-2 bg-gray-100 dark:bg-gray-700/50 rounded-lg"><Mic className="w-4 h-4 text-celestial-600 dark:text-celestial-500" /></div>
-            <div className="flex-1">
-              <label className="text-[10px] text-gray-500 font-medium block uppercase">Explanação</label>
-              <input
-                type="text"
+          <div className="bg-white dark:bg-gray-800 p-3 pt-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm flex items-start gap-3">
+            <div className="p-2 bg-gray-100 dark:bg-gray-700/50 rounded-lg mt-1"><Mic className="w-4 h-4 text-celestial-600 dark:text-celestial-500" /></div>
+            <div className="flex-1 w-full">
+              <label className="text-[10px] text-gray-500 font-medium block uppercase mb-1.5">Explanador</label>
+              <SeletorMembro
                 placeholder="Quem explanou?"
-                className="w-full bg-transparent outline-none font-medium text-sm placeholder-gray-400 dark:placeholder-gray-600 text-gray-900 dark:text-white"
                 value={formData.explanador}
-                onChange={e => setFormData({ ...formData, explanador: e.target.value })}
+                onChange={(val) => setFormData({ ...formData, explanador: val })}
+                membros={membros}
+                onMembroAdicionado={handleMembroAdicionado}
               />
             </div>
           </div>
@@ -306,7 +366,7 @@ export default function NovaSessao() {
           <div className="bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm flex items-center gap-3">
             <div className="p-2 bg-gray-100 dark:bg-gray-700/50 rounded-lg"><Users className="w-4 h-4 text-purple-600 dark:text-purple-400" /></div>
             <div className="flex-1">
-              <label className="text-[10px] text-gray-500 font-medium block uppercase">Participantes</label>
+              <label className="text-[10px] text-gray-500 font-medium block uppercase mb-1">Total de Participantes</label>
               <input
                 type="number"
                 placeholder="0"

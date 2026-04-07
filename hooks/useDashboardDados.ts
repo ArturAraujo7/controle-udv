@@ -4,9 +4,12 @@ import { supabase } from '@/lib/supabaseClient'
 export type RelatorioSessao = {
   id: number
   data_realizacao: string
-  quantidade_participantes: number // 0 significa Sessão Histórica Memory
+  quantidade_participantes: number
   tipo: string
   dirigente: string | null
+  dirigente_id: number | null
+  dirigente_2_id: number | null
+  tipo_delegacao: string | null
   leitor_documentos: string | null
   explanador: string | null
 }
@@ -61,7 +64,7 @@ export function useDashboardDados(anoSelecionado: string) {
       const [resSessoes, resPreparos, resSaidas, globalP, globalC, globalS] = await Promise.all([
         supabase
           .from('sessoes')
-          .select('id, data_realizacao, quantidade_participantes, tipo, dirigente, leitor_documentos, explanador')
+          .select('id, data_realizacao, quantidade_participantes, tipo, dirigente, dirigente_id, dirigente_2_id, tipo_delegacao, leitor_documentos, explanador')
           .gte('data_realizacao', gteData)
           .lte('data_realizacao', lteData)
           .order('data_realizacao', { ascending: false }),

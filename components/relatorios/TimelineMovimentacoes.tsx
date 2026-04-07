@@ -87,7 +87,7 @@ export function TimelineMovimentacoes({ sessoes, preparos, saidas, consumos, loa
           tipo: 'consumo',
           etiqueta_tipo: `Sessão ${sessao.tipo}`,
           descricao_principal: `Dirigente: ${sessao.dirigente || '—'}`,
-          descricao_secundaria: `${sessao.quantidade_participantes} pessoas`,
+          descricao_secundaria: `${sessao.quantidade_participantes} pessoas${sessao.tipo_delegacao ? ` • ${sessao.tipo_delegacao}` : ''}`,
           quantidade: somaConsumo,
           badgeColor: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
           Icon: Database

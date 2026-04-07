@@ -127,11 +127,43 @@ export default function GestaoMembros() {
     }
   }
 
-  const filteredMembros = membros.filter(m =>
-    m.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (m.nome_exibicao && m.nome_exibicao.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (m.grau && m.grau.toLowerCase().includes(searchTerm.toLowerCase()))
-  )
+  const handleDelete = async (id: number) => {
+    if (!confirm('Tem certeza que deseja apagar este cadastro permanentemente?')) return
+
+    try {
+      const { error } = await supabase
+        .from('membros')
+        .delete()
+        .eq('id', id)
+      
+      if (error) throw error
+      alert('Cadastro apagado com sucesso!')
+      handleCloseModal()
+      fetchMembros()
+    } catch (error: any) {
+      alert('Erro ao apagar: ' + error.message)
+    }
+  }
+
+  const grauPeso: Record<string, number> = {
+    'Mestre': 1,
+    'Corpo do Conselho': 2,
+    'Corpo Instrutivo': 3,
+    'Sócio': 4
+  }
+
+  const filteredMembros = membros
+    .filter(m =>
+      m.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (m.nome_exibicao && m.nome_exibicao.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (m.grau && m.grau.toLowerCase().includes(searchTerm.toLowerCase()))
+    )
+    .sort((a, b) => {
+      const pesoA = grauPeso[a.grau || 'Sócio'] || 5
+      const pesoB = grauPeso[b.grau || 'Sócio'] || 5
+      if (pesoA !== pesoB) return pesoA - pesoB
+      return a.nome.localeCompare(b.nome)
+    })
 
   const graus = ['Sócio', 'Corpo Instrutivo', 'Corpo do Conselho', 'Mestre']
 
@@ -152,6 +184,33 @@ export default function GestaoMembros() {
           Novo Cadastro
         </button>
       </div>
+
+      {/* Metrics Container */}
+      {!loading && membros.length > 0 && (
+        <div className="flex overflow-x-auto gap-3 pb-2 mb-4 snap-x [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+          {/* Total */}
+          <div className="min-w-[110px] bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col justify-center snap-start flex-1">
+            <span className="text-gray-500 dark:text-gray-400 text-[10px] font-bold uppercase tracking-wider">Total</span>
+            <span className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{membros.length}</span>
+          </div>
+          <div className="min-w-[110px] bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col justify-center snap-start flex-1">
+            <span className="text-gray-500 dark:text-gray-400 text-[10px] font-bold uppercase tracking-wider">Sócios</span>
+            <span className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{membros.filter(m => m.grau === 'Sócio').length}</span>
+          </div>
+          <div className="min-w-[110px] bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col justify-center snap-start flex-1">
+            <span className="text-gray-500 dark:text-gray-400 text-[10px] font-bold uppercase tracking-wider">Instrutivo</span>
+            <span className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{membros.filter(m => m.grau === 'Corpo Instrutivo').length}</span>
+          </div>
+          <div className="min-w-[110px] bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col justify-center snap-start flex-1">
+            <span className="text-gray-500 dark:text-gray-400 text-[10px] font-bold uppercase tracking-wider">Conselho</span>
+            <span className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{membros.filter(m => m.grau === 'Corpo do Conselho').length}</span>
+          </div>
+          <div className="min-w-[110px] bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col justify-center snap-start flex-1">
+            <span className="text-gray-500 dark:text-gray-400 text-[10px] font-bold uppercase tracking-wider">Mestres</span>
+            <span className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{membros.filter(m => m.grau === 'Mestre').length}</span>
+          </div>
+        </div>
+      )}
 
       <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
         <div className="p-4 border-b border-gray-200 dark:border-gray-700">
@@ -338,7 +397,7 @@ export default function GestaoMembros() {
                 )}
               </div>
 
-              <div className="mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
+              <div className="mt-6 pt-4 border-t border-gray-100 dark:border-gray-700 space-y-3">
                 <button
                   type="submit"
                   disabled={isSubmitting}
@@ -346,6 +405,15 @@ export default function GestaoMembros() {
                 >
                   {isSubmitting ? 'Salvando...' : editingMembro ? 'Salvar Alterações' : 'Cadastrar Membro'}
                 </button>
+                {editingMembro && (
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(editingMembro.id)}
+                    className="w-full py-3 text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-xl font-bold transition-all active:scale-[0.98] flex items-center justify-center"
+                  >
+                    Excluir Cadastro
+                  </button>
+                )}
               </div>
             </form>
           </div>

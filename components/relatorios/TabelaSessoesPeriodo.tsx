@@ -92,7 +92,16 @@ export function TabelaSessoesPeriodo({ sessoes, loading, anoSelecionado }: Tabel
                       {sessao.tipo}
                     </span>
                   </td>
-                  <td className="py-3 px-4 font-medium text-gray-900 dark:text-gray-100 print:text-black">{fallback(sessao.dirigente)}</td>
+                  <td className="py-3 px-4 print:text-black">
+                    <div className="flex flex-col">
+                      <span className="font-medium text-gray-900 dark:text-gray-100 print:text-black">{fallback(sessao.dirigente)}</span>
+                      {sessao.tipo_delegacao && (
+                        <span className="text-[9px] uppercase font-bold text-celestial-600 dark:text-celestial-400 mt-0.5 tracking-tight">
+                          {sessao.tipo_delegacao}
+                        </span>
+                      )}
+                    </div>
+                  </td>
                   <td className="py-3 px-4 text-gray-600 dark:text-gray-400 print:text-black">{fallback(sessao.leitor_documentos)}</td>
                   <td className="py-3 px-4 text-gray-600 dark:text-gray-400 print:text-black">{fallback(sessao.explanador)}</td>
                   <td className="py-3 px-4 text-center tabular-nums text-gray-500 dark:text-gray-400 print:text-black font-semibold">{sessao.quantidade_participantes}</td>

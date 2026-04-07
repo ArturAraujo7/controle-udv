@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Save, User, ShieldCheck } from 'lucide-react'
+import { ArrowLeft, Save, User, ShieldCheck, Database } from 'lucide-react'
 import { useAuth } from '@/components/AuthProvider'
 import Link from 'next/link'
 
@@ -116,8 +116,8 @@ export default function Perfil() {
                     </button>
                 </form>
 
-                {profile?.role === 'admin' && (
-                    <div className="mt-8">
+                {((profile?.role as string) === 'admin' || (profile?.role as string) === 'geral') && (
+                    <div className="mt-8 space-y-3">
                         <Link 
                             href="/admin/usuarios"
                             className="w-full bg-white dark:bg-gray-800 border border-gold-200 dark:border-gold-900/50 text-gold-700 dark:text-gold-500 font-bold py-4 px-4 rounded-2xl shadow-sm hover:shadow-md hover:border-gold-300 dark:hover:border-gold-800 transition-all flex items-center justify-center gap-3 active:scale-[0.98]"
@@ -125,6 +125,15 @@ export default function Perfil() {
                             <ShieldCheck className="w-6 h-6" />
                             <span>Gerenciar Usuários & Cargos</span>
                         </Link>
+
+                        <Link 
+                            href="/admin/auditoria"
+                            className="w-full bg-white dark:bg-gray-800 border border-purple-200 dark:border-purple-900/50 text-purple-700 dark:text-purple-500 font-bold py-4 px-4 rounded-2xl shadow-sm hover:shadow-md hover:border-purple-300 dark:hover:border-purple-800 transition-all flex items-center justify-center gap-3 active:scale-[0.98]"
+                        >
+                            <Database className="w-6 h-6" />
+                            <span>Auditoria de Dados</span>
+                        </Link>
+
                         <p className="text-[10px] text-gray-400 text-center mt-3 uppercase tracking-widest font-medium">
                             Acesso administrativo restrito
                         </p>
