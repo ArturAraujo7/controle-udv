@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import { ArrowLeft, Save, Users, User, Beaker, Trash2, BookOpen, Mic, Plus } from 'lucide-react'
 import Link from 'next/link'
 import { use } from 'react'
+import { SeletorMembro, MembroSimples } from '@/app/components/SeletorMembro'
+import { SeletorMultiploMembro } from '@/app/components/SeletorMultiploMembro'
 
 type PreparoSelect = {
   id: number
@@ -31,11 +33,19 @@ export default function EditarSessao({ params }: { params: Promise<{ id: string 
     data_realizacao: '',
     hora: '',
     tipo: '',
-    dirigente: '',
-    explanador: '',
-    leitor_documentos: '',
+    dirigentes: [] as { id: number | null, nome: string }[],
+    tipo_delegacao: 'Transmissão da Assistência',
+    explanador: { id: null as number | null, nome: '' },
+    leitor_documentos: { id: null as number | null, nome: '' },
     quantidade_participantes: '',
   })
+
+  const [membros, setMembros] = useState<MembroSimples[]>([])
+
+  const handleMembroAdicionado = (novoMembro: MembroSimples) => {
+    const novaLista = [...membros, novoMembro].sort((a, b) => a.nome.localeCompare(b.nome))
+    setMembros(novaLista)
+  }
 
   // Estado para lista de consumos
   const [consumos, setConsumos] = useState<ConsumoItem[]>([])
@@ -107,14 +117,33 @@ export default function EditarSessao({ params }: { params: Promise<{ id: string 
         }
       }
 
+      // 4. Carrega Membros
+      const { data: membrosDB } = await supabase.from('membros').select('*').order('nome')
+      if (membrosDB) {
+        setMembros(membrosDB as MembroSimples[])
+      }
+
       // Preenche o formulário
+      const dirigentes = []
+      if (sessao.dirigente_id) {
+          dirigentes.push({ id: sessao.dirigente_id, nome: sessao.dirigente.split(' / ')[0] || '' })
+      } else if (sessao.dirigente) {
+          const parts = sessao.dirigente.split(' / ')
+          parts.forEach((p: string) => dirigentes.push({ id: null, nome: p }))
+      }
+      
+      if (sessao.dirigente_2_id && sessao.dirigente.includes(' / ')) {
+          dirigentes.push({ id: sessao.dirigente_2_id, nome: sessao.dirigente.split(' / ')[1] || '' })
+      }
+
       setFormData({
         data_realizacao: dateVal,
         hora: timeVal,
         tipo: sessao.tipo,
-        dirigente: sessao.dirigente,
-        explanador: sessao.explanador || '',
-        leitor_documentos: sessao.leitor_documentos || '',
+        dirigentes,
+        tipo_delegacao: sessao.tipo_delegacao || 'Transmissão da Assistência',
+        explanador: { id: sessao.explanador_id || null, nome: sessao.explanador || '' },
+        leitor_documentos: { id: sessao.leitor_documentos_id || null, nome: sessao.leitor_documentos || '' },
         quantidade_participantes: String(sessao.quantidade_participantes),
       })
 
@@ -175,9 +204,14 @@ export default function EditarSessao({ params }: { params: Promise<{ id: string 
     const { error: erroSessao } = await supabase.from('sessoes').update({
       data_realizacao: dataCompleta,
       tipo: formData.tipo,
-      dirigente: formData.dirigente,
-      explanador: formData.explanador,
-      leitor_documentos: formData.leitor_documentos,
+      dirigente: formData.dirigentes.map(d => d.nome).join(' / '),
+      dirigente_id: formData.dirigentes[0]?.id || null,
+      dirigente_2_id: formData.dirigentes[1]?.id || null,
+      tipo_delegacao: formData.dirigentes.length > 1 ? formData.tipo_delegacao : null,
+      explanador: formData.explanador.nome,
+      explanador_id: formData.explanador.id,
+      leitor_documentos: formData.leitor_documentos.nome,
+      leitor_documentos_id: formData.leitor_documentos.id,
       quantidade_participantes: Number(formData.quantidade_participantes),
     }).eq('id', id)
 
@@ -342,40 +376,98 @@ export default function EditarSessao({ params }: { params: Promise<{ id: string 
           </button>
         </section>
 
-        {/* Bloco 4: Detalhes */}
-        <div className="space-y-3">
-          <div className="bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm flex items-center gap-3">
-            <div className="p-2 bg-gray-100 dark:bg-gray-700/50 rounded-lg"><User className="w-4 h-4 text-gray-500 dark:text-gray-400" /></div>
-            <div className="flex-1">
-              <label className="text-[10px] text-gray-500 font-medium block uppercase">Dirigente</label>
-              <input type="text" className="w-full bg-transparent outline-none font-medium text-sm text-gray-900 dark:text-white" value={formData.dirigente} onChange={e => setFormData({ ...formData, dirigente: e.target.value })} />
+        {/* Bloco 4: Detalhes da Sessão */}
+        <section className="space-y-4">
+          <div className="bg-white dark:bg-gray-800 p-3 pt-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm flex flex-col gap-3">
+            <div className="flex items-start gap-3 w-full">
+              <div className="p-2 bg-gray-100 dark:bg-gray-700/50 rounded-lg mt-1"><User className="w-4 h-4 text-gray-500 dark:text-gray-400" /></div>
+              <div className="flex-1 w-full flex flex-col gap-3">
+                <div>
+                  <label className="text-[10px] text-gray-500 font-medium block uppercase mb-1.5">Mestre Dirigente</label>
+                  <SeletorMultiploMembro
+                    placeholder="Quem dirigiu?"
+                    value={formData.dirigentes}
+                    onChange={(val) => setFormData({ ...formData, dirigentes: val })}
+                    membros={membros}
+                    onMembroAdicionado={handleMembroAdicionado}
+                    max={2}
+                  />
+                </div>
+              </div>
+            </div>
+            {formData.dirigentes.length > 1 && (
+              <div className="mt-2 p-3 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-lg animate-in fade-in zoom-in-95">
+                <label className="text-[10px] text-gray-500 font-medium block uppercase mb-2">Classificação da Delegação</label>
+                <div className="flex flex-col gap-2">
+                  <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="delegacao"
+                      value="Transmissão da Assistência"
+                      checked={formData.tipo_delegacao === 'Transmissão da Assistência'}
+                      onChange={e => setFormData({ ...formData, tipo_delegacao: e.target.value })}
+                      className="text-gold-600 dark:text-gold-500 focus:ring-gold-500"
+                    />
+                    Transmissão da Assistência
+                  </label>
+                  <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="delegacao"
+                      value="Transmissão da Representação"
+                      checked={formData.tipo_delegacao === 'Transmissão da Representação'}
+                      onChange={e => setFormData({ ...formData, tipo_delegacao: e.target.value })}
+                      className="text-gold-600 dark:text-gold-500 focus:ring-gold-500"
+                    />
+                    Transmissão da Representação
+                  </label>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 p-3 pt-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm flex items-start gap-3">
+            <div className="p-2 bg-gray-100 dark:bg-gray-700/50 rounded-lg mt-1"><BookOpen className="w-4 h-4 text-yellow-600 dark:text-yellow-500" /></div>
+            <div className="flex-1 w-full">
+              <label className="text-[10px] text-gray-500 font-medium block uppercase mb-1.5">Leitor de Documentos</label>
+              <SeletorMembro
+                placeholder="Quem leu?"
+                value={formData.leitor_documentos}
+                onChange={(val) => setFormData({ ...formData, leitor_documentos: val })}
+                membros={membros}
+                onMembroAdicionado={handleMembroAdicionado}
+              />
             </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm flex items-center gap-3">
-            <div className="p-2 bg-gray-100 dark:bg-gray-700/50 rounded-lg"><BookOpen className="w-4 h-4 text-yellow-600 dark:text-yellow-500" /></div>
-            <div className="flex-1">
-              <label className="text-[10px] text-gray-500 font-medium block uppercase">Leitura</label>
-              <input type="text" className="w-full bg-transparent outline-none font-medium text-sm text-gray-900 dark:text-white" value={formData.leitor_documentos} onChange={e => setFormData({ ...formData, leitor_documentos: e.target.value })} />
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm flex items-center gap-3">
-            <div className="p-2 bg-gray-100 dark:bg-gray-700/50 rounded-lg"><Mic className="w-4 h-4 text-celestial-600 dark:text-celestial-500" /></div>
-            <div className="flex-1">
-              <label className="text-[10px] text-gray-500 font-medium block uppercase">Explanação</label>
-              <input type="text" className="w-full bg-transparent outline-none font-medium text-sm text-gray-900 dark:text-white" value={formData.explanador} onChange={e => setFormData({ ...formData, explanador: e.target.value })} />
+          <div className="bg-white dark:bg-gray-800 p-3 pt-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm flex items-start gap-3">
+            <div className="p-2 bg-gray-100 dark:bg-gray-700/50 rounded-lg mt-1"><Mic className="w-4 h-4 text-celestial-600 dark:text-celestial-500" /></div>
+            <div className="flex-1 w-full">
+              <label className="text-[10px] text-gray-500 font-medium block uppercase mb-1.5">Explanador</label>
+              <SeletorMembro
+                placeholder="Quem explanou?"
+                value={formData.explanador}
+                onChange={(val) => setFormData({ ...formData, explanador: val })}
+                membros={membros}
+                onMembroAdicionado={handleMembroAdicionado}
+              />
             </div>
           </div>
 
           <div className="bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm flex items-center gap-3">
             <div className="p-2 bg-gray-100 dark:bg-gray-700/50 rounded-lg"><Users className="w-4 h-4 text-purple-600 dark:text-purple-400" /></div>
             <div className="flex-1">
-              <label className="text-[10px] text-gray-500 font-medium block uppercase">Participantes</label>
-              <input type="number" className="w-full bg-transparent outline-none font-bold text-lg text-gray-900 dark:text-white" value={formData.quantidade_participantes} onChange={e => setFormData({ ...formData, quantidade_participantes: e.target.value })} />
+              <label className="text-[10px] text-gray-500 font-medium block uppercase mb-1">Total de Participantes</label>
+              <input
+                type="number"
+                placeholder="0"
+                className="w-full bg-transparent outline-none font-bold text-lg placeholder-gray-400 dark:placeholder-gray-600 text-gray-900 dark:text-white"
+                value={formData.quantidade_participantes}
+                onChange={e => setFormData({ ...formData, quantidade_participantes: e.target.value })}
+              />
             </div>
           </div>
-        </div>
+        </section>
 
         <button
           type="submit"

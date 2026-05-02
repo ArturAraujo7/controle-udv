@@ -66,7 +66,8 @@ export function SeletorMembro({ placeholder = "Selecione ou digite...", value, o
   }
 
   const handleSelect = (m: MembroSimples) => {
-    onChange({ id: m.id, nome: m.nome })
+    const nomeFormatado = formatarNome(m.nome_exibicao || m.nome, m.grau)
+    onChange({ id: m.id, nome: nomeFormatado })
     setIsOpen(false)
     setSearch('')
   }
@@ -100,7 +101,8 @@ export function SeletorMembro({ placeholder = "Selecione ou digite...", value, o
       
       const novoMembro = data as MembroSimples
       onMembroAdicionado(novoMembro)
-      onChange({ id: novoMembro.id, nome: novoMembro.nome })
+      const nomeFormatado = formatarNome(novoMembro.nome_exibicao || novoMembro.nome, novoMembro.grau)
+      onChange({ id: novoMembro.id, nome: nomeFormatado })
       
       // Reset and close
       setIsModalOpen(false)
