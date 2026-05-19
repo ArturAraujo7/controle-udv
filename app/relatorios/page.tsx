@@ -19,6 +19,8 @@ export default function RelatoriosPage() {
   
   const currentYear = new Date().getFullYear().toString()
   const [anoSelecionado, setAnoSelecionado] = useState<string>(currentYear)
+  const [showAssistenteInput, setShowAssistenteInput] = useState(false)
+  const [dataAssistente, setDataAssistente] = useState('')
   
   // Hook Global
   const { sessoes, preparos, saidas, consumos, estoqueAtual, loading } = useDashboardDados(anoSelecionado)
@@ -27,8 +29,19 @@ export default function RelatoriosPage() {
   
   const handlePrint = useReactToPrint({
     contentRef: componentRef,
-    documentTitle: `Relatorio_Geral_UDV_${anoSelecionado}`,
+    documentTitle: `Relatorio_Geral_UDV_${anoSelecionado.replace(':', '_')}`,
   })
+
+  const getPeriodoLabel = () => {
+    if (anoSelecionado === 'Todos') return 'Histórico Total';
+    if (anoSelecionado.startsWith('assistente:')) {
+      const data = anoSelecionado.split(':')[1];
+      const [ano, mes, dia] = data.split('-');
+      return `Assistente (A partir de ${dia}/${mes}/${ano})`;
+    }
+    return `Ano ${anoSelecionado}`;
+  };
+  const periodoLabel = getPeriodoLabel();
 
   // === CALCULOS DE RESUMO (Seções Superiores) ===
   const sessoesReais = sessoes.filter(s => s.quantidade_participantes > 0)
@@ -48,7 +61,7 @@ export default function RelatoriosPage() {
   const AnosParaFiltro = ['Todos', currentYear, (parseInt(currentYear) - 1).toString(), (parseInt(currentYear) - 2).toString()]
 
   // Condição para mostrar dados de vegetal (estoque, consumo, preparo)
-  const mostrarDadosVegetal = anoSelecionado === 'Todos' || parseInt(anoSelecionado) >= 2026;
+  const mostrarDadosVegetal = anoSelecionado === 'Todos' || anoSelecionado.startsWith('assistente:') || parseInt(anoSelecionado) >= 2026;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 pb-20 text-gray-900 dark:text-white transition-colors duration-300">
@@ -65,15 +78,17 @@ export default function RelatoriosPage() {
         </div>
       </header>
 
-      {/* Controle Central de Filtro */}
-      <div className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700/60 shadow-sm mb-6 flex flex-col md:flex-row gap-4 justify-between items-center print:hidden">
-        <div className="flex w-full md:w-auto overflow-x-auto gap-2 no-scrollbar pb-1">
+      <div className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700/60 shadow-sm mb-6 flex flex-col xl:flex-row gap-4 justify-between items-center print:hidden">
+        <div className="flex w-full xl:w-auto overflow-x-auto gap-2 no-scrollbar pb-1 items-center">
           {AnosParaFiltro.map(ano => (
             <button
               key={ano}
-              onClick={() => setAnoSelecionado(ano)}
+              onClick={() => {
+                setAnoSelecionado(ano)
+                setShowAssistenteInput(false)
+              }}
               className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider whitespace-nowrap transition-colors border ${
-                anoSelecionado === ano
+                anoSelecionado === ano && !showAssistenteInput
                   ? 'bg-celestial-600 border-celestial-600 text-white shadow-celestial-600/20 shadow-lg'
                   : 'bg-gray-50 dark:bg-gray-700/50 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600'
               }`}
@@ -81,6 +96,53 @@ export default function RelatoriosPage() {
               {ano === 'Todos' ? 'Histórico Total' : `Ano ${ano}`}
             </button>
           ))}
+
+          <div className="flex items-center ml-2 border-l pl-2 border-gray-200 dark:border-gray-700 h-full">
+             {!(showAssistenteInput || anoSelecionado.startsWith('assistente:')) ? (
+               <button
+                 onClick={() => setShowAssistenteInput(true)}
+                 className="px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider whitespace-nowrap transition-colors border bg-gray-50 dark:bg-gray-700/50 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600"
+               >
+                 Relatório do Assistente
+               </button>
+             ) : (
+               <div className="flex items-center gap-2">
+                 <input 
+                   type="date" 
+                   className="px-3 py-1.5 rounded-lg text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white h-[34px] focus:ring-2 focus:ring-celestial-500 focus:border-celestial-500 outline-none"
+                   value={dataAssistente}
+                   onChange={(e) => setDataAssistente(e.target.value)}
+                 />
+                 <button
+                   onClick={() => {
+                     if (dataAssistente) {
+                       setAnoSelecionado(`assistente:${dataAssistente}`)
+                     }
+                   }}
+                   className={`px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider whitespace-nowrap transition-colors border h-[34px] ${
+                     anoSelecionado.startsWith('assistente:') && anoSelecionado.includes(dataAssistente)
+                       ? 'bg-celestial-600 border-celestial-600 text-white shadow-celestial-600/20 shadow-lg'
+                       : 'bg-emerald-600 border-emerald-600 text-white shadow-emerald-600/20 shadow-sm hover:bg-emerald-700'
+                   }`}
+                 >
+                   Gerar
+                 </button>
+                 <button
+                   onClick={() => {
+                     setShowAssistenteInput(false)
+                     if (anoSelecionado.startsWith('assistente:')) {
+                       setAnoSelecionado(currentYear)
+                     }
+                     setDataAssistente('')
+                   }}
+                   className="px-3 py-1.5 text-xs font-bold text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors uppercase h-[34px] flex items-center"
+                   title="Cancelar"
+                 >
+                   X
+                 </button>
+               </div>
+             )}
+          </div>
         </div>
         
         <button
@@ -97,11 +159,10 @@ export default function RelatoriosPage() {
         }
       `}} />
       <div ref={componentRef} className="print:p-0 print:bg-white print:text-black">
-        {/* Print Header */}
         <div className="hidden print:flex flex-col items-center justify-center border-b print:border-gray-300 pb-5 mb-8 gap-3">
             <img src="/PDF/header.svg" alt="Cabeçalho Guardião" className="h-16 w-auto drop-shadow-sm" />
             <p className="text-[10px] font-medium uppercase tracking-widest print:text-gray-400">
-              Período de Referência: <span className="font-bold print:text-gray-600">{anoSelecionado === 'Todos' ? 'Histórico Completo' : anoSelecionado}</span>
+              Período de Referência: <span className="font-bold print:text-gray-600">{periodoLabel}</span>
             </p>
         </div>
 
@@ -176,7 +237,7 @@ export default function RelatoriosPage() {
             <TabelaSessoesPeriodo 
                sessoes={sessoes} 
                loading={loading} 
-               anoSelecionado={anoSelecionado} 
+               anoSelecionado={periodoLabel} 
             />
           </div>
 

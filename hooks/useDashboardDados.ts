@@ -55,7 +55,10 @@ export function useDashboardDados(anoSelecionado: string) {
       let gteData = '2000-01-01T00:00:00'
       let lteData = '2099-12-31T23:59:59'
 
-      if (anoSelecionado !== 'Todos') {
+      if (anoSelecionado.startsWith('assistente:')) {
+        const startDate = anoSelecionado.split(':')[1]
+        gteData = `${startDate}T00:00:00`
+      } else if (anoSelecionado !== 'Todos') {
         gteData = `${anoSelecionado}-01-01T00:00:00`
         lteData = `${anoSelecionado}-12-31T23:59:59`
       }
