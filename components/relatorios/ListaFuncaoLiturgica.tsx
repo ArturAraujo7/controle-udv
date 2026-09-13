@@ -1,7 +1,13 @@
+'use client'
 import { useMemo } from 'react'
 import { Copy, Check, Crown, AlertCircle } from 'lucide-react'
 import { useState } from 'react'
 import { RelatorioSessao } from '@/hooks/useDashboardDados'
+
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
+import { cn } from '@/lib/utils'
 
 interface ListaFuncaoLiturgicaProps {
   titulo: string
@@ -70,66 +76,62 @@ export function ListaFuncaoLiturgica({ titulo, sessoes, funcaoKey, loading }: Li
   }
 
   if (loading) {
-    return <div className="h-64 bg-gray-100 dark:bg-gray-800 rounded-xl animate-pulse"></div>
+    return <Skeleton className="h-64 rounded-xl" />
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700/60 shadow-sm overflow-hidden flex flex-col h-full print:border-gray-300 print:shadow-none print:break-inside-avoid">
-      <div className="p-4 border-b border-gray-100 dark:border-gray-700/50 flex justify-between items-center bg-gray-50/50 dark:bg-gray-800/50 print:bg-white px-5">
-        <h3 className="font-bold text-gray-900 dark:text-white text-sm print:text-black uppercase tracking-wider">{titulo}</h3>
-        <button
+    <Card className="py-0 overflow-hidden flex flex-col h-full print:shadow-none print:break-inside-avoid">
+      <div className="p-4 border-b flex justify-between items-center">
+        <h3 className="font-medium text-sm print:text-black">{titulo}</h3>
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={handleCopy}
           disabled={ranking.length === 0}
-          className="text-gray-400 hover:text-celestial-600 dark:hover:text-celestial-400 transition-colors disabled:opacity-30 print:hidden outline-none focus:ring-2 focus:ring-celestial-500/50 rounded-md p-1"
-          title="Copiar lista"
+          className="print:hidden"
+          aria-label={`Copiar lista de ${titulo.toLowerCase()}`}
         >
-          {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
-        </button>
+          {copied ? <Check className="text-primary" /> : <Copy />}
+        </Button>
       </div>
 
-      <div className="p-0 flex-1 overflow-y-auto max-h-[400px] print:max-h-none print:overflow-visible">
+      <div className="flex-1 overflow-y-auto max-h-[400px] print:max-h-none print:overflow-visible">
         {ranking.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center p-8 text-center opacity-70">
-            <AlertCircle className="w-8 h-8 text-gray-300 dark:text-gray-600 mb-2" />
-            <p className="text-gray-500 dark:text-gray-400 text-xs">Nenhum registro no período</p>
+          <div className="h-full flex flex-col items-center justify-center p-8 text-center">
+            <AlertCircle className="w-6 h-6 text-muted-foreground mb-2" />
+            <p className="text-sm text-muted-foreground">Nenhum registro no período</p>
           </div>
         ) : (
-          <ul className="divide-y divide-gray-100 dark:divide-gray-700/50 print:divide-gray-200">
+          <ul className="divide-y">
             {ranking.map((item, index) => {
               const isFirst = index === 0
               return (
-                <li 
-                  key={index} 
-                  className={`flex justify-between items-center px-5 py-3 print:break-inside-avoid ${isFirst ? 'bg-gold-50/30 dark:bg-gold-900/10' : ''}`}
+                <li
+                  key={index}
+                  className="flex justify-between items-center gap-3 px-4 py-3 print:break-inside-avoid"
                 >
-                  <div className="flex items-center gap-3">
-                    {/* Badge da posição */}
-                    <span className={`flex items-center justify-center w-6 h-6 rounded-full text-[10px] font-bold shadow-sm border ${
-                      isFirst 
-                        ? 'bg-gradient-to-b from-gold-400 to-gold-600 text-white border-gold-500 shadow-gold-500/20 print:border-black print:text-black print:bg-transparent' 
-                        : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-600 print:border-gray-300'
-                    }`}>
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className={cn(
+                      'flex items-center justify-center w-6 h-6 rounded-full text-[10px] font-medium tabular-nums shrink-0 border',
+                      isFirst
+                        ? 'bg-primary text-primary-foreground border-primary print:bg-transparent print:text-black print:border-black'
+                        : 'text-muted-foreground print:border-gray-300'
+                    )}>
                       {isFirst ? <Crown className="w-3 h-3" /> : index + 1}
                     </span>
-                    
-                    <span className={`text-sm ${isFirst ? 'font-bold text-gold-700 dark:text-gold-400' : 'font-medium text-gray-700 dark:text-gray-300'} print:text-black`}>
+                    <span className={cn('text-sm truncate print:text-black', isFirst && 'font-medium')}>
                       {item.nome}
                     </span>
                   </div>
-                  
-                  <div className={`text-xs font-bold tabular-nums px-2 py-0.5 rounded border ${
-                    isFirst 
-                      ? 'bg-gold-100/50 text-gold-700 border-gold-200/50 dark:bg-gold-900/20 dark:text-gold-400 dark:border-gold-800/30 print:border-gray-300 print:text-black' 
-                      : 'bg-gray-50 text-gray-500 border-gray-100 dark:bg-gray-800/50 dark:text-gray-400 dark:border-gray-700/50 print:border-gray-300 print:text-black'
-                  }`}>
-                    {item.contagem}x
-                  </div>
+                  <span className="text-xs text-muted-foreground tabular-nums shrink-0 print:text-black">
+                    {item.contagem}×
+                  </span>
                 </li>
               )
             })}
           </ul>
         )}
       </div>
-    </div>
+    </Card>
   )
 }

@@ -1,6 +1,13 @@
+'use client'
 import { useMemo, useState } from 'react'
 import { RelatorioSessao, RelatorioPreparo, RelatorioSaida, RelatorioConsumo } from '@/hooks/useDashboardDados'
 import { ArrowDownLeft, ArrowUpRight, History, Database, ArrowRight, ArrowLeft } from 'lucide-react'
+
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
+import { formatarData, formatarNumero } from '@/lib/formato'
+import { cn } from '@/lib/utils'
 
 // Representação unificada para a Timeline
 type Movimentacao = {
@@ -40,7 +47,7 @@ export function TimelineMovimentacoes({ sessoes, preparos, saidas, consumos, loa
         descricao_principal: p.nucleo_origem ? `Origem: ${p.nucleo_origem}` : (p.mestre_preparo ? `Resp: ${p.mestre_preparo}` : 'Entrada Nova'),
         descricao_secundaria: `Lote #${p.id}`,
         quantidade: p.quantidade_preparada,
-        badgeColor: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
+        badgeColor: 'bg-primary/10 text-primary border-primary/20',
         Icon: ArrowDownLeft
       })
     })
@@ -55,7 +62,7 @@ export function TimelineMovimentacoes({ sessoes, preparos, saidas, consumos, loa
         descricao_principal: `Destino: ${s.destino}`,
         descricao_secundaria: s.observacao ? `Obs: ${s.observacao}` : '',
         quantidade: s.quantidade,
-        badgeColor: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+        badgeColor: 'bg-destructive/10 text-destructive border-destructive/20',
         Icon: ArrowUpRight
       })
     })
@@ -73,7 +80,7 @@ export function TimelineMovimentacoes({ sessoes, preparos, saidas, consumos, loa
           descricao_principal: `${sessao.tipo}`,
           descricao_secundaria: `Dirigente: ${sessao.dirigente || '—'}`,
           quantidade: 0,
-          badgeColor: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+          badgeColor: 'bg-muted text-muted-foreground border-transparent',
           Icon: History
         })
       } else {
@@ -89,7 +96,7 @@ export function TimelineMovimentacoes({ sessoes, preparos, saidas, consumos, loa
           descricao_principal: `Dirigente: ${sessao.dirigente || '—'}`,
           descricao_secundaria: `${sessao.quantidade_participantes} pessoas${sessao.tipo_delegacao ? ` • ${sessao.tipo_delegacao}` : ''}`,
           quantidade: somaConsumo,
-          badgeColor: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
+          badgeColor: 'bg-secondary text-secondary-foreground border-transparent',
           Icon: Database
         })
       }
@@ -100,14 +107,16 @@ export function TimelineMovimentacoes({ sessoes, preparos, saidas, consumos, loa
 
   }, [preparos, saidas, sessoes, consumos])
 
-  if (loading) return <div className="h-64 bg-gray-100 dark:bg-gray-800 rounded-xl animate-pulse"></div>
+  if (loading) return <Skeleton className="h-64 rounded-xl" />
 
   if (movimentacoes.length === 0) {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-xl p-8 text-center border border-dashed border-gray-300 dark:border-gray-700 flex flex-col items-center justify-center">
-        <History className="w-8 h-8 text-gray-300 dark:text-gray-600 mb-2" />
-        <p className="text-gray-500 dark:text-gray-400 text-sm">Nenhuma movimentação registrada no período.</p>
-      </div>
+      <Card className="border-dashed">
+        <CardContent className="py-10 text-center">
+          <History className="w-6 h-6 text-muted-foreground mx-auto mb-2" />
+          <p className="text-sm text-muted-foreground">Nenhuma movimentação registrada no período.</p>
+        </CardContent>
+      </Card>
     )
   }
 
@@ -115,75 +124,80 @@ export function TimelineMovimentacoes({ sessoes, preparos, saidas, consumos, loa
   const itensPaginados = movimentacoes.slice((paginaAtual - 1) * itensPorPagina, paginaAtual * itensPorPagina)
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700/60 shadow-sm overflow-hidden print:overflow-visible flex flex-col print:block h-full print:border-none print:shadow-none">
-       <div className="p-4 border-b border-gray-100 dark:border-gray-700/50 bg-gray-50/50 dark:bg-gray-800/50 print:hidden">
-        <h3 className="font-bold text-gray-900 dark:text-white print:text-black">Rastreabilidade</h3>
-        <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mt-0.5">Timeline consolidada</p>
+    <Card className="py-0 overflow-hidden print:border-none print:shadow-none">
+      <div className="p-4 border-b print:hidden">
+        <h3 className="font-medium">Rastreabilidade</h3>
+        <p className="text-xs text-muted-foreground mt-0.5">Extrato consolidado de entradas, consumos e saídas</p>
       </div>
 
-      <div className="p-4 flex-1">
-        <div className="space-y-4 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-gray-200 dark:before:via-gray-700 before:to-transparent">
-          {itensPaginados.map((item) => (
-            <div key={item.id} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active print:break-inside-avoid">
-              
-              {/* Icon Marker */}
-              <div className="flex items-center justify-center w-10 h-10 rounded-full border-4 border-white dark:border-gray-800 bg-celestial-500 text-white shadow-sm shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10 print:border-gray-300">
-                <item.Icon className="w-5 h-5" />
-              </div>
-              
-              {/* Card Content */}
-              <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] bg-white dark:bg-gray-800 p-4 rounded border border-gray-200 dark:border-gray-700/60 shadow-sm group-hover:border-celestial-300 dark:group-hover:border-celestial-700 transition-colors print:border-gray-300">
-                
-                <div className="flex justify-between items-start mb-1">
-                    <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">{new Date(item.data).toLocaleDateString('pt-BR')}</span>
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase border ${item.badgeColor} print:border-gray-400 print:text-black print:bg-transparent`}>
-                      {item.etiqueta_tipo}
-                    </span>
+      <ul className="divide-y">
+        {itensPaginados.map((item) => (
+          <li key={item.id} className="flex items-start gap-3 p-4 print:break-inside-avoid">
+            <item.Icon className={cn(
+              'w-4 h-4 shrink-0 mt-0.5',
+              item.tipo === 'entrada' ? 'text-primary'
+                : item.tipo === 'saida' ? 'text-destructive'
+                  : 'text-muted-foreground'
+            )} />
+
+            <div className="flex-1 min-w-0">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium truncate print:text-black">{item.descricao_principal}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5 truncate">{item.descricao_secundaria}</p>
                 </div>
 
-                <div className="flex justify-between items-end mt-2">
-                  <div>
-                    <h4 className="font-bold text-sm text-gray-900 dark:text-white print:text-black">{item.descricao_principal}</h4>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{item.descricao_secundaria}</p>
-                  </div>
-                  
+                <div className="text-right shrink-0">
                   {item.tipo !== 'historico' && (
-                    <div className="text-right">
-                      <span className={`text-lg font-black tracking-tight ${item.tipo === 'entrada' ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-900 dark:text-white'} print:text-black`}>
-                        {item.tipo === 'entrada' ? '+' : '-'}{item.quantidade.toFixed(2).replace('.', ',')}
-                      </span>
-                      <span className="text-xs font-bold text-gray-400 ml-1">L</span>
-                    </div>
+                    <p className={cn(
+                      'text-sm font-medium tabular-nums print:text-black',
+                      item.tipo === 'entrada' ? 'text-primary' : 'text-destructive'
+                    )}>
+                      {item.tipo === 'entrada' ? '+' : '−'}{formatarNumero(item.quantidade)}
+                      <span className="text-xs font-normal text-muted-foreground ml-0.5">L</span>
+                    </p>
                   )}
+                  <p className="text-xs text-muted-foreground tabular-nums mt-0.5">{formatarData(item.data)}</p>
                 </div>
               </div>
 
+              <span className={cn(
+                'inline-flex items-center text-xs px-2 py-0.5 rounded-md border mt-2',
+                item.badgeColor,
+                'print:border-gray-400 print:text-black print:bg-transparent'
+              )}>
+                {item.etiqueta_tipo}
+              </span>
             </div>
-          ))}
-        </div>
-      </div>
+          </li>
+        ))}
+      </ul>
 
       {totalPaginas > 1 && (
-        <div className="p-4 border-t border-gray-100 dark:border-gray-700/50 bg-gray-50/50 dark:bg-gray-800/50 flex justify-between items-center print:hidden">
-            <button 
-              onClick={() => setPaginaAtual(p => Math.max(1, p - 1))}
-              disabled={paginaAtual === 1}
-              className="p-2 bg-white dark:bg-gray-700 rounded border border-gray-200 dark:border-gray-600 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-600"
-            >
-              <ArrowLeft className="w-4 h-4 text-gray-600 dark:text-gray-300" />
-            </button>
-            <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">
-              Pág {paginaAtual} / {totalPaginas}
-            </span>
-            <button 
-              onClick={() => setPaginaAtual(p => Math.min(totalPaginas, p + 1))}
-              disabled={paginaAtual === totalPaginas}
-              className="p-2 bg-white dark:bg-gray-700 rounded border border-gray-200 dark:border-gray-600 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-600"
-            >
-              <ArrowRight className="w-4 h-4 text-gray-600 dark:text-gray-300" />
-            </button>
+        <div className="p-4 border-t flex items-center justify-between print:hidden">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => setPaginaAtual(p => Math.max(1, p - 1))}
+            disabled={paginaAtual === 1}
+            aria-label="Página anterior"
+          >
+            <ArrowLeft />
+          </Button>
+          <span className="text-sm text-muted-foreground tabular-nums">
+            Página {paginaAtual} de {totalPaginas}
+          </span>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => setPaginaAtual(p => Math.min(totalPaginas, p + 1))}
+            disabled={paginaAtual === totalPaginas}
+            aria-label="Próxima página"
+          >
+            <ArrowRight />
+          </Button>
         </div>
       )}
-    </div>
+    </Card>
   )
 }
