@@ -1,224 +1,195 @@
 'use client'
-import { useState, useEffect } from 'react'
-import { supabase } from '@/lib/supabaseClient'
 import Link from 'next/link'
-import { Search, Plus, CalendarDays } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { BookOpen, CalendarDays, Plus, Search } from 'lucide-react'
 
+import { useAuth } from '@/components/AuthProvider'
+import { ChipsFiltro } from '@/components/comum/ChipsFiltro'
+import { DataBloco } from '@/components/comum/DataBloco'
+import { ResumoLinha } from '@/components/comum/Indicadores'
+import { ItemLista, ListaCard, ValorLinha, Vazio } from '@/components/comum/Lista'
+import { Cabecalho } from '@/components/comum/Secao'
+import { SUBNAV_SESSOES, SubNav } from '@/components/layout/SubNav'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
-import { Card, CardContent } from '@/components/ui/card'
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from '@/components/ui/table'
-import {
-  SessionDetailDialog, type ConsumoDetalhado,
-} from '@/components/dashboard/SessionDetailDialog'
-import { formatarData, formatarNumero } from '@/lib/formato'
+import { useDadosEstoque } from '@/hooks/useDadosEstoque'
+import { agruparPorMes, ehSessaoHistorica, totalPorSessao } from '@/lib/estoque'
+import { anoDe, formatarData, formatarHora, formatarNumero, rotuloMes } from '@/lib/formato'
+import { podeEditar } from '@/lib/permissoes'
 
-type Sessao = {
-  id: number
-  data_realizacao: string
-  tipo: string
-  dirigente: string
-  quantidade_participantes: number
-  quantidade_consumida: number
-  user_id?: string
-  explanador?: string
-  leitor_documentos?: string
-  user_name?: string
-}
+type Categoria = 'todas' | 'realizadas' | 'historicas'
 
-export default function HistoricoSessoes() {
-  const [sessoes, setSessoes] = useState<Sessao[]>([])
-  const [loading, setLoading] = useState(true)
-  const [searchTerm, setSearchTerm] = useState('')
+const PASSO = 40
 
-  // Estado do diálogo de detalhes
-  const [selectedSession, setSelectedSession] = useState<Sessao | null>(null)
-  const [loadingDetails, setLoadingDetails] = useState(false)
-  const [sessionConsumos, setSessionConsumos] = useState<ConsumoDetalhado[]>([])
+export default function Sessoes() {
+  const { profile } = useAuth()
+  const editor = podeEditar(profile)
+  const { carregando, erro, sessoes, consumos } = useDadosEstoque()
+  const [agora] = useState(() => new Date())
+  const [ano, setAno] = useState(String(agora.getFullYear()))
+  const [tipo, setTipo] = useState('todos')
+  const [categoria, setCategoria] = useState<Categoria>('todas')
+  const [busca, setBusca] = useState('')
+  const [limite, setLimite] = useState(PASSO)
 
-  useEffect(() => {
-    async function fetchSessoes() {
-      // 1. Busca as sessões
-      const { data: dadosSessoes } = await supabase.from('sessoes').select('*').order('data_realizacao', { ascending: false })
+  const porSessao = useMemo(() => totalPorSessao(consumos), [consumos])
+  const ordenadas = useMemo(
+    () => [...sessoes].sort((a, b) => b.data_realizacao.localeCompare(a.data_realizacao) || b.id - a.id),
+    [sessoes]
+  )
 
-      // 2. Busca os consumos (apenas totais para a lista)
-      const { data: dadosConsumos } = await supabase.from('consumos_sessao').select('id_sessao, quantidade_consumida')
+  const anos = [...new Set([agora.getFullYear(), ...ordenadas.map(s => anoDe(s.data_realizacao))])].sort((a, b) => b - a)
+  const tipos = [...new Set(sessoes.map(s => s.tipo))].sort((a, b) => a.localeCompare(b))
 
-      // 3. Busca perfis de usuários
-      const userIds = Array.from(new Set(dadosSessoes?.map((s) => s.user_id).filter(Boolean))) || []
-      const { data: profiles } = await supabase.from('profiles').select('id, full_name').in('id', userIds)
+  const doAno = ordenadas.filter(s => ano === 'todos' || anoDe(s.data_realizacao) === Number(ano))
+  const realizadas = doAno.filter(s => !ehSessaoHistorica(s))
+  const consumoTotal = realizadas.reduce((acc, s) => acc + (porSessao.get(s.id) ?? 0), 0)
+  const participantesTotal = realizadas.reduce((acc, s) => acc + s.quantidade_participantes, 0)
 
-      // 4. Calcula o total por sessão e adiciona nome do usuário
-      const sessoesComConsumo = dadosSessoes?.map((sessao) => {
-        const consumosDaSessao = dadosConsumos?.filter(c => c.id_sessao === sessao.id) || []
-        const totalConsumido = Number(consumosDaSessao.reduce((acc: number, curr) => acc + Number(curr.quantidade_consumida || 0), 0).toFixed(2))
-        const profile = profiles?.find((p) => p.id === sessao.user_id)
+  const termo = busca.trim().toLowerCase()
+  const filtradas = doAno
+    .filter(s => tipo === 'todos' || s.tipo === tipo)
+    .filter(s => categoria === 'todas' || (categoria === 'historicas') === ehSessaoHistorica(s))
+    .filter(s =>
+      !termo ||
+      [s.tipo, s.dirigente, s.leitor_documentos, s.explanador, formatarData(s.data_realizacao)]
+        .some(v => v?.toLowerCase().includes(termo))
+    )
 
-        return {
-          ...sessao,
-          quantidade_consumida: totalConsumido,
-          user_name: profile?.full_name
-        }
-      }) || []
-
-      setSessoes(sessoesComConsumo)
-      setLoading(false)
-    }
-    fetchSessoes()
-  }, [])
-
-  const handleOpenModal = async (sessao: Sessao) => {
-    setSelectedSession(sessao)
-    setLoadingDetails(true)
-    setSessionConsumos([])
-
-    // Busca os detalhes do consumo incluindo info do preparo
-    const { data, error } = await supabase
-      .from('consumos_sessao')
-      .select(`
-        id,
-        quantidade_consumida,
-        preparos (
-          data_preparo,
-          mestre_preparo,
-          grau
-        )
-      `)
-      .eq('id_sessao', sessao.id)
-
-    if (data) {
-      // Cast explícito necessário pois o supabase retorna tipos complexos no join
-      setSessionConsumos(data as unknown as ConsumoDetalhado[])
-    } else if (error) {
-      console.error('Erro ao buscar detalhes:', error)
-    }
-
-    setLoadingDetails(false)
-  }
-
-  const busca = searchTerm.toLowerCase()
-  const filtradas = sessoes.filter(sessao => {
-    const dirigente = sessao.dirigente?.toLowerCase() || ''
-    const tipo = sessao.tipo?.toLowerCase() || ''
-    const data = formatarData(sessao.data_realizacao).toLowerCase()
-    return dirigente.includes(busca) || tipo.includes(busca) || data.includes(busca)
-  })
+  const grupos = agruparPorMes(filtradas.slice(0, limite), s => s.data_realizacao)
+  const mudarFiltro = <T,>(setter: (v: T) => void) => (valor: T) => { setter(valor); setLimite(PASSO) }
 
   return (
     <>
-      <div className="flex items-center justify-between gap-4 mb-6">
-        <h1 className="text-2xl font-semibold tracking-tight">Sessões</h1>
-        <Button asChild>
-          <Link href="/nova-sessao"><Plus data-slot="icon" /> Nova sessão</Link>
-        </Button>
-      </div>
+      <Cabecalho
+        titulo="Sessões"
+        acoes={editor && (
+          <div className="hidden gap-2 md:flex">
+            <Button variant="outline" asChild>
+              <Link href="/nova-sessao-historica"><BookOpen /> Registro histórico</Link>
+            </Button>
+            <Button asChild>
+              <Link href="/nova-sessao"><Plus /> Nova sessão</Link>
+            </Button>
+          </div>
+        )}
+      />
+      <SubNav itens={SUBNAV_SESSOES} />
 
-      <div className="relative mb-4">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+      {erro && <div className="mb-4"><Vazio>Não foi possível carregar as sessões: {erro}</Vazio></div>}
+
+      <ResumoLinha
+        carregando={carregando}
+        itens={[
+          { rotulo: ano === 'todos' ? 'Sessões no total' : `Sessões em ${ano}`, valor: realizadas.length },
+          { rotulo: 'Média de participantes', valor: realizadas.length ? Math.round(participantesTotal / realizadas.length) : 0 },
+          { rotulo: 'Consumo médio', valor: `${formatarNumero(realizadas.length ? consumoTotal / realizadas.length : 0)} L` },
+        ]}
+      />
+
+      <div className="relative mt-5 mb-3">
+        <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input
-          className="pl-9"
-          placeholder="Buscar por dirigente, tipo ou data…"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          className="h-10 pl-9"
+          placeholder="Buscar por dirigente, leitor, tipo ou data…"
+          value={busca}
+          onChange={e => mudarFiltro(setBusca)(e.target.value)}
           aria-label="Buscar sessão"
         />
       </div>
 
-      {loading ? (
-        <div className="space-y-2">
-          {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-14 rounded-lg" />)}
+      <div className="space-y-3">
+        <ChipsFiltro
+          rotulo="Categoria"
+          valor={categoria}
+          onChange={mudarFiltro(setCategoria)}
+          opcoes={[
+            { valor: 'todas', rotulo: 'Todas' },
+            { valor: 'realizadas', rotulo: 'Realizadas' },
+            { valor: 'historicas', rotulo: 'Registros históricos' },
+          ]}
+        />
+        <div className="grid grid-cols-2 gap-2 md:flex">
+          <Select value={ano} onValueChange={mudarFiltro(setAno)}>
+            <SelectTrigger className="w-full md:w-40" aria-label="Ano"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos os anos</SelectItem>
+              {anos.map(a => <SelectItem key={a} value={String(a)}>{a}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Select value={tipo} onValueChange={mudarFiltro(setTipo)}>
+            <SelectTrigger className="w-full md:w-52" aria-label="Tipo de sessão"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos os tipos</SelectItem>
+              {tipos.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+            </SelectContent>
+          </Select>
         </div>
-      ) : filtradas.length === 0 ? (
-        <Card className="border-dashed">
-          <CardContent className="py-10 text-center">
-            <CalendarDays className="w-6 h-6 text-muted-foreground mx-auto mb-2" />
-            <p className="text-sm text-muted-foreground">
-              {sessoes.length === 0
-                ? 'Nenhuma sessão registrada ainda.'
-                : 'Nenhuma sessão corresponde à busca.'}
-            </p>
-            {sessoes.length === 0 && (
-              <Button variant="outline" asChild className="mt-4">
-                <Link href="/nova-sessao">Registrar primeira sessão</Link>
+      </div>
+
+      <div className="mt-5">
+        {carregando ? (
+          <div className="space-y-2">
+            {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-[68px] rounded-xl" />)}
+          </div>
+        ) : filtradas.length === 0 ? (
+          <Vazio
+            icone={<CalendarDays />}
+            acao={sessoes.length === 0 && editor && (
+              <div className="flex flex-wrap justify-center gap-2">
+                <Button variant="outline" asChild><Link href="/nova-sessao">Registrar primeira sessão</Link></Button>
+                <Button variant="ghost" asChild><Link href="/nova-sessao-historica">Registro histórico</Link></Button>
+              </div>
+            )}
+          >
+            {sessoes.length === 0 ? 'Nenhuma sessão registrada ainda.' : 'Nenhuma sessão neste filtro.'}
+          </Vazio>
+        ) : (
+          <div className="space-y-6">
+            {grupos.map(grupo => (
+              <section key={grupo.chave}>
+                <div className="mb-2 flex items-baseline justify-between gap-3 px-1">
+                  <h2 className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground">{rotuloMes(grupo.chave)}</h2>
+                  <span className="text-xs text-muted-foreground">
+                    {grupo.itens.length} {grupo.itens.length === 1 ? 'sessão' : 'sessões'}
+                  </span>
+                </div>
+                <ListaCard>
+                  {grupo.itens.map(s => {
+                    const historica = ehSessaoHistorica(s)
+                    return (
+                      <ItemLista
+                        key={s.id}
+                        href={`/sessoes/${s.id}`}
+                        inicio={<DataBloco iso={s.data_realizacao} />}
+                        sobre={historica ? <Badge variant="outline">Histórica</Badge> : undefined}
+                        titulo={s.tipo}
+                        subtitulo={[s.dirigente, !historica && `${s.quantidade_participantes} participantes`].filter(Boolean).join(' · ') || '—'}
+                        fim={
+                          historica ? undefined : (
+                            <ValorLinha valor={`${formatarNumero(porSessao.get(s.id) ?? 0)} L`} detalhe={formatarHora(s.data_realizacao)} />
+                          )
+                        }
+                      />
+                    )
+                  })}
+                </ListaCard>
+              </section>
+            ))}
+
+            {filtradas.length > limite && (
+              <Button variant="outline" className="w-full" onClick={() => setLimite(l => l + PASSO)}>
+                Mostrar mais ({filtradas.length - limite} restantes)
               </Button>
             )}
-          </CardContent>
-        </Card>
-      ) : (
-        <Card className="overflow-hidden py-0">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Data</TableHead>
-                  <TableHead>Tipo</TableHead>
-                  <TableHead className="hidden sm:table-cell">Dirigente</TableHead>
-                  <TableHead className="text-right hidden sm:table-cell">Participantes</TableHead>
-                  <TableHead className="text-right">Consumo</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filtradas.map(sessao => {
-                  const ehHistorica = sessao.quantidade_participantes === 0
-                  return (
-                    <TableRow
-                      key={sessao.id}
-                      onClick={() => handleOpenModal(sessao)}
-                      tabIndex={0}
-                      role="button"
-                      onKeyDown={e => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault()
-                          handleOpenModal(sessao)
-                        }
-                      }}
-                      className="cursor-pointer"
-                    >
-                      <TableCell className="tabular-nums whitespace-nowrap">
-                        {formatarData(sessao.data_realizacao)}
-                        <span className="block sm:hidden text-xs text-muted-foreground mt-0.5 font-normal truncate max-w-[8rem]">
-                          {sessao.dirigente}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={ehHistorica ? 'outline' : 'secondary'}>
-                          {ehHistorica ? 'Histórica' : sessao.tipo}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="hidden sm:table-cell text-muted-foreground">
-                        {sessao.dirigente || '—'}
-                      </TableCell>
-                      <TableCell className="hidden sm:table-cell text-right tabular-nums">
-                        {ehHistorica ? '—' : sessao.quantidade_participantes}
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums font-medium whitespace-nowrap">
-                        {ehHistorica ? '—' : `${formatarNumero(sessao.quantidade_consumida)} L`}
-                      </TableCell>
-                    </TableRow>
-                  )
-                })}
-              </TableBody>
-            </Table>
           </div>
-        </Card>
-      )}
-
-      <SessionDetailDialog
-        sessao={selectedSession}
-        consumos={sessionConsumos}
-        loading={loadingDetails}
-        registradoPor={selectedSession?.user_name}
-        onOpenChange={aberto => {
-          if (!aberto) {
-            setSelectedSession(null)
-            setSessionConsumos([])
-          }
-        }}
-      />
+        )}
+      </div>
     </>
   )
 }

@@ -1,388 +1,201 @@
 'use client'
-import { useState, useEffect } from 'react'
-import { supabase } from '@/lib/supabaseClient'
-import { Plus, Search, Users, MapPin, Loader2 } from 'lucide-react'
-import { toast } from 'sonner'
+import Link from 'next/link'
+import { useEffect, useMemo, useState } from 'react'
+import { Plus, Search, Users } from 'lucide-react'
 
+import { useAuth } from '@/components/AuthProvider'
+import { Avatar } from '@/components/comum/Avatar'
+import { ChipsFiltro } from '@/components/comum/ChipsFiltro'
+import { ItemLista, ListaCard, ValorLinha, Vazio } from '@/components/comum/Lista'
+import { Cabecalho } from '@/components/comum/Secao'
+import { SUBNAV_SESSOES, SubNav } from '@/components/layout/SubNav'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Badge } from '@/components/ui/badge'
-import { Card, CardContent } from '@/components/ui/card'
-import { Skeleton } from '@/components/ui/skeleton'
-import { Separator } from '@/components/ui/separator'
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle,
-} from '@/components/ui/dialog'
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
-import { BotaoExcluir } from '@/components/BotaoExcluir'
-import { GRAUS_MEMBRO } from '@/lib/constants'
+import { Skeleton } from '@/components/ui/skeleton'
+import { useLista } from '@/hooks/useListas'
+import { buscarTodos } from '@/lib/consultas'
+import { nomeMembro } from '@/lib/membros'
+import { podeEditar } from '@/lib/permissoes'
+import { supabase } from '@/lib/supabaseClient'
+import type { Membro, Sessao } from '@/lib/tipos'
 
-export type Membro = {
-  id: number
-  nome: string
-  nome_exibicao?: string | null
-  grau: string
-  tipo_vinculo: 'Local' | 'Visitante'
-  nucleo_origem: string | null
-  ativo: boolean
-  user_id?: string
-}
+type SessaoCondutores = Pick<Sessao, 'id' | 'data_realizacao' | 'dirigente_id' | 'dirigente_2_id' | 'leitor_documentos_id' | 'explanador_id'>
+type Ordem = 'grau' | 'nome' | 'atuantes'
 
-/** Peso para ordenar por hierarquia institucional. */
-const grauPeso: Record<string, number> = Object.fromEntries(
-  GRAUS_MEMBRO.map((grau, i) => [grau, i + 1])
-)
+export default function Membros() {
+  const { profile } = useAuth()
+  const editor = podeEditar(profile)
+  const graus = useLista('graus')
 
-export default function GestaoMembros() {
+  const [carregando, setCarregando] = useState(true)
+  const [erro, setErro] = useState<string | null>(null)
   const [membros, setMembros] = useState<Membro[]>([])
-  const [loading, setLoading] = useState(true)
-  const [searchTerm, setSearchTerm] = useState('')
-
-  // Modal State
-  const [isModalOpen, setIsModalOpen] = useState(false)
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [editingMembro, setEditingMembro] = useState<Membro | null>(null)
-
-  // Form State
-  const [formData, setFormData] = useState({
-    nome: '',
-    nome_exibicao: '',
-    grau: 'Sócio',
-    tipo_vinculo: 'Local' as 'Local' | 'Visitante',
-    nucleo_origem: '',
-    ativo: true,
-  })
-
-  // Fetch Membros
-  const fetchMembros = async () => {
-    setLoading(true)
-    const { data, error } = await supabase
-      .from('membros')
-      .select('*')
-      .order('nome', { ascending: true })
-
-    if (data) {
-      setMembros(data)
-    } else {
-      console.error('Erro ao buscar membros:', error)
-    }
-    setLoading(false)
-  }
+  const [sessoes, setSessoes] = useState<SessaoCondutores[]>([])
+  const [agora] = useState(() => new Date())
+  const [filtro, setFiltro] = useState('todos')
+  const [ordem, setOrdem] = useState<Ordem>('grau')
+  const [busca, setBusca] = useState('')
 
   useEffect(() => {
-    fetchMembros()
+    let ativo = true
+    Promise.all([
+      buscarTodos<Membro>((de, ate) => supabase.from('membros').select('*').order('id').range(de, ate)),
+      buscarTodos<SessaoCondutores>((de, ate) =>
+        supabase
+          .from('sessoes')
+          .select('id, data_realizacao, dirigente_id, dirigente_2_id, leitor_documentos_id, explanador_id')
+          .order('id')
+          .range(de, ate)
+      ),
+    ])
+      .then(([m, s]) => {
+        if (!ativo) return
+        setMembros(m)
+        setSessoes(s)
+        setCarregando(false)
+      })
+      .catch(e => {
+        if (!ativo) return
+        setErro(e instanceof Error ? e.message : 'Erro ao carregar')
+        setCarregando(false)
+      })
+    return () => { ativo = false }
   }, [])
 
-  // Handlers
-  const handleOpenModal = (membro?: Membro) => {
-    if (membro) {
-      setEditingMembro(membro)
-      setFormData({
-        nome: membro.nome,
-        nome_exibicao: membro.nome_exibicao || '',
-        grau: membro.grau || 'Sócio',
-        tipo_vinculo: membro.tipo_vinculo,
-        nucleo_origem: membro.nucleo_origem || '',
-        ativo: membro.ativo,
-      })
-    } else {
-      setEditingMembro(null)
-      setFormData({
-        nome: '',
-        nome_exibicao: '',
-        grau: 'Sócio',
-        tipo_vinculo: 'Local',
-        nucleo_origem: '',
-        ativo: true,
-      })
+  const ano = String(agora.getFullYear())
+  const atuacao = useMemo(() => {
+    const dirigiu = new Map<number, number>()
+    const total = new Map<number, number>()
+    const somar = (mapa: Map<number, number>, id: number | null) => { if (id) mapa.set(id, (mapa.get(id) ?? 0) + 1) }
+    for (const s of sessoes) {
+      if (!s.data_realizacao.startsWith(ano)) continue
+      somar(dirigiu, s.dirigente_id)
+      somar(dirigiu, s.dirigente_2_id)
+      for (const id of new Set([s.dirigente_id, s.dirigente_2_id, s.leitor_documentos_id, s.explanador_id])) somar(total, id)
     }
-    setIsModalOpen(true)
-  }
+    return { dirigiu, total }
+  }, [sessoes, ano])
 
-  const handleCloseModal = () => {
-    setIsModalOpen(false)
-    setEditingMembro(null)
-  }
+  const ativos = membros.filter(m => m.ativo)
+  const contagem = (fn: (m: Membro) => boolean) => membros.filter(fn).length
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsSubmitting(true)
-
-    try {
-      const payload = {
-        nome: formData.nome,
-        nome_exibicao: formData.nome_exibicao,
-        grau: formData.grau,
-        tipo_vinculo: formData.tipo_vinculo,
-        nucleo_origem: formData.tipo_vinculo === 'Visitante' ? formData.nucleo_origem : null,
-        ativo: formData.ativo,
-      }
-
-      if (editingMembro) {
-        const { error } = await supabase
-          .from('membros')
-          .update(payload)
-          .eq('id', editingMembro.id)
-
-        if (error) throw error
-        toast.success('Cadastro atualizado')
-      } else {
-        const { error } = await supabase
-          .from('membros')
-          .insert([payload])
-
-        if (error) throw error
-        toast.success('Membro cadastrado')
-      }
-
-      handleCloseModal()
-      fetchMembros()
-    } catch (error) {
-      const mensagem = error instanceof Error ? error.message : 'Erro desconhecido'
-      toast.error('Erro ao salvar', { description: mensagem })
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
-
-  const handleDelete = async (id: number) => {
-    try {
-      const { error } = await supabase
-        .from('membros')
-        .delete()
-        .eq('id', id)
-
-      if (error) throw error
-      toast.success('Cadastro apagado')
-      handleCloseModal()
-      fetchMembros()
-    } catch (error) {
-      const mensagem = error instanceof Error ? error.message : 'Erro desconhecido'
-      toast.error('Erro ao apagar', { description: mensagem })
-    }
-  }
-
-  const busca = searchTerm.toLowerCase()
-  const filteredMembros = membros
+  const termo = busca.trim().toLowerCase()
+  const filtrados = membros
     .filter(m =>
-      m.nome.toLowerCase().includes(busca) ||
-      (m.nome_exibicao && m.nome_exibicao.toLowerCase().includes(busca)) ||
-      (m.grau && m.grau.toLowerCase().includes(busca))
+      filtro === 'inativos' ? !m.ativo
+        : !m.ativo ? false
+          : filtro === 'todos' ? true
+            : filtro === 'visitantes' ? m.tipo_vinculo === 'Visitante'
+              : m.grau === filtro
     )
+    .filter(m => !termo || [m.nome, m.nome_exibicao, m.grau, m.nucleo_origem].some(v => v?.toLowerCase().includes(termo)))
     .sort((a, b) => {
-      const pesoA = grauPeso[a.grau || 'Sócio'] || 5
-      const pesoB = grauPeso[b.grau || 'Sócio'] || 5
-      if (pesoA !== pesoB) return pesoA - pesoB
-      return a.nome.localeCompare(b.nome)
+      if (ordem === 'atuantes') {
+        const diff = (atuacao.total.get(b.id) ?? 0) - (atuacao.total.get(a.id) ?? 0)
+        if (diff) return diff
+      }
+      if (ordem === 'grau') {
+        const peso = (m: Membro) => { const i = graus.indexOf(m.grau ?? ''); return i === -1 ? graus.length : i }
+        const diff = peso(a) - peso(b)
+        if (diff) return diff
+      }
+      return (a.nome_exibicao || a.nome).localeCompare(b.nome_exibicao || b.nome)
     })
-
-  const contagens = [
-    { rotulo: 'Total', valor: membros.length },
-    ...GRAUS_MEMBRO.map(grau => ({
-      rotulo: grau,
-      valor: membros.filter(m => m.grau === grau).length,
-    })),
-  ]
 
   return (
     <>
-      <div className="flex items-center justify-between gap-4 mb-6">
-        <h1 className="text-2xl font-semibold tracking-tight">Membros</h1>
-        <Button onClick={() => handleOpenModal()}>
-          <Plus data-slot="icon" /> Novo cadastro
-        </Button>
-      </div>
+      <Cabecalho
+        titulo="Sessões"
+        acoes={editor && (
+          <Button asChild className="hidden md:inline-flex">
+            <Link href="/membros/novo"><Plus /> Novo membro</Link>
+          </Button>
+        )}
+      />
+      <SubNav itens={SUBNAV_SESSOES} />
 
-      {!loading && membros.length > 0 && (
-        <div className="grid grid-cols-3 sm:grid-cols-5 gap-3 mb-6">
-          {contagens.map(({ rotulo, valor }) => (
-            <Card key={rotulo}>
-              <CardContent className="px-4">
-                <p className="text-xs text-muted-foreground truncate">{rotulo}</p>
-                <p className="text-2xl font-semibold tabular-nums tracking-tight mt-0.5">{valor}</p>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
+      {erro && <div className="mb-4"><Vazio>Não foi possível carregar os membros: {erro}</Vazio></div>}
 
-      <div className="relative mb-4">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+      <div className="relative mb-3">
+        <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input
-          className="pl-9"
-          placeholder="Buscar membro por nome ou grau…"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          className="h-10 pl-9"
+          placeholder="Buscar membro…"
+          value={busca}
+          onChange={e => setBusca(e.target.value)}
           aria-label="Buscar membro"
         />
       </div>
 
-      {loading ? (
+      <ChipsFiltro
+        rotulo="Filtrar membros"
+        valor={filtro}
+        onChange={setFiltro}
+        opcoes={[
+          { valor: 'todos', rotulo: 'Todos', contagem: ativos.length },
+          ...graus.map(g => ({ valor: g, rotulo: g, contagem: contagem(m => m.ativo && m.grau === g) })),
+          { valor: 'visitantes', rotulo: 'Visitantes', contagem: contagem(m => m.ativo && m.tipo_vinculo === 'Visitante') },
+          { valor: 'inativos', rotulo: 'Inativos', contagem: contagem(m => !m.ativo) },
+        ]}
+      />
+
+      <div className="mt-4 mb-2.5 flex items-center justify-between gap-3 px-1">
+        <p className="text-sm text-muted-foreground">
+          {carregando ? '…' : `${filtrados.length} ${filtrados.length === 1 ? 'membro' : 'membros'}`}
+        </p>
+        <Select value={ordem} onValueChange={v => setOrdem(v as Ordem)}>
+          <SelectTrigger size="sm" className="min-w-40" aria-label="Ordenar"><SelectValue /></SelectTrigger>
+          <SelectContent align="end">
+            <SelectItem value="grau">Ordenar por grau</SelectItem>
+            <SelectItem value="nome">Ordenar por nome</SelectItem>
+            <SelectItem value="atuantes">Mais atuantes no ano</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {carregando ? (
         <div className="space-y-2">
-          {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-16 rounded-xl" />)}
+          {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-[60px] rounded-xl" />)}
         </div>
-      ) : filteredMembros.length === 0 ? (
-        <Card className="border-dashed">
-          <CardContent className="py-10 text-center">
-            <Users className="w-6 h-6 text-muted-foreground mx-auto mb-2" />
-            <p className="text-sm text-muted-foreground">
-              {membros.length === 0
-                ? 'Nenhum membro cadastrado ainda.'
-                : 'Nenhum membro corresponde à busca.'}
-            </p>
-            {membros.length === 0 && (
-              <Button variant="outline" className="mt-4" onClick={() => handleOpenModal()}>
-                Cadastrar primeiro membro
-              </Button>
-            )}
-          </CardContent>
-        </Card>
+      ) : filtrados.length === 0 ? (
+        <Vazio
+          icone={<Users />}
+          acao={membros.length === 0 && editor && (
+            <Button variant="outline" asChild><Link href="/membros/novo">Cadastrar primeiro membro</Link></Button>
+          )}
+        >
+          {membros.length === 0 ? 'Nenhum membro cadastrado ainda.' : 'Nenhum membro neste filtro.'}
+        </Vazio>
       ) : (
-        <Card className="py-0 overflow-hidden">
-          <ul className="divide-y">
-            {filteredMembros.map((membro) => (
-              <li key={membro.id} className="flex items-center justify-between gap-3 p-4 transition-colors hover:bg-muted/50">
-                <div className="min-w-0">
-                  <h3 className="font-medium text-sm leading-tight truncate">
-                    {membro.nome}
-                    {!membro.ativo && (
-                      <span className="text-muted-foreground font-normal"> · inativo</span>
-                    )}
-                  </h3>
-                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1 text-xs text-muted-foreground">
-                    <span>{membro.grau || 'Sócio'}</span>
-                    <Badge variant={membro.tipo_vinculo === 'Local' ? 'secondary' : 'outline'}>
-                      {membro.tipo_vinculo}
-                    </Badge>
-                    {membro.tipo_vinculo === 'Visitante' && membro.nucleo_origem && (
-                      <span className="flex items-center gap-1 truncate max-w-[12rem]">
-                        <MapPin className="w-3 h-3 shrink-0" />
-                        <span className="truncate">{membro.nucleo_origem}</span>
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <Button variant="outline" size="sm" onClick={() => handleOpenModal(membro)}>
-                  Editar
-                </Button>
-              </li>
-            ))}
-          </ul>
-        </Card>
+        <ListaCard>
+          {filtrados.map(m => {
+            const dirigiu = atuacao.dirigiu.get(m.id) ?? 0
+            return (
+              <ItemLista
+                key={m.id}
+                href={`/membros/${m.id}`}
+                inicio={<Avatar nome={m.nome_exibicao || m.nome} arquivo={m.foto_arquivo} />}
+                titulo={nomeMembro(m)}
+                subtitulo={[
+                  m.grau || 'Sem grau',
+                  m.tipo_vinculo === 'Visitante' && `Visitante${m.nucleo_origem ? ` · ${m.nucleo_origem}` : ''}`,
+                  !m.ativo && 'Inativo',
+                ].filter(Boolean).join(' · ')}
+                fim={dirigiu > 0 ? <ValorLinha valor={`${dirigiu}×`} detalhe="dirigiu no ano" /> : undefined}
+              />
+            )
+          })}
+        </ListaCard>
       )}
 
-      <Dialog open={isModalOpen} onOpenChange={aberto => { if (!aberto) handleCloseModal() }}>
-        <DialogContent className="max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{editingMembro ? 'Editar membro' : 'Novo cadastro'}</DialogTitle>
-          </DialogHeader>
-
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="space-y-2">
-              <Label htmlFor="nome">Nome completo <span className="text-destructive">*</span></Label>
-              <Input
-                id="nome"
-                required
-                value={formData.nome}
-                onChange={e => setFormData({ ...formData, nome: e.target.value })}
-                placeholder="Nome completo do sócio"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="nome-exibicao">Nome de exibição <span className="text-destructive">*</span></Label>
-              <Input
-                id="nome-exibicao"
-                required
-                value={formData.nome_exibicao}
-                onChange={e => setFormData({ ...formData, nome_exibicao: e.target.value })}
-                placeholder="O nome pelo qual é chamado"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="vinculo">Vínculo</Label>
-                <Select
-                  value={formData.tipo_vinculo}
-                  onValueChange={valor => setFormData({
-                    ...formData,
-                    tipo_vinculo: valor as 'Local' | 'Visitante',
-                    nucleo_origem: valor === 'Local' ? '' : formData.nucleo_origem,
-                  })}
-                >
-                  <SelectTrigger id="vinculo" className="w-full"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Local">Local</SelectItem>
-                    <SelectItem value="Visitante">Visitante</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="grau">Grau institucional</Label>
-                <Select value={formData.grau} onValueChange={grau => setFormData({ ...formData, grau })}>
-                  <SelectTrigger id="grau" className="w-full"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {GRAUS_MEMBRO.map(g => (
-                      <SelectItem key={g} value={g}>{g}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {formData.tipo_vinculo === 'Visitante' && (
-              <div className="space-y-2">
-                <Label htmlFor="nucleo">Núcleo de origem <span className="text-destructive">*</span></Label>
-                <Input
-                  id="nucleo"
-                  required
-                  value={formData.nucleo_origem}
-                  onChange={e => setFormData({ ...formData, nucleo_origem: e.target.value })}
-                  placeholder="Ex.: Sede Geral"
-                />
-              </div>
-            )}
-
-            {editingMembro && (
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={formData.ativo}
-                  onChange={e => setFormData({ ...formData, ativo: e.target.checked })}
-                  className="size-4 accent-primary"
-                />
-                Cadastro ativo no sistema
-              </label>
-            )}
-
-            <Separator />
-
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex gap-3">
-                <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting && <Loader2 data-slot="icon" className="animate-spin" />}
-                  {isSubmitting ? 'Salvando…' : editingMembro ? 'Salvar' : 'Cadastrar'}
-                </Button>
-                <Button type="button" variant="ghost" onClick={handleCloseModal}>Cancelar</Button>
-              </div>
-              {editingMembro && (
-                <BotaoExcluir
-                  titulo={`Apagar o cadastro de ${editingMembro.nome}?`}
-                  descricao="O cadastro será removido permanentemente. Se o membro já participou de sessões, prefira marcá-lo como inativo."
-                  rotulo="Apagar"
-                  disabled={isSubmitting}
-                  onConfirmar={() => handleDelete(editingMembro.id)}
-                />
-              )}
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
+      {editor && (
+        <Button variant="outline" asChild className="mt-4 h-11 w-full border-dashed text-primary md:hidden">
+          <Link href="/membros/novo"><Plus /> Adicionar membro</Link>
+        </Button>
+      )}
     </>
   )
 }
