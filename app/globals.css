@@ -10,6 +10,8 @@
    ============================================================ */
 
 :root {
+  /* Faz os controles nativos (date/time, scrollbars) seguirem o tema */
+  color-scheme: light;
   --background: #fafaf9;
   --foreground: #1c1917;
   --card: #ffffff;
@@ -47,6 +49,7 @@
 }
 
 .dark {
+  color-scheme: dark;
   --background: #0c0a09;
   --foreground: #f5f5f4;
   --card: #1c1917;
