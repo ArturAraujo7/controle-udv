@@ -1,254 +1,365 @@
 'use client'
-import { useState, useRef } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useReactToPrint } from 'react-to-print'
-import { Printer, Droplets, Users, BookOpen, X } from 'lucide-react'
+import { Download, FileSpreadsheet, Printer } from 'lucide-react'
 
-// Hooks
-import { useDashboardDados } from '@/hooks/useDashboardDados'
-
-// Componentes
-import { ResumoCard } from '@/components/relatorios/ResumoCard'
-import { TabelaSessoesPeriodo } from '@/components/relatorios/TabelaSessoesPeriodo'
+import { useAuth } from '@/components/AuthProvider'
+import { ChipsFiltro } from '@/components/comum/ChipsFiltro'
+import { Indicador } from '@/components/comum/Indicadores'
+import { Vazio } from '@/components/comum/Lista'
+import { Cabecalho, Secao } from '@/components/comum/Secao'
+import { GraficoConsumoMensal, GraficoSessoesPorMes, GraficoSessoesTipo } from '@/components/relatorios/Graficos'
 import { ListaFuncaoLiturgica } from '@/components/relatorios/ListaFuncaoLiturgica'
-import { GraficoSessoesPorMes, GraficoSessoesTipo } from '@/components/relatorios/Graficos'
+import { TabelaSessoesPeriodo } from '@/components/relatorios/TabelaSessoesPeriodo'
 import { TimelineMovimentacoes } from '@/components/relatorios/TimelineMovimentacoes'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Separator } from '@/components/ui/separator'
-import { formatarNumero } from '@/lib/formato'
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { useConfiguracoes } from '@/hooks/useConfiguracoes'
+import { useDadosEstoque } from '@/hooks/useDadosEstoque'
+import { baixarCSV } from '@/lib/csv'
+import { calcularSaldos, ehSessaoHistorica, estoqueDisponivel, montarMovimentacoes, totalPorSessao } from '@/lib/estoque'
+import { formatarData, formatarHora, formatarNumero, hojeISO, variacaoPercentual } from '@/lib/formato'
+import { podeEditar } from '@/lib/permissoes'
+import type { ConsumoSessao, Sessao } from '@/lib/tipos'
+import { cn } from '@/lib/utils'
 
-export default function RelatoriosPage() {
-  const currentYear = new Date().getFullYear().toString()
-  const [anoSelecionado, setAnoSelecionado] = useState<string>(currentYear)
-  const [showAssistenteInput, setShowAssistenteInput] = useState(false)
-  const [dataAssistente, setDataAssistente] = useState('')
+type Intervalo = { inicio: string | null; fim: string | null }
 
-  // Hook Global
-  const { sessoes, preparos, saidas, consumos, estoqueAtual, loading } = useDashboardDados(anoSelecionado)
+const SECOES = [
+  { id: 'visao-geral', rotulo: 'Visão geral' },
+  { id: 'sessoes-escalas', rotulo: 'Sessões' },
+  { id: 'rastreabilidade', rotulo: 'Rastreabilidade' },
+]
 
-  const componentRef = useRef<HTMLDivElement>(null)
+const dentro = (iso: string, intervalo: Intervalo) => {
+  const dia = iso.slice(0, 10)
+  return (!intervalo.inicio || dia >= intervalo.inicio) && (!intervalo.fim || dia <= intervalo.fim)
+}
 
-  const handlePrint = useReactToPrint({
-    contentRef: componentRef,
-    documentTitle: `Relatorio_Geral_UDV_${anoSelecionado.replace(':', '_')}`,
+const deslocarDias = (iso: string, dias: number) => {
+  const d = new Date(`${iso}T12:00:00Z`)
+  d.setUTCDate(d.getUTCDate() + dias)
+  return d.toISOString().slice(0, 10)
+}
+
+function resumir(sessoes: Sessao[], porSessao: Map<number, number>) {
+  const reais = sessoes.filter(s => !ehSessaoHistorica(s))
+  const participantes = reais.reduce((a, s) => a + s.quantidade_participantes, 0)
+  const consumo = reais.reduce((a, s) => a + (porSessao.get(s.id) ?? 0), 0)
+  return {
+    sessoes: sessoes.length,
+    reais: reais.length,
+    participantes,
+    mediaParticipantes: reais.length ? participantes / reais.length : 0,
+    consumo,
+    mediaConsumo: reais.length ? consumo / reais.length : 0,
+    perCapitaMl: participantes ? (consumo * 1000) / participantes : 0,
+  }
+}
+
+export default function Relatorios() {
+  const { profile } = useAuth()
+  const editor = podeEditar(profile)
+  const { config } = useConfiguracoes()
+  const { carregando, erro, preparos, consumos, saidas, sessoes } = useDadosEstoque()
+
+  const [agora] = useState(() => new Date())
+  const anoAtual = agora.getFullYear()
+  const hoje = hojeISO(agora)
+  const [escolha, setEscolha] = useState(String(anoAtual))
+  const [desde, setDesde] = useState('')
+  const [secaoAtiva, setSecaoAtiva] = useState(SECOES[0].id)
+  const [imprimindo, setImprimindo] = useState(false)
+  const refImpressao = useRef<HTMLDivElement>(null)
+
+  const periodo = useMemo(() => {
+    if (escolha === 'todos') {
+      return { atual: { inicio: null, fim: null }, anterior: null, rotulo: 'Histórico total' }
+    }
+    if (escolha === 'desde') {
+      if (!desde) return { atual: { inicio: hoje, fim: hoje }, anterior: null, rotulo: 'Escolha a data inicial' }
+      const dias = Math.round((new Date(hoje).getTime() - new Date(desde).getTime()) / 86_400_000)
+      return {
+        atual: { inicio: desde, fim: hoje },
+        anterior: { inicio: deslocarDias(desde, -dias - 1), fim: deslocarDias(desde, -1) },
+        rotulo: `A partir de ${formatarData(desde)}`,
+      }
+    }
+    const ano = Number(escolha)
+    // No ano corrente, compara com o mesmo intervalo (até hoje) do ano anterior
+    const fimAnterior = ano === anoAtual ? `${ano - 1}-${hoje.slice(5)}` : `${ano - 1}-12-31`
+    return {
+      atual: { inicio: `${ano}-01-01`, fim: `${ano}-12-31` },
+      anterior: { inicio: `${ano - 1}-01-01`, fim: fimAnterior },
+      rotulo: `Ano ${ano}`,
+    }
+  }, [escolha, desde, hoje, anoAtual])
+
+  const dados = useMemo(() => {
+    const porSessao = totalPorSessao(consumos)
+    const ordenadas = [...sessoes].sort((a, b) => b.data_realizacao.localeCompare(a.data_realizacao))
+    const sessoesPeriodo = ordenadas.filter(s => dentro(s.data_realizacao, periodo.atual))
+    const idsPeriodo = new Set(sessoesPeriodo.map(s => s.id))
+    const consumosPeriodo: ConsumoSessao[] = consumos.filter(c => idsPeriodo.has(c.id_sessao))
+
+    const atual = resumir(sessoesPeriodo, porSessao)
+    const anterior = periodo.anterior
+      ? resumir(ordenadas.filter(s => dentro(s.data_realizacao, periodo.anterior!)), porSessao)
+      : null
+
+    const lotes = calcularSaldos(preparos, consumos, saidas, { hoje, sessoes })
+    const movimentacoes = montarMovimentacoes({ preparos, sessoes, consumos, saidas })
+      .filter(m => dentro(m.data, periodo.atual))
+
+    return {
+      porSessao,
+      sessoesPeriodo,
+      consumosPeriodo,
+      atual,
+      anterior,
+      estoque: estoqueDisponivel(lotes, config.somar_maturacao_no_saldo),
+      movimentacoes,
+    }
+  }, [sessoes, consumos, preparos, saidas, periodo, hoje, config.somar_maturacao_no_saldo])
+
+  // Sem controle de vegetal antes de 2026: esses números só aparecem quando fazem sentido.
+  const mostrarVegetal = escolha === 'todos' || escolha === 'desde' || Number(escolha) >= 2026
+  const variacao = (atual: number, chave: keyof ReturnType<typeof resumir>) =>
+    dados.anterior ? variacaoPercentual(atual, dados.anterior[chave]) : undefined
+
+  const imprimir = useReactToPrint({
+    contentRef: refImpressao,
+    documentTitle: `Relatorio_Guardiao_${periodo.rotulo.replace(/\W+/g, '_')}`,
+    onBeforePrint: () => new Promise<void>(resolve => {
+      setImprimindo(true)
+      setTimeout(resolve, 50)
+    }),
+    onAfterPrint: () => setImprimindo(false),
   })
 
-  const getPeriodoLabel = () => {
-    if (anoSelecionado === 'Todos') return 'Histórico total'
-    if (anoSelecionado.startsWith('assistente:')) {
-      const data = anoSelecionado.split(':')[1]
-      const [ano, mes, dia] = data.split('-')
-      return `A partir de ${dia}/${mes}/${ano}`
-    }
-    return `Ano ${anoSelecionado}`
+  const exportarSessoes = () => {
+    baixarCSV(`sessoes-${periodo.rotulo}`, [
+      ['Data', 'Hora', 'Tipo', 'Dirigente', 'Delegação', 'Leitor', 'Explanador', 'Participantes', 'Consumo (L)'],
+      ...[...dados.sessoesPeriodo].reverse().map(s => [
+        formatarData(s.data_realizacao),
+        formatarHora(s.data_realizacao),
+        s.tipo,
+        s.dirigente,
+        s.tipo_delegacao,
+        s.leitor_documentos,
+        s.explanador,
+        ehSessaoHistorica(s) ? '' : s.quantidade_participantes,
+        ehSessaoHistorica(s) ? '' : formatarNumero(dados.porSessao.get(s.id) ?? 0),
+      ]),
+    ])
   }
-  const periodoLabel = getPeriodoLabel()
 
-  // === CALCULOS DE RESUMO ===
-  const sessoesReais = sessoes.filter(s => s.quantidade_participantes > 0)
-  const totalSessoes = sessoesReais.length
+  const exportarMovimentacoes = () => {
+    baixarCSV(`movimentacoes-${periodo.rotulo}`, [
+      ['Data', 'Tipo', 'Descrição', 'Detalhe', 'Quantidade (L)', 'Saldo após (L)'],
+      ...[...dados.movimentacoes].reverse().map(m => [
+        formatarData(m.data),
+        m.tipo === 'entrada' ? 'Entrada' : m.tipo === 'consumo' ? 'Consumo' : 'Saída',
+        m.titulo,
+        m.subtitulo,
+        `${m.tipo === 'entrada' ? '' : '-'}${formatarNumero(m.quantidade)}`,
+        formatarNumero(m.saldoApos),
+      ]),
+    ])
+  }
 
-  const totalParticipantes = sessoesReais.reduce((acc, s) => acc + s.quantidade_participantes, 0)
-  const totalConsumido = consumos.reduce((acc, c) => acc + c.quantidade_consumida, 0)
-
-  const mediaPorSessao = totalSessoes > 0 ? totalConsumido / totalSessoes : 0
-  const mediaParticipantesSessao = totalSessoes > 0 ? totalParticipantes / totalSessoes : 0
-  const mediaPerCapita = totalParticipantes > 0 ? (totalConsumido * 1000) / totalParticipantes : 0
-
-  const anosParaFiltro = ['Todos', currentYear, (parseInt(currentYear) - 1).toString(), (parseInt(currentYear) - 2).toString()]
-
-  // Condição para mostrar dados de vegetal (estoque, consumo, preparo)
-  const mostrarDadosVegetal = anoSelecionado === 'Todos' || anoSelecionado.startsWith('assistente:') || parseInt(anoSelecionado) >= 2026
-
-  const usandoFiltroAssistente = anoSelecionado.startsWith('assistente:')
+  const irPara = (id: string) => {
+    setSecaoAtiva(id)
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
 
   return (
     <>
-      <div className="flex items-center justify-between gap-4 mb-6 print:hidden">
-        <h1 className="text-2xl font-semibold tracking-tight">Relatórios</h1>
-        <Button variant="outline" onClick={handlePrint}>
-          <Printer data-slot="icon" />
-          <span className="hidden sm:inline">Exportar PDF</span>
-        </Button>
+      <Cabecalho
+        titulo="Relatórios"
+        acoes={
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" disabled={carregando} className="print:hidden">
+                <Download /> <span className="hidden sm:inline">Exportar</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuItem onSelect={() => imprimir()}>
+                <Printer /> Relatório em PDF
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onSelect={exportarSessoes}>
+                <FileSpreadsheet /> Sessões (CSV)
+              </DropdownMenuItem>
+              {mostrarVegetal && (
+                <DropdownMenuItem onSelect={exportarMovimentacoes}>
+                  <FileSpreadsheet /> Movimentações (CSV)
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        }
+      />
+
+      {/* Período fixo no topo ao rolar */}
+      <div className="sticky top-14 z-20 -mx-4 mb-4 space-y-2 border-b bg-background/90 px-4 py-2.5 backdrop-blur print:hidden md:mx-0 md:rounded-b-xl md:px-0">
+        <ChipsFiltro
+          rotulo="Período"
+          valor={escolha}
+          onChange={setEscolha}
+          opcoes={[
+            { valor: String(anoAtual), rotulo: String(anoAtual) },
+            { valor: String(anoAtual - 1), rotulo: String(anoAtual - 1) },
+            { valor: String(anoAtual - 2), rotulo: String(anoAtual - 2) },
+            { valor: 'todos', rotulo: 'Histórico total' },
+            { valor: 'desde', rotulo: 'A partir de uma data…' },
+          ]}
+        />
+        {escolha === 'desde' && (
+          <div className="flex items-center gap-2">
+            <Label htmlFor="desde" className="shrink-0 text-muted-foreground">Início</Label>
+            <Input id="desde" type="date" value={desde} max={hoje} onChange={e => setDesde(e.target.value)} className="h-9 w-auto" />
+          </div>
+        )}
+        <nav aria-label="Seções do relatório" className="grid grid-cols-3 rounded-lg bg-muted p-[3px]">
+          {SECOES.map(s => (
+            <button
+              key={s.id}
+              type="button"
+              onClick={() => irPara(s.id)}
+              className={cn(
+                'rounded-md py-1.5 text-xs font-medium transition-colors sm:text-sm',
+                secaoAtiva === s.id ? 'bg-background text-foreground shadow-sm dark:bg-input/40' : 'text-muted-foreground'
+              )}
+            >
+              {s.rotulo}
+            </button>
+          ))}
+        </nav>
       </div>
 
-      <Card className="mb-6 print:hidden">
-        <CardContent className="flex flex-col lg:flex-row lg:items-center gap-4 justify-between">
-          <div className="overflow-x-auto">
-            <Tabs
-              value={usandoFiltroAssistente ? '' : anoSelecionado}
-              onValueChange={ano => {
-                setAnoSelecionado(ano)
-                setShowAssistenteInput(false)
-              }}
-            >
-              <TabsList>
-                {anosParaFiltro.map(ano => (
-                  <TabsTrigger key={ano} value={ano}>
-                    {ano === 'Todos' ? 'Histórico total' : ano}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-            </Tabs>
-          </div>
+      {erro && <div className="mb-4"><Vazio>Não foi possível carregar os dados: {erro}</Vazio></div>}
 
-          <div className="flex items-center gap-2">
-            {!(showAssistenteInput || usandoFiltroAssistente) ? (
-              <Button variant="ghost" size="sm" onClick={() => setShowAssistenteInput(true)}>
-                Relatório do assistente
-              </Button>
-            ) : (
-              <>
-                <Input
-                  type="date"
-                  className="w-auto"
-                  aria-label="Data inicial do relatório do assistente"
-                  value={dataAssistente}
-                  onChange={(e) => setDataAssistente(e.target.value)}
-                />
-                <Button
-                  size="sm"
-                  disabled={!dataAssistente}
-                  onClick={() => setAnoSelecionado(`assistente:${dataAssistente}`)}
-                >
-                  Gerar
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  aria-label="Cancelar filtro por data"
-                  onClick={() => {
-                    setShowAssistenteInput(false)
-                    if (usandoFiltroAssistente) setAnoSelecionado(currentYear)
-                    setDataAssistente('')
-                  }}
-                >
-                  <X />
-                </Button>
-              </>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+      <div ref={refImpressao} className="print:bg-white print:p-0 print:text-black">
+        <style dangerouslySetInnerHTML={{ __html: '@media print { @page { margin: 15mm; } }' }} />
 
-      <style dangerouslySetInnerHTML={{
-        __html: `@media print { @page { margin: 15mm; } }`
-      }} />
-
-      <div ref={componentRef} className="print:p-0 print:bg-white print:text-black">
-        <div className="hidden print:flex flex-col items-center justify-center border-b print:border-gray-300 pb-5 mb-8 gap-3">
+        <div className="mb-8 hidden flex-col items-center gap-3 border-b pb-5 print:flex">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/PDF/header.svg" alt="Guardião" className="h-16 w-auto" />
+          <p className="text-sm font-semibold">{config.nucleo_nome}</p>
           <p className="text-[10px] uppercase tracking-widest">
-            Período de referência: <span className="font-bold">{periodoLabel}</span>
+            Período de referência: <span className="font-bold">{periodo.rotulo}</span>
           </p>
         </div>
 
-        <div className="space-y-6">
-          {/* Resumo */}
-          <div className={`grid grid-cols-2 ${mostrarDadosVegetal ? 'lg:grid-cols-5' : 'lg:grid-cols-2'} gap-3`}>
-            {mostrarDadosVegetal && (
-              <div className="col-span-2 lg:col-span-1 h-full">
-                <ResumoCard
-                  titulo="Estoque atual"
-                  valor={loading ? '—' : `${formatarNumero(estoqueAtual)} L`}
-                  subtitulo="Saldo real no momento"
-                  icone={<Droplets className="w-3.5 h-3.5" />}
-                  destaque
-                />
-              </div>
+        <Secao id="visao-geral" titulo="Visão geral" className="mt-0 scroll-mt-44" acao={<span className="print:hidden">{periodo.rotulo}</span>}>
+          <div className={cn('grid grid-cols-2 gap-3', mostrarVegetal ? 'lg:grid-cols-5' : 'lg:grid-cols-3')}>
+            {mostrarVegetal && (
+              <Indicador
+                rotulo="Estoque atual"
+                valor={formatarNumero(dados.estoque)}
+                unidade="L"
+                detalhe="Saldo real hoje"
+                carregando={carregando}
+                className="col-span-2 ring-primary/30 lg:col-span-1"
+              />
             )}
-
-            <ResumoCard
-              titulo="Sessões"
-              valor={loading ? '—' : sessoes.length}
-              subtitulo="Total no período"
-              icone={<BookOpen className="w-3.5 h-3.5" />}
+            <Indicador
+              rotulo="Sessões"
+              valor={dados.atual.sessoes}
+              detalhe={dados.atual.sessoes !== dados.atual.reais ? `${dados.atual.reais} realizadas` : undefined}
+              variacao={variacao(dados.atual.sessoes, 'sessoes')}
+              carregando={carregando}
             />
-
-            <ResumoCard
-              titulo={anoSelecionado === 'Todos' ? 'Média de participantes' : 'Participantes'}
-              valor={loading ? '—' : (anoSelecionado === 'Todos' ? Math.round(mediaParticipantesSessao) : totalParticipantes)}
-              subtitulo={anoSelecionado === 'Todos' ? 'Por sessão oficial' : 'Público acumulado'}
-              icone={<Users className="w-3.5 h-3.5" />}
+            <Indicador
+              rotulo={escolha === 'todos' ? 'Média de participantes' : 'Participantes'}
+              valor={escolha === 'todos' ? Math.round(dados.atual.mediaParticipantes) : dados.atual.participantes}
+              detalhe={escolha === 'todos' ? 'por sessão realizada' : `média de ${Math.round(dados.atual.mediaParticipantes)} por sessão`}
+              variacao={escolha === 'todos' ? undefined : variacao(dados.atual.participantes, 'participantes')}
+              carregando={carregando}
             />
-
-            {mostrarDadosVegetal && (
+            {mostrarVegetal && (
               <>
-                <ResumoCard
-                  titulo={anoSelecionado === 'Todos' ? 'Média de consumo' : 'Total consumido'}
-                  valor={loading ? '—' : `${formatarNumero(anoSelecionado === 'Todos' ? mediaPorSessao : totalConsumido)} L`}
-                  subtitulo={anoSelecionado === 'Todos'
-                    ? 'Volume médio por sessão'
-                    : `Média de ${formatarNumero(mediaPorSessao)} L por sessão`}
-                  icone={<Droplets className="w-3.5 h-3.5" />}
+                <Indicador
+                  rotulo="Consumo total"
+                  valor={formatarNumero(dados.atual.consumo)}
+                  unidade="L"
+                  detalhe={`média de ${formatarNumero(dados.atual.mediaConsumo)} L por sessão`}
+                  variacao={variacao(dados.atual.consumo, 'consumo')}
+                  carregando={carregando}
                 />
-
-                <ResumoCard
-                  titulo="Consumo per capita"
-                  valor={loading ? '—' : `${mediaPerCapita.toFixed(0)} ml`}
-                  subtitulo="Média por participante"
-                  icone={<Droplets className="w-3.5 h-3.5" />}
+                <Indicador
+                  rotulo="Consumo por pessoa"
+                  valor={Math.round(dados.atual.perCapitaMl)}
+                  unidade="ml"
+                  variacao={variacao(dados.atual.perCapitaMl, 'perCapitaMl')}
+                  carregando={carregando}
                 />
               </>
             )}
           </div>
 
-          <Separator className="print:hidden" />
-
-          {/* Gráficos */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 print:flex print:justify-center print:break-inside-avoid">
+          <div className="mt-4 grid gap-4 md:grid-cols-2 print:block">
             <Card className="print:hidden">
               <CardContent>
-                <h3 className="text-sm font-medium text-muted-foreground mb-4">Sessões por mês</h3>
-                <GraficoSessoesPorMes sessoes={sessoes} loading={loading} />
+                <h3 className="mb-3 text-sm font-medium text-muted-foreground">Sessões por mês</h3>
+                <GraficoSessoesPorMes sessoes={dados.sessoesPeriodo} loading={carregando} />
               </CardContent>
             </Card>
-            <Card className="print:shadow-none print:break-inside-avoid print:w-[75%]">
+            {mostrarVegetal && (
+              <Card className="print:hidden">
+                <CardContent>
+                  <h3 className="mb-3 text-sm font-medium text-muted-foreground">Consumo mensal (L)</h3>
+                  <GraficoConsumoMensal sessoes={dados.sessoesPeriodo} consumos={dados.consumosPeriodo} loading={carregando} />
+                </CardContent>
+              </Card>
+            )}
+            <Card className="print:mx-auto print:w-3/4 print:break-inside-avoid print:shadow-none">
               <CardContent>
-                <h3 className="text-sm font-medium text-muted-foreground mb-4 print:text-black">Tipos de sessão</h3>
-                <GraficoSessoesTipo sessoes={sessoes} loading={loading} />
+                <h3 className="mb-3 text-sm font-medium text-muted-foreground print:text-black">Tipos de sessão</h3>
+                <GraficoSessoesTipo sessoes={dados.sessoesPeriodo} loading={carregando} />
               </CardContent>
             </Card>
           </div>
+        </Secao>
 
-          <h2 className="text-lg font-semibold tracking-tight print:hidden mt-8">
-            Sessões e escalas
-          </h2>
+        <Secao id="sessoes-escalas" titulo="Sessões e escalas" className="scroll-mt-44 print:break-before-page">
+          <TabelaSessoesPeriodo
+            sessoes={dados.sessoesPeriodo}
+            loading={carregando}
+            periodo={periodo.rotulo}
+            nucleoNome={config.nucleo_nome}
+          />
+          <div className="mt-4 grid gap-4 md:grid-cols-3">
+            <ListaFuncaoLiturgica titulo="Dirigentes" sessoes={dados.sessoesPeriodo} funcaoKey="dirigente" loading={carregando} />
+            <ListaFuncaoLiturgica titulo="Leitores" sessoes={dados.sessoesPeriodo} funcaoKey="leitor_documentos" loading={carregando} />
+            <ListaFuncaoLiturgica titulo="Explanadores" sessoes={dados.sessoesPeriodo} funcaoKey="explanador" loading={carregando} />
+          </div>
+        </Secao>
 
-          <div className="print:break-before-page">
-            <TabelaSessoesPeriodo
-              sessoes={sessoes}
-              loading={loading}
-              anoSelecionado={periodoLabel}
+        {mostrarVegetal && (
+          <Secao id="rastreabilidade" titulo="Rastreabilidade" className="scroll-mt-44">
+            <TimelineMovimentacoes
+              movimentacoes={dados.movimentacoes}
+              loading={carregando}
+              podeEditar={editor}
+              mostrarTudo={imprimindo}
             />
+          </Secao>
+        )}
+
+        {config.assinatura_relatorio && (
+          <div className="mt-12 hidden text-center text-sm print:block">
+            <div className="mx-auto mb-1 w-64 border-t border-black" />
+            {config.assinatura_relatorio}
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <ListaFuncaoLiturgica titulo="Dirigentes" sessoes={sessoes} funcaoKey="dirigente" loading={loading} />
-            <ListaFuncaoLiturgica titulo="Leitores" sessoes={sessoes} funcaoKey="leitor_documentos" loading={loading} />
-            <ListaFuncaoLiturgica titulo="Explanadores" sessoes={sessoes} funcaoKey="explanador" loading={loading} />
-          </div>
-
-          {mostrarDadosVegetal && (
-            <>
-              <Separator className="print:hidden" />
-              <h2 className="text-lg font-semibold tracking-tight mt-8 print:text-black">
-                Extrato de rastreabilidade
-              </h2>
-
-              <TimelineMovimentacoes
-                sessoes={sessoes}
-                preparos={preparos}
-                saidas={saidas}
-                consumos={consumos}
-                loading={loading}
-              />
-            </>
-          )}
-        </div>
+        )}
       </div>
     </>
   )
