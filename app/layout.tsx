@@ -29,6 +29,7 @@ export const viewport: Viewport = {
 }
 
 import { AIChatWidget } from '@/components/AIChatWidget'
+import { AppShell } from '@/components/layout/AppShell'
 import { Toaster } from '@/components/ui/sonner'
 import { cn } from '@/lib/utils'
 
@@ -39,12 +40,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="pt-BR" suppressHydrationWarning className={cn('font-sans', inter.variable)}>
-      <body className="transition-colors duration-300 bg-gray-100 dark:bg-black text-foreground antialiased">
+      <body className="bg-background text-foreground antialiased">
         <ThemeProvider>
           <AuthProvider>
-            <div className="max-w-5xl mx-auto min-h-screen sm:min-h-[calc(100vh-2rem)] sm:my-4 sm:rounded-3xl bg-gray-50 dark:bg-gray-900 shadow-2xl sm:border border-x-0 sm:border-x border-gray-200 dark:border-gray-800 relative overflow-hidden">
-              {children}
-            </div>
+            <AppShell>{children}</AppShell>
             <AIChatWidget />
             <Toaster richColors position="top-center" />
           </AuthProvider>
