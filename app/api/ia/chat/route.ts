@@ -44,7 +44,7 @@ export async function POST(req: Request) {
     // O sistema funciona muito melhor (reduz alucinação do modelo Flash)
     // ao receber dados formatados e simplificados invés de JSON bruto com ISO Strings.
     // Calcular os consumos totais por sessão para já entregar mastigado para a inteligência
-    const consumosPorSessao = (consumosReq.data || []).reduce((acc: any, c: any) => {
+    const consumosPorSessao = (consumosReq.data || []).reduce<Record<number, number>>((acc, c) => {
       acc[c.id_sessao] = (acc[c.id_sessao] || 0) + Number(c.quantidade_consumida || 0);
       return acc;
     }, {});

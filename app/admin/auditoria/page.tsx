@@ -2,10 +2,23 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Database, CheckCircle2 } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, Loader2 } from 'lucide-react'
+import { toast } from 'sonner'
+
 import { useAuth } from '@/components/AuthProvider'
 import { SeletorMembro, MembroSimples } from '@/app/components/SeletorMembro'
 import { SeletorMultiploMembro } from '@/app/components/SeletorMultiploMembro'
+import { Button } from '@/components/ui/button'
+import { Label } from '@/components/ui/label'
+import { Badge } from '@/components/ui/badge'
+import { Card, CardContent } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Separator } from '@/components/ui/separator'
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select'
+import { TIPOS_DELEGACAO } from '@/lib/constants'
+import { formatarData } from '@/lib/formato'
 
 type SessaoPendente = {
   id: string
@@ -17,6 +30,168 @@ type SessaoPendente = {
   leitor_documentos: string | null
   leitor_documentos_id: number | null
   tipo: string
+}
+
+type PayloadCorrecao = Partial<{
+  dirigente: string
+  dirigente_id: number | null
+  dirigente_2_id: number | null
+  tipo_delegacao: string
+  explanador: string
+  explanador_id: number | null
+  leitor_documentos: string
+  leitor_documentos_id: number | null
+}>
+
+/** Uma sessão continua pendente enquanto houver nome em texto sem ID vinculado. */
+function aindaPendente(s: SessaoPendente) {
+  return (
+    (!!s.dirigente && s.dirigente.trim() !== '' && s.dirigente_id === null) ||
+    (!!s.explanador && s.explanador.trim() !== '' && s.explanador_id === null) ||
+    (!!s.leitor_documentos && s.leitor_documentos.trim() !== '' && s.leitor_documentos_id === null)
+  )
+}
+
+function ItemAuditoria({
+  sessao,
+  membros,
+  onMembroAdicionado,
+  onAplicar,
+}: {
+  sessao: SessaoPendente
+  membros: MembroSimples[]
+  onMembroAdicionado: (m: MembroSimples) => void
+  onAplicar: (id: string, payload: PayloadCorrecao) => Promise<void>
+}) {
+  const pendenteDirigente = !!sessao.dirigente && sessao.dirigente.trim() !== '' && !sessao.dirigente_id
+  const pendenteExplanador = !!sessao.explanador && sessao.explanador.trim() !== '' && !sessao.explanador_id
+  const pendenteLeitor = !!sessao.leitor_documentos && sessao.leitor_documentos.trim() !== '' && !sessao.leitor_documentos_id
+
+  const [dirsSelect, setDirsSelect] = useState<{ id: number | null, nome: string }[]>([])
+  const [tipoDeleg, setTipoDeleg] = useState<string>('Transmissão da Assistência')
+  // Pré-preenchidos com o texto legado para que o usuário saiba quem procurar.
+  // Cada item é montado com key={sessao.id}, então o estado inicial basta.
+  const [expSelect, setExpSelect] = useState(
+    () => ({ id: null as number | null, nome: pendenteExplanador ? sessao.explanador ?? '' : '' })
+  )
+  const [leiSelect, setLeiSelect] = useState(
+    () => ({ id: null as number | null, nome: pendenteLeitor ? sessao.leitor_documentos ?? '' : '' })
+  )
+  const [isSaving, setIsSaving] = useState(false)
+
+  const saveChanges = async () => {
+    setIsSaving(true)
+    const payload: PayloadCorrecao = {}
+    if (pendenteDirigente && dirsSelect.length > 0) {
+      payload.dirigente_id = dirsSelect[0].id
+      if (dirsSelect.length > 1) {
+        payload.dirigente_2_id = dirsSelect[1].id
+        payload.tipo_delegacao = tipoDeleg
+      }
+      payload.dirigente = dirsSelect.map(d => d.nome).join(' / ')
+    }
+    if (pendenteExplanador && expSelect.id) {
+      payload.explanador_id = expSelect.id
+      payload.explanador = expSelect.nome
+    }
+    if (pendenteLeitor && leiSelect.id) {
+      payload.leitor_documentos_id = leiSelect.id
+      payload.leitor_documentos = leiSelect.nome
+    }
+
+    await onAplicar(sessao.id, payload)
+    setIsSaving(false)
+  }
+
+  const hasSelection =
+    (pendenteDirigente ? dirsSelect.length > 0 : true) &&
+    (pendenteExplanador ? !!expSelect.id : true) &&
+    (pendenteLeitor ? !!leiSelect.id : true)
+
+  const canSave = hasSelection && (dirsSelect.length > 0 || !!expSelect.id || !!leiSelect.id)
+
+  return (
+    <Card>
+      <CardContent className="space-y-5">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-xs text-muted-foreground tabular-nums">{formatarData(sessao.data_realizacao)}</p>
+            <h3 className="font-medium">{sessao.tipo}</h3>
+          </div>
+          <Badge variant="outline">Pendente</Badge>
+        </div>
+
+        <Separator />
+
+        {pendenteDirigente && (
+          <div className="space-y-2">
+            <Label>
+              Dirigente registrado como{' '}
+              <span className="font-normal text-muted-foreground">“{sessao.dirigente}”</span>
+            </Label>
+            <SeletorMultiploMembro
+              membros={membros}
+              onMembroAdicionado={onMembroAdicionado}
+              value={dirsSelect}
+              onChange={setDirsSelect}
+              placeholder="Vincule o membro correspondente…"
+              max={2}
+            />
+            {dirsSelect.length > 1 && (
+              <div className="space-y-2 pt-2">
+                <Label htmlFor={`deleg-${sessao.id}`}>Classificação da delegação</Label>
+                <Select value={tipoDeleg} onValueChange={setTipoDeleg}>
+                  <SelectTrigger id={`deleg-${sessao.id}`} className="w-full"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {TIPOS_DELEGACAO.map(tipo => (
+                      <SelectItem key={tipo} value={tipo}>{tipo}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
+        )}
+
+        {pendenteLeitor && (
+          <div className="space-y-2">
+            <Label>
+              Leitor registrado como{' '}
+              <span className="font-normal text-muted-foreground">“{sessao.leitor_documentos}”</span>
+            </Label>
+            <SeletorMembro
+              membros={membros}
+              onMembroAdicionado={onMembroAdicionado}
+              value={leiSelect}
+              onChange={setLeiSelect}
+              placeholder="Vincule o membro correspondente…"
+            />
+          </div>
+        )}
+
+        {pendenteExplanador && (
+          <div className="space-y-2">
+            <Label>
+              Explanador registrado como{' '}
+              <span className="font-normal text-muted-foreground">“{sessao.explanador}”</span>
+            </Label>
+            <SeletorMembro
+              membros={membros}
+              onMembroAdicionado={onMembroAdicionado}
+              value={expSelect}
+              onChange={setExpSelect}
+              placeholder="Vincule o membro correspondente…"
+            />
+          </div>
+        )}
+
+        <Button onClick={saveChanges} disabled={!canSave || isSaving} className="w-full">
+          {isSaving && <Loader2 data-slot="icon" className="animate-spin" />}
+          {isSaving ? 'Aplicando…' : 'Aplicar correção'}
+        </Button>
+      </CardContent>
+    </Card>
+  )
 }
 
 export default function Auditoria() {
@@ -43,14 +218,9 @@ export default function Auditoria() {
         .select('*')
         .or('dirigente_id.is.null,explanador_id.is.null,leitor_documentos_id.is.null')
         .order('data_realizacao', { ascending: false })
-      
+
       if (sessoesDB) {
-          const validas = (sessoesDB as SessaoPendente[]).filter(s => 
-             (s.dirigente && s.dirigente.trim() !== '' && s.dirigente_id === null) || 
-             (s.explanador && s.explanador.trim() !== '' && s.explanador_id === null) || 
-             (s.leitor_documentos && s.leitor_documentos.trim() !== '' && s.leitor_documentos_id === null)
-          )
-          setSessoes(validas)
+        setSessoes((sessoesDB as SessaoPendente[]).filter(aindaPendente))
       }
       setLoading(false)
     }
@@ -58,177 +228,72 @@ export default function Auditoria() {
   }, [profile, router])
 
   const handleMembroAdicionado = (novoMembro: MembroSimples) => {
-    setMembros([...membros, novoMembro].sort((a, b) => a.nome.localeCompare(b.nome)))
+    setMembros(prev => [...prev, novoMembro].sort((a, b) => a.nome.localeCompare(b.nome)))
   }
 
-  const handleUpdate = async (sessaoId: string, payload: any) => {
-     const { error } = await supabase.from('sessoes').update(payload).eq('id', sessaoId)
-     if (error) {
-         alert('Erro ao atualizar: ' + error.message)
-         return
-     }
-     
-     setSessoes(sessoes.map(s => s.id === sessaoId ? { ...s, ...payload } : s).filter(s => 
-        (s.dirigente && s.dirigente.trim() !== '' && s.dirigente_id === null) || 
-        (s.explanador && s.explanador.trim() !== '' && s.explanador_id === null) || 
-        (s.leitor_documentos && s.leitor_documentos.trim() !== '' && s.leitor_documentos_id === null)
-     ))
-  }
-
-  const ItemAuditoria = ({ sessao }: { sessao: SessaoPendente }) => {
-    const pendenteDirigente = sessao.dirigente && sessao.dirigente.trim() !== '' && !sessao.dirigente_id
-    const pendenteExplanador = sessao.explanador && sessao.explanador.trim() !== '' && !sessao.explanador_id
-    const pendenteLeitor = sessao.leitor_documentos && sessao.leitor_documentos.trim() !== '' && !sessao.leitor_documentos_id
-
-    const [dirsSelect, setDirsSelect] = useState<{ id: number | null, nome: string }[]>([])
-    const [tipoDeleg, setTipoDeleg] = useState('Transmissão da Assistência')
-    const [expSelect, setExpSelect] = useState({ id: null as number | null, nome: '' })
-    const [leiSelect, setLeiSelect] = useState({ id: null as number | null, nome: '' })
-
-    const [isSaving, setIsSaving] = useState(false)
-
-    useEffect(() => {
-        // Se tinha texto mas não mapeou para o states ainda, deixamos o estado vazio pra que o usuario procure.
-        // A prop placeholder mostrará o que ele deve puxar
-        if (pendenteExplanador && sessao.explanador) setExpSelect({ id: null, nome: sessao.explanador })
-        if (pendenteLeitor && sessao.leitor_documentos) setLeiSelect({ id: null, nome: sessao.leitor_documentos })
-    }, [sessao, pendenteExplanador, pendenteLeitor])
-
-    const saveChanges = async () => {
-        setIsSaving(true)
-        const payload: any = {}
-        if (pendenteDirigente && dirsSelect.length > 0) {
-            payload.dirigente_id = dirsSelect[0].id
-            if (dirsSelect.length > 1) {
-               payload.dirigente_2_id = dirsSelect[1].id
-               payload.tipo_delegacao = tipoDeleg
-            }
-            payload.dirigente = dirsSelect.map(d => d.nome).join(' / ')
-        }
-        if (pendenteExplanador && expSelect.id) {
-           payload.explanador_id = expSelect.id
-           payload.explanador = expSelect.nome
-        }
-        if (pendenteLeitor && leiSelect.id) {
-           payload.leitor_documentos_id = leiSelect.id
-           payload.leitor_documentos = leiSelect.nome
-        }
-        
-        await handleUpdate(sessao.id, payload)
-        setIsSaving(false)
+  const handleUpdate = async (sessaoId: string, payload: PayloadCorrecao) => {
+    const { error } = await supabase.from('sessoes').update(payload).eq('id', sessaoId)
+    if (error) {
+      toast.error('Erro ao aplicar correção', { description: error.message })
+      return
     }
 
-    const hasSelection = (pendenteDirigente ? dirsSelect.length > 0 : true) && 
-                         (pendenteExplanador ? !!expSelect.id : true) && 
-                         (pendenteLeitor ? !!leiSelect.id : true)
-
-    const canSave = hasSelection && (dirsSelect.length > 0 || expSelect.id || leiSelect.id)
-
-    return (
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
-            <div className="flex justify-between items-center border-b border-gray-100 dark:border-gray-700 pb-3">
-                <div>
-                   <span className="text-xs text-gray-500 font-mono">{new Date(sessao.data_realizacao).toLocaleDateString('pt-BR')}</span>
-                   <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                       {sessao.tipo}
-                   </h3>
-                </div>
-            </div>
-            
-            <div className="space-y-4">
-                {pendenteDirigente && (
-                    <div className="flex flex-col gap-1">
-                        <label className="text-[10px] text-gray-500 uppercase tracking-wider">Dirigentes pendentes: <span className="font-bold text-red-500">"{sessao.dirigente}"</span></label>
-                        <SeletorMultiploMembro 
-                            membros={membros} 
-                            onMembroAdicionado={handleMembroAdicionado} 
-                            value={dirsSelect} 
-                            onChange={setDirsSelect} 
-                            placeholder="Mapeie titular (e opcional)..." 
-                            max={2}
-                        />
-                        
-                        {dirsSelect.length > 1 && (
-                            <div className="mt-2 p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl space-y-2 animate-in fade-in slide-in-from-top-1">
-                                <label className="text-[10px] text-gray-500 uppercase tracking-wider block mb-1">Tipo de Delegação</label>
-                                <select 
-                                    value={tipoDeleg} 
-                                    onChange={e => setTipoDeleg(e.target.value)}
-                                    className="w-full text-sm bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-2 outline-none"
-                                >
-                                    <option value="Transmissão da Assistência">Transmissão da Assistência</option>
-                                    <option value="Transmissão da Representação">Transmissão da Representação</option>
-                                </select>
-                            </div>
-                        )}
-                    </div>
-                )}
-                {pendenteLeitor && (
-                    <div className="flex flex-col gap-1">
-                        <label className="text-[10px] text-gray-500 uppercase tracking-wider">Leitor pendente: <span className="font-bold text-red-500">"{sessao.leitor_documentos}"</span></label>
-                        <SeletorMembro membros={membros} onMembroAdicionado={handleMembroAdicionado} value={leiSelect} onChange={setLeiSelect} placeholder="Selecione o membro correto..." />
-                    </div>
-                )}
-                {pendenteExplanador && (
-                    <div className="flex flex-col gap-1">
-                        <label className="text-[10px] text-gray-500 uppercase tracking-wider">Explanador pendente: <span className="font-bold text-red-500">"{sessao.explanador}"</span></label>
-                        <SeletorMembro membros={membros} onMembroAdicionado={handleMembroAdicionado} value={expSelect} onChange={setExpSelect} placeholder="Selecione o membro correto..." />
-                    </div>
-                )}
-            </div>
-            
-            <button 
-                onClick={saveChanges}
-                disabled={!canSave || isSaving}
-                className="w-full bg-purple-600 hover:bg-purple-700 disabled:bg-gray-300 disabled:text-gray-500 dark:disabled:bg-gray-700 dark:disabled:text-gray-400 text-white font-bold py-2.5 rounded-lg transition-colors flex justify-center items-center gap-2"
-            >
-                {isSaving ? 'Aplicando...' : 'Aplicar Correção'}
-            </button>
-        </div>
+    toast.success('Correção aplicada')
+    setSessoes(prev =>
+      prev.map(s => s.id === sessaoId ? { ...s, ...payload } : s).filter(aindaPendente)
     )
   }
 
   if (loading) {
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center text-gray-500">
-            <span className="animate-pulse">Buscando pendências de integridade...</span>
-        </div>
+      <div className="space-y-4">
+        <Skeleton className="h-9 w-56" />
+        {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-48 rounded-xl" />)}
+      </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 pb-20 text-gray-900 dark:text-white transition-colors duration-300">
-        <header className="flex items-center mb-6">
-            <button type="button" onClick={() => router.back()} className="p-2 bg-white dark:bg-gray-800 rounded-full shadow-sm mr-4 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
-                <ArrowLeft className="w-5 h-5 text-gray-500 dark:text-gray-300" />
-            </button>
-            <div>
-                <h1 className="text-xl font-bold flex items-center gap-2">
-                    <Database className="w-5 h-5 text-purple-600" /> 
-                    Auditoria de Dados
-                </h1>
-                <p className="text-xs text-gray-500">Relacionamento de Membros nas Sessões</p>
-            </div>
-        </header>
+    <>
+      <div className="flex items-center gap-3 mb-2">
+        <Button variant="ghost" size="icon" onClick={() => router.back()} aria-label="Voltar">
+          <ArrowLeft />
+        </Button>
+        <h1 className="text-2xl font-semibold tracking-tight">Auditoria de dados</h1>
+      </div>
+      <p className="text-sm text-muted-foreground mb-6 ml-12">
+        Sessões cujos nomes ainda estão só em texto, sem vínculo com o cadastro de membros.
+      </p>
 
-        <div className="max-w-md mx-auto space-y-4">
-            {sessoes.length === 0 ? (
-                <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-2xl p-8 flex flex-col items-center text-center shadow-sm">
-                    <CheckCircle2 className="w-16 h-16 text-green-500 mb-4" />
-                    <h2 className="text-lg font-bold text-green-900 dark:text-green-400 mb-2">Tudo perfeito!</h2>
-                    <p className="text-sm text-green-700 dark:text-green-500">
-                        Não existem sessões históricas pendentes de validação de IDs de membro. Banco íntegro.
-                    </p>
-                </div>
-            ) : (
-                <div className="space-y-4">
-                    <div className="bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 text-xs font-medium p-3 rounded-xl border border-purple-200 dark:border-purple-800">
-                        Encontramos {sessoes.length} sessões pendentes onde os nomes não possuem um ID de Membro amarrado. Cadastre os visitantes na hora, ou puxe um associado existente da lista.
-                    </div>
-                    {sessoes.map(s => <ItemAuditoria key={s.id} sessao={s} />)}
-                </div>
-            )}
-        </div>
-    </div>
+      <div className="max-w-2xl space-y-4">
+        {sessoes.length === 0 ? (
+          <Card className="border-dashed">
+            <CardContent className="py-12 text-center">
+              <CheckCircle2 className="w-8 h-8 text-primary mx-auto mb-3" />
+              <h2 className="font-medium">Nenhuma pendência</h2>
+              <p className="text-sm text-muted-foreground mt-1 max-w-sm mx-auto">
+                Todas as sessões têm seus dirigentes, leitores e explanadores vinculados ao cadastro de membros.
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <>
+            <p className="text-sm text-muted-foreground">
+              {sessoes.length} {sessoes.length === 1 ? 'sessão pendente' : 'sessões pendentes'}. Vincule cada
+              nome a um membro existente, ou cadastre o visitante na hora pelo próprio seletor.
+            </p>
+            {sessoes.map(s => (
+              <ItemAuditoria
+                key={s.id}
+                sessao={s}
+                membros={membros}
+                onMembroAdicionado={handleMembroAdicionado}
+                onAplicar={handleUpdate}
+              />
+            ))}
+          </>
+        )}
+      </div>
+    </>
   )
 }
