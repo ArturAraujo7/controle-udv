@@ -1,9 +1,14 @@
 'use client'
 
 import Link from 'next/link'
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { ChevronLeft, Loader2 } from 'lucide-react'
+import { toast } from 'sonner'
 
+import { useAuth } from '@/components/AuthProvider'
 import { Button } from '@/components/ui/button'
+import { podeEditar } from '@/lib/permissoes'
 
 export type AcaoEnvio = 'salvar' | 'outro'
 
@@ -33,6 +38,17 @@ export function FormLayout({
   rotuloOutro?: string
   children: React.ReactNode
 }) {
+  const router = useRouter()
+  const { profile } = useAuth()
+
+  // Quem só tem leitura não usa formulários (o banco também bloqueia a gravação).
+  useEffect(() => {
+    if (profile && !podeEditar(profile)) {
+      toast.error('Seu acesso permite apenas visualizar os dados')
+      router.replace('/')
+    }
+  }, [profile, router])
+
   const enviar = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const botao = (e.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null

@@ -6,14 +6,14 @@ import { Label } from '@/components/ui/label'
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
-import { TIPOS_DELEGACAO } from '@/lib/constants'
+import { useLista } from '@/hooks/useListas'
+import type { MembroRef } from '@/lib/sessoes'
 
-export type MembroRef = { id: number | null; nome: string }
+export type { MembroRef }
 
 /**
  * Bloco "quem conduziu a sessão" — dirigentes (até 2, com classificação da
- * delegação), leitor e explanador. Compartilhado pelos quatro formulários de
- * sessão (nova, edição, histórica e edição histórica).
+ * delegação), leitor e explanador. Compartilhado pelos formulários de sessão.
  */
 export function CamposCondutores({
   dirigentes,
@@ -22,7 +22,9 @@ export function CamposCondutores({
   explanador,
   membros,
   rotuloDirigente = 'Quem dirigiu?',
-  opcional = false,
+  exigirLeitorExplanador = false,
+  exigirExplanador = false,
+  erros,
   onDirigentesChange,
   onTipoDelegacaoChange,
   onLeitorChange,
@@ -35,20 +37,22 @@ export function CamposCondutores({
   explanador: MembroRef
   membros: MembroSimples[]
   rotuloDirigente?: string
-  /** Marca leitor e explanador como opcionais no rótulo. */
-  opcional?: boolean
+  exigirLeitorExplanador?: boolean
+  exigirExplanador?: boolean
+  erros?: Partial<Record<'dirigente' | 'leitor' | 'explanador', string>>
   onDirigentesChange: (valor: MembroRef[]) => void
   onTipoDelegacaoChange: (valor: string) => void
   onLeitorChange: (valor: MembroRef) => void
   onExplanadorChange: (valor: MembroRef) => void
   onMembroAdicionado: (membro: MembroSimples) => void
 }) {
-  const sufixo = opcional ? ' (opcional)' : ''
+  const tiposDelegacao = useLista('tipos_delegacao', tipoDelegacao)
+  const obrigatorio = <span className="text-destructive" aria-hidden="true">*</span>
 
   return (
     <div className="space-y-5">
       <div className="space-y-2">
-        <Label>Mestre dirigente</Label>
+        <Label>Mestre dirigente {!!erros && obrigatorio}</Label>
         <SeletorMultiploMembro
           placeholder={rotuloDirigente}
           value={dirigentes}
@@ -57,15 +61,20 @@ export function CamposCondutores({
           onMembroAdicionado={onMembroAdicionado}
           max={2}
         />
+        {erros?.dirigente ? (
+          <p className="text-xs text-destructive" role="alert">{erros.dirigente}</p>
+        ) : (
+          <p className="text-xs text-muted-foreground">Adicione um segundo dirigente quando houver delegação.</p>
+        )}
       </div>
 
       {dirigentes.length > 1 && (
         <div className="space-y-2">
           <Label htmlFor="delegacao">Classificação da delegação</Label>
           <Select value={tipoDelegacao} onValueChange={onTipoDelegacaoChange}>
-            <SelectTrigger id="delegacao" className="w-full"><SelectValue /></SelectTrigger>
+            <SelectTrigger id="delegacao" className="h-10 w-full"><SelectValue /></SelectTrigger>
             <SelectContent>
-              {TIPOS_DELEGACAO.map(tipo => (
+              {tiposDelegacao.map(tipo => (
                 <SelectItem key={tipo} value={tipo}>{tipo}</SelectItem>
               ))}
             </SelectContent>
@@ -73,9 +82,9 @@ export function CamposCondutores({
         </div>
       )}
 
-      <div className="grid sm:grid-cols-2 gap-5">
+      <div className="grid gap-5 sm:grid-cols-2">
         <div className="space-y-2">
-          <Label>Leitor de documentos{sufixo}</Label>
+          <Label>Leitor de documentos {exigirLeitorExplanador && obrigatorio}</Label>
           <SeletorMembro
             placeholder="Quem leu?"
             value={leitor}
@@ -83,9 +92,10 @@ export function CamposCondutores({
             membros={membros}
             onMembroAdicionado={onMembroAdicionado}
           />
+          {erros?.leitor && <p className="text-xs text-destructive" role="alert">{erros.leitor}</p>}
         </div>
         <div className="space-y-2">
-          <Label>Explanador{sufixo}</Label>
+          <Label>Explanador {(exigirLeitorExplanador || exigirExplanador) && obrigatorio}</Label>
           <SeletorMembro
             placeholder="Quem explanou?"
             value={explanador}
@@ -93,6 +103,7 @@ export function CamposCondutores({
             membros={membros}
             onMembroAdicionado={onMembroAdicionado}
           />
+          {erros?.explanador && <p className="text-xs text-destructive" role="alert">{erros.explanador}</p>}
         </div>
       </div>
     </div>
