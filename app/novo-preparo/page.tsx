@@ -2,9 +2,15 @@
 import { useState } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Save, Beaker, Truck } from 'lucide-react'
-import Link from 'next/link'
+import { ArrowLeft, Save, Loader2 } from 'lucide-react'
+import { toast } from 'sonner'
+
 import { useAuth } from '@/components/AuthProvider'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Card, CardContent } from '@/components/ui/card'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 export default function NovoPreparo() {
   const router = useRouter()
@@ -16,8 +22,8 @@ export default function NovoPreparo() {
 
   const [formData, setFormData] = useState({
     data_preparo: new Date().toISOString().split('T')[0],
-    data_chegada: new Date().toISOString().split('T')[0], // Novo campo
-    nucleo_origem: '', // Novo campo
+    data_chegada: new Date().toISOString().split('T')[0],
+    nucleo_origem: '',
     mestre_preparo: '',
     procedencia_mariri: '',
     procedencia_chacrona: '',
@@ -25,6 +31,8 @@ export default function NovoPreparo() {
     grau: '',
     status: 'Disponível'
   })
+
+  const ehDoacao = tipoEntrada === 'Doação'
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -38,8 +46,8 @@ export default function NovoPreparo() {
         {
           tipo: tipoEntrada,
           data_preparo: formData.data_preparo,
-          data_chegada: tipoEntrada === 'Doação' ? formData.data_chegada : null, // Só salva se for doação
-          nucleo_origem: tipoEntrada === 'Doação' ? formData.nucleo_origem : null,
+          data_chegada: ehDoacao ? formData.data_chegada : null, // Só salva se for doação
+          nucleo_origem: ehDoacao ? formData.nucleo_origem : null,
           mestre_preparo: formData.mestre_preparo,
           procedencia_mariri: formData.procedencia_mariri,
           procedencia_chacrona: formData.procedencia_chacrona,
@@ -53,170 +61,129 @@ export default function NovoPreparo() {
     setLoading(false)
 
     if (error) {
-      alert('Erro ao salvar: ' + error.message)
+      toast.error('Erro ao salvar', { description: error.message })
     } else {
-      alert(tipoEntrada === 'Local' ? 'Preparo registrado!' : 'Doação registrada!')
+      toast.success(ehDoacao ? 'Doação registrada' : 'Preparo registrado')
       router.replace('/estoque')
     }
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 text-gray-900 dark:text-white transition-colors duration-300">
-      <div className="flex items-center mb-6">
-        <button type="button" onClick={() => router.back()} className="p-2 bg-white dark:bg-gray-800 rounded-full shadow-sm mr-4 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
-          <ArrowLeft className="w-5 h-5 text-gray-500 dark:text-gray-300" />
-        </button>
-        <h1 className="text-xl font-bold">Entrada de Estoque</h1>
+    <>
+      <div className="flex items-center gap-3 mb-6">
+        <Button variant="ghost" size="icon" onClick={() => router.back()} aria-label="Voltar">
+          <ArrowLeft />
+        </Button>
+        <h1 className="text-2xl font-semibold tracking-tight">Entrada de estoque</h1>
       </div>
 
-      {/* Seletor de Tipo */}
-      <div className="flex bg-white dark:bg-gray-800 p-1 rounded-xl mb-6 border border-gray-200 dark:border-gray-700">
-        <button
-          onClick={() => setTipoEntrada('Local')}
-          className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${tipoEntrada === 'Local'
-            ? 'bg-gold-600 text-white shadow-md'
-            : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-            }`}
-        >
-          Produção Local
-        </button>
-        <button
-          onClick={() => setTipoEntrada('Doação')}
-          className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${tipoEntrada === 'Doação'
-            ? 'bg-celestial-600 text-white shadow-md'
-            : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-            }`}
-        >
-          Doação Recebida
-        </button>
-      </div>
+      <form onSubmit={handleSubmit} className="space-y-5 max-w-2xl">
+        <Tabs value={tipoEntrada} onValueChange={v => setTipoEntrada(v as 'Local' | 'Doação')}>
+          <TabsList className="w-full">
+            <TabsTrigger value="Local" className="flex-1">Produção local</TabsTrigger>
+            <TabsTrigger value="Doação" className="flex-1">Doação recebida</TabsTrigger>
+          </TabsList>
+        </Tabs>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-
-        {/* CAMPOS ESPECÍFICOS DE DOAÇÃO */}
-        {tipoEntrada === 'Doação' && (
-          <div className="bg-celestial-50 dark:bg-celestial-900/20 p-4 rounded-xl border border-celestial-100 dark:border-celestial-800/50 space-y-4 animate-in fade-in slide-in-from-top-4">
-            <div className="flex items-center gap-2 mb-2">
-              <Truck className="w-5 h-5 text-celestial-500 dark:text-celestial-400" />
-              <label className="text-sm font-bold text-celestial-700 dark:text-celestial-100">Dados do Recebimento</label>
-            </div>
-
-            <div>
-              <label className="text-xs text-celestial-600 dark:text-celestial-200 font-medium block mb-1">Data de Chegada</label>
-              <input
-                type="date"
-                className="w-full bg-white dark:bg-gray-800 rounded-lg p-2 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 outline-none focus:border-celestial-500 dark:[color-scheme:dark]"
-                value={formData.data_chegada}
-                onChange={e => setFormData({ ...formData, data_chegada: e.target.value })}
-              />
-            </div>
-
-            <div>
-              <label className="text-xs text-celestial-600 dark:text-celestial-200 font-medium block mb-1">Núcleo de Origem</label>
-              <input
-                type="text"
-                placeholder="Ex: Núcleo Mestre Gabriel"
-                className="w-full bg-white dark:bg-gray-800 rounded-lg p-2 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 outline-none focus:border-celestial-500 placeholder-gray-400 dark:placeholder-gray-500"
-                value={formData.nucleo_origem}
-                onChange={e => setFormData({ ...formData, nucleo_origem: e.target.value })}
-              />
-            </div>
-          </div>
+        {ehDoacao && (
+          <Card>
+            <CardContent className="grid sm:grid-cols-2 gap-5">
+              <div className="space-y-2">
+                <Label htmlFor="data-chegada">Data de chegada</Label>
+                <Input
+                  id="data-chegada"
+                  type="date"
+                  value={formData.data_chegada}
+                  onChange={e => setFormData({ ...formData, data_chegada: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="nucleo">Núcleo de origem</Label>
+                <Input
+                  id="nucleo"
+                  placeholder="Ex.: Núcleo Mestre Gabriel"
+                  value={formData.nucleo_origem}
+                  onChange={e => setFormData({ ...formData, nucleo_origem: e.target.value })}
+                />
+              </div>
+            </CardContent>
+          </Card>
         )}
 
-        {/* DADOS DO VEGETAL (COMUNS) */}
-        <div className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 space-y-4">
-          <div className="flex items-center gap-2 mb-2 border-b border-gray-100 dark:border-gray-700 pb-2">
-            <Beaker className="w-5 h-5 text-gold-600 dark:text-gold-500" />
-            <label className="text-sm font-bold text-gray-900 dark:text-gray-200">Dados do Vegetal</label>
-          </div>
-
-          <div>
-            <label className="text-xs text-gray-500 dark:text-gray-400 font-medium block mb-1">Data do Preparo</label>
-            <input
-              type="date"
-              className="w-full bg-transparent font-semibold outline-none text-gray-900 dark:text-white dark:[color-scheme:dark]"
-              value={formData.data_preparo}
-              onChange={e => setFormData({ ...formData, data_preparo: e.target.value })}
-            />
-          </div>
-
-          <div>
-            <label className="text-xs text-gray-500 dark:text-gray-400 font-medium block mb-1">Mestre do Preparo</label>
-            <input
-              type="text"
-              placeholder="Nome do Mestre Responsável"
-              className="w-full bg-transparent font-semibold outline-none text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600"
-              value={formData.mestre_preparo}
-              onChange={e => setFormData({ ...formData, mestre_preparo: e.target.value })}
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="text-xs text-gray-500 dark:text-gray-400 font-medium block mb-1">Procedência Mariri</label>
-              <input
-                type="text"
-                placeholder="Ex: Seringal Novo"
-                className="w-full bg-transparent border-b border-gray-200 dark:border-gray-700 pb-1 outline-none text-gray-900 dark:text-white text-sm placeholder-gray-400 dark:placeholder-gray-600 focus:border-gold-500 transition-colors"
+        <Card>
+          <CardContent className="grid sm:grid-cols-2 gap-5">
+            <div className="space-y-2">
+              <Label htmlFor="data-preparo">Data do preparo</Label>
+              <Input
+                id="data-preparo"
+                type="date"
+                value={formData.data_preparo}
+                onChange={e => setFormData({ ...formData, data_preparo: e.target.value })}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="mestre">Mestre do preparo</Label>
+              <Input
+                id="mestre"
+                placeholder="Nome do mestre responsável"
+                value={formData.mestre_preparo}
+                onChange={e => setFormData({ ...formData, mestre_preparo: e.target.value })}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="mariri">Procedência do mariri</Label>
+              <Input
+                id="mariri"
+                placeholder="Ex.: Seringal Novo"
                 value={formData.procedencia_mariri}
                 onChange={e => setFormData({ ...formData, procedencia_mariri: e.target.value })}
               />
             </div>
-            <div>
-              <label className="text-xs text-gray-500 dark:text-gray-400 font-medium block mb-1">Procedência Chacrona</label>
-              <input
-                type="text"
-                placeholder="Ex: Plantio Local"
-                className="w-full bg-transparent border-b border-gray-200 dark:border-gray-700 pb-1 outline-none text-gray-900 dark:text-white text-sm placeholder-gray-400 dark:placeholder-gray-600 focus:border-gold-500 transition-colors"
+            <div className="space-y-2">
+              <Label htmlFor="chacrona">Procedência da chacrona</Label>
+              <Input
+                id="chacrona"
+                placeholder="Ex.: Plantio local"
                 value={formData.procedencia_chacrona}
                 onChange={e => setFormData({ ...formData, procedencia_chacrona: e.target.value })}
               />
             </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4 pt-2">
-            <div>
-              <label className="text-xs text-gray-500 dark:text-gray-400 font-medium block mb-1">Quantidade (L)</label>
-              <input
+            <div className="space-y-2">
+              <Label htmlFor="quantidade">Quantidade (litros) <span className="text-destructive">*</span></Label>
+              <Input
+                id="quantidade"
                 type="number"
                 step="0.1"
-                placeholder="0.0"
-                className="w-full bg-transparent text-xl font-bold outline-none text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600"
+                min="0"
+                placeholder="0,0"
+                className="tabular-nums"
                 value={formData.quantidade_preparada}
                 onChange={e => setFormData({ ...formData, quantidade_preparada: e.target.value })}
+                required
               />
             </div>
-            <div>
-              <label className="text-xs text-gray-500 dark:text-gray-400 font-medium block mb-1">Grau</label>
-              <input
-                type="text"
-                placeholder="Apuração"
-                className="w-full bg-transparent text-xl font-bold outline-none text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600"
+            <div className="space-y-2">
+              <Label htmlFor="grau">Grau</Label>
+              <Input
+                id="grau"
+                placeholder="Ex.: Apuração"
                 value={formData.grau}
                 onChange={e => setFormData({ ...formData, grau: e.target.value })}
               />
             </div>
-          </div>
+          </CardContent>
+        </Card>
+
+        <div className="flex gap-3">
+          <Button type="submit" disabled={loading}>
+            {loading ? <Loader2 data-slot="icon" className="animate-spin" /> : <Save data-slot="icon" />}
+            {loading ? 'Salvando…' : ehDoacao ? 'Registrar recebimento' : 'Registrar produção'}
+          </Button>
+          <Button type="button" variant="ghost" onClick={() => router.back()}>Cancelar</Button>
         </div>
-
-        <button
-          type="submit"
-          disabled={loading}
-          className={`w-full py-4 rounded-xl font-bold text-lg shadow-lg transition-all flex items-center justify-center gap-2 mt-4 text-white ${tipoEntrada === 'Local'
-            ? 'bg-gold-600 hover:bg-gold-700'
-            : 'bg-celestial-600 hover:bg-celestial-700'
-            }`}
-        >
-          {loading ? 'Salvando...' : (
-            <>
-              <Save className="w-5 h-5" />
-              {tipoEntrada === 'Local' ? 'Registrar Produção' : 'Registrar Recebimento'}
-            </>
-          )}
-        </button>
-
       </form>
-    </div>
+    </>
   )
 }
