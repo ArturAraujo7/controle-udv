@@ -124,7 +124,7 @@ export default function Inicio() {
                   <span className="ml-1.5 text-lg font-normal text-muted-foreground">L</span>
                 </p>
               )}
-              <p className="pt-1 text-sm text-muted-foreground">
+              <div className="pt-1 text-sm text-muted-foreground">
                 {carregando ? (
                   <Skeleton className="h-4 w-48" />
                 ) : resumo.autonomia !== null ? (
@@ -135,7 +135,7 @@ export default function Inicio() {
                 ) : (
                   'Sem consumo recente para estimar a autonomia'
                 )}
-              </p>
+              </div>
               <div className="pt-2">
                 {carregando ? <Skeleton className="h-14" /> : <SparklineSaldo serie={resumo.serie} />}
               </div>
