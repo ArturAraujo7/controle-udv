@@ -1,346 +1,250 @@
 'use client'
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabaseClient'
-import {
-  Plus, Database, ChevronRight, Users, ArrowUpRight, BarChart3,
-  BookOpen, Droplets, CalendarDays,
-} from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { AlertTriangle, CalendarDays, ChevronRight, Clock, Database } from 'lucide-react'
+
 import { ChangelogModal } from '@/components/ChangelogModal'
 import { useAuth } from '@/components/AuthProvider'
-import {
-  SessionDetailDialog, type ConsumoDetalhado, type SessaoDetalhe,
-} from '@/components/dashboard/SessionDetailDialog'
-import { Card, CardContent, CardDescription } from '@/components/ui/card'
+import { DataBloco } from '@/components/comum/DataBloco'
+import { Indicador } from '@/components/comum/Indicadores'
+import { ItemLista, ListaCard, ValorLinha, Vazio } from '@/components/comum/Lista'
+import { LinkSecao, Secao } from '@/components/comum/Secao'
+import { ItemMovimentacao } from '@/components/estoque/ItemMovimentacao'
+import { SparklineSaldo } from '@/components/estoque/SparklineSaldo'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { formatarData, formatarNumero } from '@/lib/formato'
-import { cn } from '@/lib/utils'
+import { useConfiguracoes } from '@/hooks/useConfiguracoes'
+import { useDadosEstoque } from '@/hooks/useDadosEstoque'
+import {
+  calcularSaldos, consumoMedioPorSessao, ehSessaoHistorica, estimarAutonomia, estoqueDisponivel,
+  inicioMesesAtras, lotesParados, montarMovimentacoes, serieSaldoMensal, totalPorSessao,
+} from '@/lib/estoque'
+import {
+  anoDe, formatarDataExtensa, formatarNumero, hojeISO, saudacao, variacaoPercentual,
+} from '@/lib/formato'
+import { podeEditar } from '@/lib/permissoes'
+import type { Sessao } from '@/lib/tipos'
 
-type Movimentacao = {
-  id: string
-  tipo_movimento: 'entrada' | 'saida' | 'consumo' | 'historico'
-  data: string
-  titulo: string
-  subtitulo: string
-  quantidade: number
-  detalhesSessao?: SessaoDetalhe
-}
-
-const ACOES = [
-  { href: '/nova-sessao', icone: Plus, titulo: 'Nova sessão', descricao: 'Registrar ata', destaque: true },
-  { href: '/novo-preparo', icone: Database, titulo: 'Preparo', descricao: 'Nova entrada' },
-  { href: '/nova-saida', icone: ArrowUpRight, titulo: 'Saída', descricao: 'Registrar doação' },
-  { href: '/relatorios', icone: BarChart3, titulo: 'Relatórios', descricao: 'Estatísticas gerais' },
-]
-
-export default function Home() {
-  const { session } = useAuth()
+export default function Inicio() {
   const router = useRouter()
-  const [estoqueAtual, setEstoqueAtual] = useState<number>(0)
-  const [totalSessoes, setTotalSessoes] = useState<number>(0)
-  const [ultimasMovimentacoes, setUltimasMovimentacoes] = useState<Movimentacao[]>([])
-  const [loading, setLoading] = useState(true)
+  const { profile } = useAuth()
+  const { config } = useConfiguracoes()
+  const { carregando, erro, preparos, consumos, saidas, sessoes } = useDadosEstoque()
+  const [agora] = useState(() => new Date())
+  const hoje = hojeISO(agora)
+  const editor = podeEditar(profile)
 
-  // Estado do diálogo de detalhes
-  const [selectedSession, setSelectedSession] = useState<SessaoDetalhe | null>(null)
-  const [loadingDetails, setLoadingDetails] = useState(false)
-  const [sessionConsumos, setSessionConsumos] = useState<ConsumoDetalhado[]>([])
-
+  // Sem nome cadastrado, o perfil precisa ser completado antes de usar o app.
   useEffect(() => {
-    async function fetchData() {
-      // 1. Verifica se usuario tem nome definido (Forçar Cadastro)
-      const user = session?.user
-      if (user) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('full_name')
-          .eq('id', user.id)
-          .single()
+    if (profile && !profile.full_name) router.push('/perfil')
+  }, [profile, router])
 
-        if (!profile?.full_name) {
-          router.push('/perfil')
-          return // Interrompe o carregamento da dash
-        }
-      }
+  const resumo = useMemo(() => {
+    const lotes = calcularSaldos(preparos, consumos, saidas, { hoje, sessoes })
+    const estoque = estoqueDisponivel(lotes, config.somar_maturacao_no_saldo)
+    const movimentacoes = montarMovimentacoes({ preparos, sessoes, consumos, saidas })
+    const media = consumoMedioPorSessao(sessoes, consumos, inicioMesesAtras(6, agora))
+    const porSessao = totalPorSessao(consumos)
 
-      // 2. Buscamos todas as tabelas: preparos, consumos_sessao e saidas
-      const { data: preparos } = await supabase.from('preparos').select('id, quantidade_preparada, data_preparo, tipo, grau, nucleo_origem, mestre_preparo')
-      // Agora buscamos o consumo na tabela certa
-      const { data: consumos } = await supabase.from('consumos_sessao').select('id_sessao, quantidade_consumida')
+    const reais = sessoes
+      .filter(s => !ehSessaoHistorica(s))
+      .sort((a, b) => b.data_realizacao.localeCompare(a.data_realizacao))
 
-      // Buscamos sessões com todos os campos necessários para o modal
-      const { data: sessoes } = await supabase
-        .from('sessoes')
-        .select('*') // Trazendo tudo para ter dirigente, explanador, etc.
-        .order('data_realizacao', { ascending: false })
+    // Compara com o mesmo intervalo (1º de janeiro até hoje) do ano anterior.
+    const diaMes = hoje.slice(5)
+    const doAno = (ano: number) =>
+      reais.filter(s => anoDe(s.data_realizacao) === ano && s.data_realizacao.slice(5, 10) <= diaMes)
+    const consumo = (lista: Sessao[]) => lista.reduce((acc, s) => acc + (porSessao.get(s.id) ?? 0), 0)
+    const participantesMedio = (lista: Sessao[]) =>
+      lista.length ? lista.reduce((acc, s) => acc + s.quantidade_participantes, 0) / lista.length : 0
 
-      const { data: saidas } = await supabase.from('saidas').select('id, quantidade, data_saida, destino')
+    const atual = doAno(agora.getFullYear())
+    const anterior = doAno(agora.getFullYear() - 1)
+    const ultima = reais[0] ?? null
 
-      // 2. Calculamos os totais
-      const totalEntrada = preparos?.reduce((acc, curr) => acc + (curr.quantidade_preparada || 0), 0) || 0
-      // Soma da tabela de consumos
-      const totalConsumoSessoes = consumos?.reduce((acc, curr) => acc + (curr.quantidade_consumida || 0), 0) || 0
-      const totalSaidasExtras = saidas?.reduce((acc, curr) => acc + (curr.quantidade || 0), 0) || 0
-
-      // 3. Atualizamos a conta final
-      // Estoque = Tudo que entrou - (O que bebeu na sessão + O que saiu/doou)
-      setEstoqueAtual(totalEntrada - totalConsumoSessoes - totalSaidasExtras)
-
-      const anoAtual = new Date().getFullYear()
-      const sessoesDoAno = sessoes?.filter(s => new Date(s.data_realizacao).getFullYear() === anoAtual)
-
-      setTotalSessoes(sessoesDoAno?.length || 0)
-
-      // 4. Montar a lista unificada de movimentações
-      const movimentos: Movimentacao[] = []
-
-      if (preparos) {
-        preparos.forEach(p => {
-          const isDoacao = p.tipo === 'Doação'
-          movimentos.push({
-            id: `preparo-${p.id}`,
-            tipo_movimento: 'entrada',
-            data: p.data_preparo,
-            titulo: isDoacao ? 'Entrada (Doação)' : 'Novo Preparo',
-            subtitulo: isDoacao ? `De: ${p.nucleo_origem || 'Outro núcleo'}` : `Grau ${p.grau} · M. ${p.mestre_preparo}`,
-            quantidade: p.quantidade_preparada
-          })
-        })
-      }
-
-      if (sessoes) {
-        sessoes.forEach(s => {
-          const consumosDaSessao = consumos?.filter(c => c.id_sessao === s.id) || []
-          const totalConsumidoNaSessao = consumosDaSessao.reduce((acc, curr) => acc + (curr.quantidade_consumida || 0), 0)
-
-          const isSessaoHistorica = s.quantidade_participantes === 0;
-
-          if (totalConsumidoNaSessao > 0 || isSessaoHistorica) {
-            movimentos.push({
-              id: `sessao-${s.id}`,
-              tipo_movimento: isSessaoHistorica ? 'historico' : 'consumo',
-              data: s.data_realizacao,
-              titulo: isSessaoHistorica ? `Registro: ${s.tipo || 'Sem Tipo'}` : `Sessão: ${s.tipo || 'Sem Tipo'}`,
-              subtitulo: isSessaoHistorica ? `Memória M. ${s.dirigente}` : `${s.quantidade_participantes || 0} participantes`,
-              quantidade: totalConsumidoNaSessao,
-              detalhesSessao: s
-            })
-          }
-        })
-      }
-
-      if (saidas) {
-        saidas.forEach(s => {
-          if (s.quantidade > 0) {
-            movimentos.push({
-              id: `saida-${s.id}`,
-              tipo_movimento: 'saida',
-              data: s.data_saida,
-              titulo: 'Saída / Doação',
-              subtitulo: `Para: ${s.destino || 'Não informado'}`,
-              quantidade: s.quantidade
-            })
-          }
-        })
-      }
-
-      // Ordenar do mais recente para o mais antigo e pegar os 5 primeiros
-      movimentos.sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime())
-      setUltimasMovimentacoes(movimentos.slice(0, 5))
-
-      setLoading(false)
+    return {
+      estoque,
+      movimentacoes,
+      media,
+      serie: serieSaldoMensal(movimentacoes, 12, agora),
+      autonomia: estimarAutonomia(estoque, media),
+      parados: lotesParados(lotes, config.dias_lote_parado, agora).length,
+      ultima,
+      consumoUltima: ultima ? porSessao.get(ultima.id) ?? 0 : 0,
+      ano: {
+        sessoes: atual.length,
+        sessoesVar: variacaoPercentual(atual.length, anterior.length),
+        consumo: consumo(atual),
+        consumoVar: variacaoPercentual(consumo(atual), consumo(anterior)),
+        mediaSessao: atual.length ? consumo(atual) / atual.length : 0,
+        participantes: participantesMedio(atual),
+        participantesVar: variacaoPercentual(participantesMedio(atual), participantesMedio(anterior)),
+      },
     }
-    fetchData()
-  }, [session?.user?.id, router])
+  }, [preparos, consumos, saidas, sessoes, hoje, agora, config.somar_maturacao_no_saldo, config.dias_lote_parado])
 
-  const handleOpenModal = async (sessao: SessaoDetalhe) => {
-    setSelectedSession(sessao)
-    setLoadingDetails(true)
-    setSessionConsumos([])
-
-    // Busca os detalhes do consumo incluindo info do preparo
-    const { data, error } = await supabase
-      .from('consumos_sessao')
-      .select(`
-        id,
-        quantidade_consumida,
-        preparos (
-          data_preparo,
-          mestre_preparo,
-          grau
-        )
-      `)
-      .eq('id_sessao', sessao.id)
-
-    if (data) {
-      setSessionConsumos(data as unknown as ConsumoDetalhado[])
-    } else if (error) {
-      console.error('Erro ao buscar detalhes:', error)
-    }
-
-    setLoadingDetails(false)
-  }
+  const primeiroNome = profile?.full_name?.split(' ')[0]
+  const estoqueBaixo = !carregando && !erro && resumo.estoque < config.estoque_minimo_litros
 
   return (
     <>
       <ChangelogModal />
 
-      {/* Resumo */}
-      <div className="grid grid-cols-2 gap-4 mb-8">
-        <Link href="/estoque" className="rounded-xl focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50">
-          <Card className="h-full transition-colors hover:border-primary/40">
-            <CardContent>
-              <CardDescription className="flex items-center gap-1.5 mb-2">
-                <Droplets className="w-3.5 h-3.5" /> Estoque
-              </CardDescription>
-              {loading ? (
-                <Skeleton className="h-9 w-24" />
+      <div className="mb-6">
+        <p className="text-sm text-muted-foreground">{formatarDataExtensa(hoje)}</p>
+        <h1 className="mt-0.5 text-3xl font-semibold tracking-tight md:text-2xl">
+          {saudacao(agora)}{primeiroNome ? `, ${primeiroNome}` : ''}
+        </h1>
+      </div>
+
+      {erro && (
+        <div className="mb-4">
+          <Vazio>Não foi possível carregar os dados: {erro}</Vazio>
+        </div>
+      )}
+
+      <div className="grid gap-4 md:grid-cols-2">
+        {/* Estoque */}
+        <Link href="/estoque" className="rounded-xl outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
+          <Card className="h-full transition-shadow hover:ring-primary/30">
+            <CardContent className="space-y-1">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm text-muted-foreground">Estoque disponível</p>
+                <span className="inline-flex items-center text-sm font-medium text-primary">
+                  Ver estoque <ChevronRight className="size-4" />
+                </span>
+              </div>
+              {carregando ? (
+                <Skeleton className="h-11 w-36" />
               ) : (
-                <p className="text-3xl font-semibold tabular-nums tracking-tight">
-                  {formatarNumero(estoqueAtual)}{' '}
-                  <span className="text-base font-normal text-muted-foreground">L</span>
+                <p className="text-[2.75rem] font-semibold leading-none tracking-tight tabular-nums">
+                  {formatarNumero(resumo.estoque)}
+                  <span className="ml-1.5 text-lg font-normal text-muted-foreground">L</span>
                 </p>
               )}
-              <p className="text-xs text-muted-foreground mt-1">Disponível hoje</p>
-            </CardContent>
-          </Card>
-        </Link>
-
-        <Link href="/sessoes" className="rounded-xl focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50">
-          <Card className="h-full transition-colors hover:border-primary/40">
-            <CardContent>
-              <CardDescription className="flex items-center gap-1.5 mb-2">
-                <CalendarDays className="w-3.5 h-3.5" /> Sessões
-              </CardDescription>
-              {loading ? (
-                <Skeleton className="h-9 w-16" />
-              ) : (
-                <p className="text-3xl font-semibold tabular-nums tracking-tight">{totalSessoes}</p>
-              )}
-              <p className="text-xs text-muted-foreground mt-1">Realizadas este ano</p>
-            </CardContent>
-          </Card>
-        </Link>
-      </div>
-
-      {/* Ações */}
-      <h2 className="text-sm font-medium text-muted-foreground mb-3">Ações</h2>
-      <div className="grid grid-cols-2 gap-3 mb-8">
-        {ACOES.map(({ href, icone: Icone, titulo, descricao, destaque }) => (
-          <Link key={href} href={href} className="rounded-xl focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50">
-            <Card className={cn(
-              'h-full transition-colors',
-              destaque
-                ? 'bg-primary text-primary-foreground border-primary hover:bg-primary/90'
-                : 'hover:border-primary/40'
-            )}>
-              <CardContent className="flex flex-col gap-3">
-                <Icone className={cn('w-5 h-5', destaque ? 'opacity-90' : 'text-muted-foreground')} />
-                <div>
-                  <h3 className="font-medium leading-tight">{titulo}</h3>
-                  <p className={cn('text-xs mt-0.5', destaque ? 'opacity-80' : 'text-muted-foreground')}>
-                    {descricao}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-        ))}
-
-        {[
-          { href: '/membros', icone: Users, titulo: 'Dados da irmandade', descricao: 'Administrar irmandade e visitantes' },
-          { href: '/nova-sessao-historica', icone: BookOpen, titulo: 'Registro histórico', descricao: 'Sessões anteriores a 2026' },
-        ].map(({ href, icone: Icone, titulo, descricao }) => (
-          <Link key={href} href={href} className="col-span-2 rounded-xl focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50">
-            <Card className="transition-colors hover:border-primary/40">
-              <CardContent className="flex items-center justify-between gap-4">
-                <div className="flex items-center gap-3 min-w-0">
-                  <Icone className="w-5 h-5 text-muted-foreground shrink-0" />
-                  <div className="min-w-0">
-                    <h3 className="font-medium leading-tight">{titulo}</h3>
-                    <p className="text-xs text-muted-foreground mt-0.5">{descricao}</p>
-                  </div>
-                </div>
-                <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
-              </CardContent>
-            </Card>
-          </Link>
-        ))}
-      </div>
-
-      {/* Histórico recente */}
-      <h2 className="text-sm font-medium text-muted-foreground mb-3">Últimas movimentações</h2>
-      <div className="space-y-2">
-        {loading ? (
-          Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-[68px] rounded-xl" />)
-        ) : ultimasMovimentacoes.length === 0 ? (
-          <Card className="border-dashed">
-            <CardContent className="py-8 text-center">
-              <Database className="w-6 h-6 text-muted-foreground mx-auto mb-2" />
-              <p className="text-sm text-muted-foreground">Nenhuma movimentação registrada ainda.</p>
-            </CardContent>
-          </Card>
-        ) : (
-          ultimasMovimentacoes.map(mov => {
-            const isEntrada = mov.tipo_movimento === 'entrada'
-            const isSaida = mov.tipo_movimento === 'saida'
-            const isHistorico = mov.tipo_movimento === 'historico'
-            const clicavel = (mov.tipo_movimento === 'consumo' || isHistorico) && mov.detalhesSessao
-            const Icone = isEntrada ? Database : isSaida ? ArrowUpRight : isHistorico ? BookOpen : Droplets
-
-            const conteudo = (
-              <>
-                <div className="flex items-center gap-3 min-w-0">
-                  <Icone className={cn('w-4 h-4 shrink-0', isEntrada ? 'text-primary' : isSaida ? 'text-destructive' : 'text-muted-foreground')} />
-                  <div className="min-w-0">
-                    <p className="text-xs text-muted-foreground">{formatarData(mov.data)}</p>
-                    <h3 className="font-medium text-sm leading-tight truncate">{mov.titulo}</h3>
-                    <p className="text-xs text-muted-foreground mt-0.5 truncate">{mov.subtitulo}</p>
-                  </div>
-                </div>
-                <div className="shrink-0 ml-3">
-                  {isHistorico ? (
-                    <span className="text-xs text-muted-foreground">Histórica</span>
-                  ) : (
-                    <span className={cn('text-sm font-medium tabular-nums', isEntrada ? 'text-primary' : 'text-destructive')}>
-                      {isEntrada ? '+' : '−'}{formatarNumero(mov.quantidade)}
-                      <span className="text-xs font-normal text-muted-foreground ml-0.5">L</span>
-                    </span>
-                  )}
-                </div>
-              </>
-            )
-
-            return clicavel ? (
-              <button
-                key={mov.id}
-                type="button"
-                onClick={() => handleOpenModal(mov.detalhesSessao!)}
-                className="w-full text-left bg-card rounded-xl border p-4 flex items-center justify-between transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
-              >
-                {conteudo}
-              </button>
-            ) : (
-              <div key={mov.id} className="bg-card rounded-xl border p-4 flex items-center justify-between">
-                {conteudo}
+              <p className="pt-1 text-sm text-muted-foreground">
+                {carregando ? (
+                  <Skeleton className="h-4 w-48" />
+                ) : resumo.autonomia !== null ? (
+                  <>
+                    ≈ <strong className="font-medium text-foreground">{resumo.autonomia} {resumo.autonomia === 1 ? 'sessão' : 'sessões'}</strong>{' '}
+                    no consumo médio de {formatarNumero(resumo.media)} L
+                  </>
+                ) : (
+                  'Sem consumo recente para estimar a autonomia'
+                )}
+              </p>
+              <div className="pt-2">
+                {carregando ? <Skeleton className="h-14" /> : <SparklineSaldo serie={resumo.serie} />}
               </div>
-            )
-          })
-        )}
+            </CardContent>
+          </Card>
+        </Link>
+
+        <div className="space-y-4">
+          {estoqueBaixo && (
+            <div
+              role="status"
+              className="flex items-start gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100"
+            >
+              <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+              <div className="min-w-0 flex-1 text-sm">
+                <p className="font-medium">Estoque abaixo de {formatarNumero(config.estoque_minimo_litros)} L</p>
+                <p className="mt-0.5 opacity-80">Considere agendar um preparo.</p>
+              </div>
+              {editor && (
+                <Button asChild size="sm" variant="outline" className="shrink-0 border-amber-300 bg-transparent dark:border-amber-500/40">
+                  <Link href="/novo-preparo">Registrar preparo</Link>
+                </Button>
+              )}
+            </div>
+          )}
+
+          {!carregando && resumo.parados > 0 && (
+            <Link
+              href="/estoque"
+              className="flex items-center gap-3 rounded-xl border bg-card p-4 text-sm transition-colors hover:bg-muted/50"
+            >
+              <Clock className="size-4 shrink-0 text-muted-foreground" />
+              <span className="flex-1">
+                {resumo.parados} {resumo.parados === 1 ? 'lote' : 'lotes'} sem movimento há mais de {config.dias_lote_parado} dias
+              </span>
+              <ChevronRight className="size-4 text-muted-foreground" />
+            </Link>
+          )}
+
+          <Secao titulo="Última sessão" acao={<LinkSecao href="/sessoes">Todas</LinkSecao>} className="mt-0">
+            {carregando ? (
+              <Skeleton className="h-[70px] rounded-xl" />
+            ) : resumo.ultima ? (
+              <ListaCard>
+                <ItemLista
+                  href={`/sessoes/${resumo.ultima.id}`}
+                  inicio={<DataBloco iso={resumo.ultima.data_realizacao} />}
+                  titulo={resumo.ultima.tipo}
+                  subtitulo={[resumo.ultima.dirigente, `${resumo.ultima.quantidade_participantes} participantes`]
+                    .filter(Boolean)
+                    .join(' · ')}
+                  fim={<ValorLinha valor={`${formatarNumero(resumo.consumoUltima)} L`} detalhe="consumo" />}
+                />
+              </ListaCard>
+            ) : (
+              <Vazio
+                icone={<CalendarDays />}
+                acao={editor && (
+                  <Button variant="outline" asChild><Link href="/nova-sessao">Registrar sessão</Link></Button>
+                )}
+              >
+                Nenhuma sessão registrada ainda.
+              </Vazio>
+            )}
+          </Secao>
+        </div>
       </div>
 
-      <SessionDetailDialog
-        sessao={selectedSession}
-        consumos={sessionConsumos}
-        loading={loadingDetails}
-        onOpenChange={aberto => {
-          if (!aberto) {
-            setSelectedSession(null)
-            setSessionConsumos([])
-          }
-        }}
-      />
+      <Secao titulo={`Este ano · ${agora.getFullYear()}`} acao={<LinkSecao href="/relatorios">Relatórios</LinkSecao>}>
+        <div className="-mx-4 grid auto-cols-[minmax(10.5rem,1fr)] grid-flow-col gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none] md:mx-0 md:grid-flow-row md:grid-cols-4 md:px-0 [&::-webkit-scrollbar]:hidden">
+          <Indicador rotulo="Sessões" valor={resumo.ano.sessoes} variacao={resumo.ano.sessoesVar} carregando={carregando} />
+          <Indicador
+            rotulo="Consumo"
+            valor={formatarNumero(resumo.ano.consumo)}
+            unidade="L"
+            variacao={resumo.ano.consumoVar}
+            carregando={carregando}
+          />
+          <Indicador
+            rotulo="Média por sessão"
+            valor={formatarNumero(resumo.ano.mediaSessao)}
+            unidade="L"
+            carregando={carregando}
+            detalhe="vegetal servido"
+          />
+          <Indicador
+            rotulo="Participantes por sessão"
+            valor={Math.round(resumo.ano.participantes)}
+            variacao={resumo.ano.participantesVar}
+            carregando={carregando}
+          />
+        </div>
+      </Secao>
+
+      <Secao titulo="Movimentações recentes" acao={<LinkSecao href="/estoque/movimentacoes">Ver extrato</LinkSecao>}>
+        {carregando ? (
+          <div className="space-y-2">
+            {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-[62px] rounded-xl" />)}
+          </div>
+        ) : resumo.movimentacoes.length === 0 ? (
+          <Vazio icone={<Database />}>Nenhuma movimentação registrada ainda.</Vazio>
+        ) : (
+          <ListaCard>
+            {resumo.movimentacoes.slice(0, 5).map(mov => (
+              <ItemMovimentacao key={mov.id} mov={mov} podeEditar={editor} />
+            ))}
+          </ListaCard>
+        )}
+      </Secao>
     </>
   )
 }
