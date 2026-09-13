@@ -1,8 +1,24 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabaseClient'
-import { ArrowLeft, Plus, Search, User, X, Briefcase, MapPin } from 'lucide-react'
-import { useRouter } from 'next/navigation'
+import { Plus, Search, Users, MapPin, Loader2 } from 'lucide-react'
+import { toast } from 'sonner'
+
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Badge } from '@/components/ui/badge'
+import { Card, CardContent } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Separator } from '@/components/ui/separator'
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle,
+} from '@/components/ui/dialog'
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select'
+import { BotaoExcluir } from '@/components/BotaoExcluir'
+import { GRAUS_MEMBRO } from '@/lib/constants'
 
 export type Membro = {
   id: number
@@ -15,8 +31,12 @@ export type Membro = {
   user_id?: string
 }
 
+/** Peso para ordenar por hierarquia institucional. */
+const grauPeso: Record<string, number> = Object.fromEntries(
+  GRAUS_MEMBRO.map((grau, i) => [grau, i + 1])
+)
+
 export default function GestaoMembros() {
-  const router = useRouter()
   const [membros, setMembros] = useState<Membro[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
@@ -108,55 +128,49 @@ export default function GestaoMembros() {
           .eq('id', editingMembro.id)
 
         if (error) throw error
-        alert('Cadastro atualizado com sucesso!')
+        toast.success('Cadastro atualizado')
       } else {
         const { error } = await supabase
           .from('membros')
           .insert([payload])
 
         if (error) throw error
-        alert('Membro cadastrado com sucesso!')
+        toast.success('Membro cadastrado')
       }
 
       handleCloseModal()
       fetchMembros()
-    } catch (error: any) {
-      alert('Erro ao salvar: ' + error.message)
+    } catch (error) {
+      const mensagem = error instanceof Error ? error.message : 'Erro desconhecido'
+      toast.error('Erro ao salvar', { description: mensagem })
     } finally {
       setIsSubmitting(false)
     }
   }
 
   const handleDelete = async (id: number) => {
-    if (!confirm('Tem certeza que deseja apagar este cadastro permanentemente?')) return
-
     try {
       const { error } = await supabase
         .from('membros')
         .delete()
         .eq('id', id)
-      
+
       if (error) throw error
-      alert('Cadastro apagado com sucesso!')
+      toast.success('Cadastro apagado')
       handleCloseModal()
       fetchMembros()
-    } catch (error: any) {
-      alert('Erro ao apagar: ' + error.message)
+    } catch (error) {
+      const mensagem = error instanceof Error ? error.message : 'Erro desconhecido'
+      toast.error('Erro ao apagar', { description: mensagem })
     }
   }
 
-  const grauPeso: Record<string, number> = {
-    'Mestre': 1,
-    'Corpo do Conselho': 2,
-    'Corpo Instrutivo': 3,
-    'Sócio': 4
-  }
-
+  const busca = searchTerm.toLowerCase()
   const filteredMembros = membros
     .filter(m =>
-      m.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (m.nome_exibicao && m.nome_exibicao.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (m.grau && m.grau.toLowerCase().includes(searchTerm.toLowerCase()))
+      m.nome.toLowerCase().includes(busca) ||
+      (m.nome_exibicao && m.nome_exibicao.toLowerCase().includes(busca)) ||
+      (m.grau && m.grau.toLowerCase().includes(busca))
     )
     .sort((a, b) => {
       const pesoA = grauPeso[a.grau || 'Sócio'] || 5
@@ -165,260 +179,210 @@ export default function GestaoMembros() {
       return a.nome.localeCompare(b.nome)
     })
 
-  const graus = ['Sócio', 'Corpo Instrutivo', 'Corpo do Conselho', 'Mestre']
+  const contagens = [
+    { rotulo: 'Total', valor: membros.length },
+    ...GRAUS_MEMBRO.map(grau => ({
+      rotulo: grau,
+      valor: membros.filter(m => m.grau === grau).length,
+    })),
+  ]
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 text-gray-900 dark:text-white transition-colors duration-300">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center">
-          <button type="button" onClick={() => router.back()} className="p-2 bg-white dark:bg-gray-800 rounded-full shadow-sm mr-4 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
-            <ArrowLeft className="w-5 h-5 text-gray-500 dark:text-gray-300" />
-          </button>
-          <h1 className="text-xl font-bold">Gestão de Membros</h1>
-        </div>
-        <button
-          onClick={() => handleOpenModal()}
-          className="flex items-center gap-2 bg-gold-600 hover:bg-gold-700 text-white px-4 py-2 rounded-xl font-medium shadow-sm transition-all text-sm"
-        >
-          <Plus className="w-4 h-4" />
-          Novo Cadastro
-        </button>
+    <>
+      <div className="flex items-center justify-between gap-4 mb-6">
+        <h1 className="text-2xl font-semibold tracking-tight">Membros</h1>
+        <Button onClick={() => handleOpenModal()}>
+          <Plus data-slot="icon" /> Novo cadastro
+        </Button>
       </div>
 
-      {/* Metrics Container */}
       {!loading && membros.length > 0 && (
-        <div className="flex overflow-x-auto gap-3 pb-2 mb-4 snap-x [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-          {/* Total */}
-          <div className="min-w-[110px] bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col justify-center snap-start flex-1">
-            <span className="text-gray-500 dark:text-gray-400 text-[10px] font-bold uppercase tracking-wider">Total</span>
-            <span className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{membros.length}</span>
-          </div>
-          <div className="min-w-[110px] bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col justify-center snap-start flex-1">
-            <span className="text-gray-500 dark:text-gray-400 text-[10px] font-bold uppercase tracking-wider">Sócios</span>
-            <span className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{membros.filter(m => m.grau === 'Sócio').length}</span>
-          </div>
-          <div className="min-w-[110px] bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col justify-center snap-start flex-1">
-            <span className="text-gray-500 dark:text-gray-400 text-[10px] font-bold uppercase tracking-wider">Instrutivo</span>
-            <span className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{membros.filter(m => m.grau === 'Corpo Instrutivo').length}</span>
-          </div>
-          <div className="min-w-[110px] bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col justify-center snap-start flex-1">
-            <span className="text-gray-500 dark:text-gray-400 text-[10px] font-bold uppercase tracking-wider">Conselho</span>
-            <span className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{membros.filter(m => m.grau === 'Corpo do Conselho').length}</span>
-          </div>
-          <div className="min-w-[110px] bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col justify-center snap-start flex-1">
-            <span className="text-gray-500 dark:text-gray-400 text-[10px] font-bold uppercase tracking-wider">Mestres</span>
-            <span className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{membros.filter(m => m.grau === 'Mestre').length}</span>
-          </div>
+        <div className="grid grid-cols-3 sm:grid-cols-5 gap-3 mb-6">
+          {contagens.map(({ rotulo, valor }) => (
+            <Card key={rotulo}>
+              <CardContent className="px-4">
+                <p className="text-xs text-muted-foreground truncate">{rotulo}</p>
+                <p className="text-2xl font-semibold tabular-nums tracking-tight mt-0.5">{valor}</p>
+              </CardContent>
+            </Card>
+          ))}
         </div>
       )}
 
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Search className="h-5 w-5 text-gray-400" />
-            </div>
-            <input
-              type="text"
-              className="block w-full pl-10 pr-3 py-3 border border-gray-200 dark:border-gray-700 rounded-xl leading-5 bg-gray-50 dark:bg-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gold-500/50 focus:border-gold-500 transition-all text-gray-900 dark:text-white"
-              placeholder="Buscar membro por nome ou grau..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-        </div>
-
-        {loading ? (
-          <div className="p-8 text-center text-gray-500 dark:text-gray-400 font-medium animate-pulse">
-            Carregando membros...
-          </div>
-        ) : filteredMembros.length === 0 ? (
-          <div className="p-8 text-center text-gray-500 dark:text-gray-400">
-            Nenhum membro encontrado. Cadastre o primeiro!
-          </div>
-        ) : (
-          <div className="divide-y divide-gray-100 dark:divide-gray-800">
-            {filteredMembros.map((membro) => (
-              <div key={membro.id} className="p-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-                <div className="flex items-center gap-3 sm:gap-4 overflow-hidden">
-                  <div className={`p-2.5 sm:p-3 rounded-xl flex-shrink-0 ${membro.tipo_vinculo === 'Local' ? 'bg-celestial-100 text-celestial-600 dark:bg-celestial-900/30 dark:text-celestial-500' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'}`}>
-                    <User className="w-5 h-5" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <h3 className="font-bold text-gray-900 dark:text-white text-sm sm:text-base leading-tight truncate">
-                      {membro.nome}
-                    </h3>
-                    <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mt-1">
-                      <span className="text-xs text-gray-600 dark:text-gray-400 font-medium">
-                        {membro.grau || 'Sócio'}
-                      </span>
-                      <span className="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600"></span>
-                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md uppercase tracking-wide ${membro.tipo_vinculo === 'Local'
-                        ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-500'
-                        : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
-                        }`}>
-                        {membro.tipo_vinculo}
-                      </span>
-                      {membro.tipo_vinculo === 'Visitante' && membro.nucleo_origem && (
-                        <>
-                          <span className="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600 hidden sm:block"></span>
-                          <span className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 flex items-center gap-0.5 truncate max-w-[120px] sm:max-w-[200px]">
-                            <MapPin className="w-3 h-3 flex-shrink-0" /> <span className="truncate">{membro.nucleo_origem}</span>
-                          </span>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                <div className="pl-2 flex-shrink-0">
-                  <button
-                    onClick={() => handleOpenModal(membro)}
-                    className="text-gold-600 hover:text-gold-700 dark:text-gold-500 dark:hover:text-gold-400 text-xs sm:text-sm font-bold tracking-wide px-3 sm:px-4 py-2 bg-gold-50 dark:bg-gold-900/20 active:bg-gold-100 dark:active:bg-gold-900/40 rounded-xl transition-all"
-                  >
-                    Editar
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+      <div className="relative mb-4">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+        <Input
+          className="pl-9"
+          placeholder="Buscar membro por nome ou grau…"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          aria-label="Buscar membro"
+        />
       </div>
 
-      {/* Modal / Slide-over (simplified for mobile) */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 dark:bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200" onClick={handleCloseModal}>
-          <div className="bg-white dark:bg-gray-800 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
-            <div className="bg-gray-50 dark:bg-gray-900/50 p-6 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
-              <h2 className="text-lg font-bold text-gray-900 dark:text-white">
-                {editingMembro ? 'Editar Membro' : 'Registrar Novo Cadastro'}
-              </h2>
-              <button type="button" onClick={handleCloseModal} className="p-2 bg-gray-200 dark:bg-gray-700 rounded-full hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
-                <X className="w-5 h-5 text-gray-600 dark:text-gray-300" />
-              </button>
+      {loading ? (
+        <div className="space-y-2">
+          {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-16 rounded-xl" />)}
+        </div>
+      ) : filteredMembros.length === 0 ? (
+        <Card className="border-dashed">
+          <CardContent className="py-10 text-center">
+            <Users className="w-6 h-6 text-muted-foreground mx-auto mb-2" />
+            <p className="text-sm text-muted-foreground">
+              {membros.length === 0
+                ? 'Nenhum membro cadastrado ainda.'
+                : 'Nenhum membro corresponde à busca.'}
+            </p>
+            {membros.length === 0 && (
+              <Button variant="outline" className="mt-4" onClick={() => handleOpenModal()}>
+                Cadastrar primeiro membro
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      ) : (
+        <Card className="py-0 overflow-hidden">
+          <ul className="divide-y">
+            {filteredMembros.map((membro) => (
+              <li key={membro.id} className="flex items-center justify-between gap-3 p-4 transition-colors hover:bg-muted/50">
+                <div className="min-w-0">
+                  <h3 className="font-medium text-sm leading-tight truncate">
+                    {membro.nome}
+                    {!membro.ativo && (
+                      <span className="text-muted-foreground font-normal"> · inativo</span>
+                    )}
+                  </h3>
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1 text-xs text-muted-foreground">
+                    <span>{membro.grau || 'Sócio'}</span>
+                    <Badge variant={membro.tipo_vinculo === 'Local' ? 'secondary' : 'outline'}>
+                      {membro.tipo_vinculo}
+                    </Badge>
+                    {membro.tipo_vinculo === 'Visitante' && membro.nucleo_origem && (
+                      <span className="flex items-center gap-1 truncate max-w-[12rem]">
+                        <MapPin className="w-3 h-3 shrink-0" />
+                        <span className="truncate">{membro.nucleo_origem}</span>
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <Button variant="outline" size="sm" onClick={() => handleOpenModal(membro)}>
+                  Editar
+                </Button>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
+
+      <Dialog open={isModalOpen} onOpenChange={aberto => { if (!aberto) handleCloseModal() }}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{editingMembro ? 'Editar membro' : 'Novo cadastro'}</DialogTitle>
+          </DialogHeader>
+
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div className="space-y-2">
+              <Label htmlFor="nome">Nome completo <span className="text-destructive">*</span></Label>
+              <Input
+                id="nome"
+                required
+                value={formData.nome}
+                onChange={e => setFormData({ ...formData, nome: e.target.value })}
+                placeholder="Nome completo do sócio"
+              />
             </div>
 
-            <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+            <div className="space-y-2">
+              <Label htmlFor="nome-exibicao">Nome de exibição <span className="text-destructive">*</span></Label>
+              <Input
+                id="nome-exibicao"
+                required
+                value={formData.nome_exibicao}
+                onChange={e => setFormData({ ...formData, nome_exibicao: e.target.value })}
+                placeholder="O nome pelo qual é chamado"
+              />
+            </div>
 
-              <div className="space-y-4">
-                {/* Nome */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Nome Completo
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.nome}
-                    onChange={e => setFormData({ ...formData, nome: e.target.value })}
-                    className="w-full p-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-900 focus:ring-2 focus:ring-gold-500/50 focus:border-gold-500 outline-none transition"
-                    placeholder="Nome completo do sócio"
-                  />
-                </div>
-
-                {/* Nome de Exibição */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Nome de Exibição
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.nome_exibicao}
-                    onChange={e => setFormData({ ...formData, nome_exibicao: e.target.value })}
-                    className="w-full p-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-900 focus:ring-2 focus:ring-gold-500/50 focus:border-gold-500 outline-none transition"
-                    placeholder="O nome pelo qual é chamado"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  {/* Tipo Vinculo */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Vínculo
-                    </label>
-                    <select
-                      value={formData.tipo_vinculo}
-                      onChange={e => setFormData({ ...formData, tipo_vinculo: e.target.value as 'Local' | 'Visitante', nucleo_origem: e.target.value === 'Local' ? '' : formData.nucleo_origem })}
-                      className="w-full p-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-900 focus:ring-2 focus:ring-gold-500/50 outline-none"
-                    >
-                      <option value="Local">Local</option>
-                      <option value="Visitante">Visitante</option>
-                    </select>
-                  </div>
-
-                  {/* Grau */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Grau Institucional
-                    </label>
-                    <select
-                      value={formData.grau}
-                      onChange={e => setFormData({ ...formData, grau: e.target.value })}
-                      className="w-full p-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-900 focus:ring-2 focus:ring-gold-500/50 outline-none"
-                    >
-                      {graus.map(g => (
-                        <option key={g} value={g}>{g}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                {/* Nucleo de Origem (condicional) */}
-                {formData.tipo_vinculo === 'Visitante' && (
-                  <div className="animate-in fade-in zoom-in-95 duration-200">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Núcleo de Origem
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={formData.nucleo_origem}
-                      onChange={e => setFormData({ ...formData, nucleo_origem: e.target.value })}
-                      className="w-full p-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-900 focus:ring-2 focus:ring-gold-500/50 outline-none transition"
-                      placeholder="Ex: Sede Geral"
-                    />
-                  </div>
-                )}
-
-                {/* Status Ativo (apenas edição) */}
-                {editingMembro && (
-                  <div className="flex items-center gap-2 pt-2">
-                    <input
-                      type="checkbox"
-                      id="ativo"
-                      checked={formData.ativo}
-                      onChange={e => setFormData({ ...formData, ativo: e.target.checked })}
-                      className="w-4 h-4 text-gold-600 rounded bg-gray-100 border-gray-300 focus:ring-gold-500"
-                    />
-                    <label htmlFor="ativo" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Cadastro Ativo no Sistema
-                    </label>
-                  </div>
-                )}
-              </div>
-
-              <div className="mt-6 pt-4 border-t border-gray-100 dark:border-gray-700 space-y-3">
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="w-full py-3 bg-gold-600 hover:bg-gold-700 text-white rounded-xl font-bold transition-all shadow-md active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-50"
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="vinculo">Vínculo</Label>
+                <Select
+                  value={formData.tipo_vinculo}
+                  onValueChange={valor => setFormData({
+                    ...formData,
+                    tipo_vinculo: valor as 'Local' | 'Visitante',
+                    nucleo_origem: valor === 'Local' ? '' : formData.nucleo_origem,
+                  })}
                 >
-                  {isSubmitting ? 'Salvando...' : editingMembro ? 'Salvar Alterações' : 'Cadastrar Membro'}
-                </button>
-                {editingMembro && (
-                  <button
-                    type="button"
-                    onClick={() => handleDelete(editingMembro.id)}
-                    className="w-full py-3 text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-xl font-bold transition-all active:scale-[0.98] flex items-center justify-center"
-                  >
-                    Excluir Cadastro
-                  </button>
-                )}
+                  <SelectTrigger id="vinculo" className="w-full"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Local">Local</SelectItem>
+                    <SelectItem value="Visitante">Visitante</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-            </form>
-          </div>
-        </div>
-      )}
-    </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="grau">Grau institucional</Label>
+                <Select value={formData.grau} onValueChange={grau => setFormData({ ...formData, grau })}>
+                  <SelectTrigger id="grau" className="w-full"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {GRAUS_MEMBRO.map(g => (
+                      <SelectItem key={g} value={g}>{g}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {formData.tipo_vinculo === 'Visitante' && (
+              <div className="space-y-2">
+                <Label htmlFor="nucleo">Núcleo de origem <span className="text-destructive">*</span></Label>
+                <Input
+                  id="nucleo"
+                  required
+                  value={formData.nucleo_origem}
+                  onChange={e => setFormData({ ...formData, nucleo_origem: e.target.value })}
+                  placeholder="Ex.: Sede Geral"
+                />
+              </div>
+            )}
+
+            {editingMembro && (
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.ativo}
+                  onChange={e => setFormData({ ...formData, ativo: e.target.checked })}
+                  className="size-4 accent-primary"
+                />
+                Cadastro ativo no sistema
+              </label>
+            )}
+
+            <Separator />
+
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex gap-3">
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting && <Loader2 data-slot="icon" className="animate-spin" />}
+                  {isSubmitting ? 'Salvando…' : editingMembro ? 'Salvar' : 'Cadastrar'}
+                </Button>
+                <Button type="button" variant="ghost" onClick={handleCloseModal}>Cancelar</Button>
+              </div>
+              {editingMembro && (
+                <BotaoExcluir
+                  titulo={`Apagar o cadastro de ${editingMembro.nome}?`}
+                  descricao="O cadastro será removido permanentemente. Se o membro já participou de sessões, prefira marcá-lo como inativo."
+                  rotulo="Apagar"
+                  disabled={isSubmitting}
+                  onConfirmar={() => handleDelete(editingMembro.id)}
+                />
+              )}
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }

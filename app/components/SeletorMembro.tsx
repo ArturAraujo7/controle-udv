@@ -2,7 +2,7 @@
 import { toast } from 'sonner'
 
 import { useState, useEffect, useRef } from 'react'
-import { Check, ChevronsUpDown, UserPlus, Search, X } from 'lucide-react'
+import { Check, UserPlus, Search, X } from 'lucide-react'
 import { supabase } from '@/lib/supabaseClient'
 
 export type MembroSimples = {
@@ -109,8 +109,9 @@ export function SeletorMembro({ placeholder = "Selecione ou digite...", value, o
       setIsModalOpen(false)
       setNewVisNome('')
       setNewVisOrigem('')
-    } catch (error: any) {
-      toast.error("Erro ao cadastrar visitante", { description: error.message })
+    } catch (error) {
+      const mensagem = error instanceof Error ? error.message : "Erro desconhecido"
+      toast.error("Erro ao cadastrar visitante", { description: mensagem })
     } finally {
       setIsSaving(false)
     }
@@ -187,7 +188,7 @@ export function SeletorMembro({ placeholder = "Selecione ou digite...", value, o
               className="w-full flex items-center justify-center gap-2 text-sm font-medium text-primary hover:text-primary/80 py-1.5 transition-colors"
             >
               <UserPlus className="w-4 h-4" />
-              Adicionar "{search}" como Visitante
+              Adicionar &ldquo;{search}&rdquo; como visitante
             </button>
           </div>
         </div>

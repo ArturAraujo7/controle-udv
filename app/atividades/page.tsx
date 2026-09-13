@@ -1,10 +1,13 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { ArrowLeft } from 'lucide-react'
+
 import { ActivityTimeline, ActivityLog } from '@/components/ActivityTimeline'
 import { supabase } from '@/lib/supabaseClient'
-import { ArrowLeft, Bell } from 'lucide-react'
 import { useAuth } from '@/components/AuthProvider'
+import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
 
 export default function Atividades() {
     const router = useRouter()
@@ -37,55 +40,48 @@ export default function Atividades() {
                 .limit(100)
 
             if (data) {
-                // @ts-ignore
-                setLogs(data)
+                setLogs(data as unknown as ActivityLog[])
             } else if (error) {
                 console.error("Erro ao buscar logs: ", error.message, error.details, error.hint)
             }
             setLoading(false)
         }
 
-        // Se confirmou que é admin, busca.
+        // Só busca quando confirmou que é admin; nos demais casos a tela já
+        // redirecionou ou ainda está resolvendo o perfil.
         if (profile?.role === 'admin') {
             fetchLogs()
-        } else if (profile !== undefined) {
-             // Caso não seja admin, já será redirecionado
-             setLoading(false)
         }
     }, [profile, router])
 
-    if (!profile || (profile.role !== 'admin' && typeof window !== 'undefined')) {
-         return <div className="min-h-screen bg-gray-50 flex items-center justify-center">Verificando acessos...</div>
+    if (!profile || profile.role !== 'admin') {
+        return (
+            <div className="space-y-4">
+                <Skeleton className="h-9 w-56" />
+                <Skeleton className="h-20 rounded-xl" />
+            </div>
+        )
     }
 
     return (
-        <main className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 pb-20 text-gray-900 dark:text-white transition-colors duration-300">
-            <header className="flex items-center mb-6">
-                <button type="button" onClick={() => router.back()} className="p-2 bg-white dark:bg-gray-800 rounded-full shadow-sm mr-4 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
-                    <ArrowLeft className="w-5 h-5 text-gray-500 dark:text-gray-300" />
-                </button>
-                <div className="flex items-center gap-2">
-                    <Bell className="w-5 h-5 text-gold-600 dark:text-gold-500" />
-                    <h1 className="text-xl font-bold">Registro de Atividades</h1>
-                </div>
-            </header>
-
-            <div className="max-w-2xl mx-auto space-y-6">
-                <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 mb-6">
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
-                        Este painel exibe um histórico automatizado de todas as interações e alterações em informações do sistema.
-                        Limita-se as 100 ocorrências mais recentes.
-                    </p>
-
-                    {loading ? (
-                        <div className="text-center py-10 text-gray-500 dark:text-gray-400 animate-pulse font-medium">
-                            Carregando histórico estrutural...
-                        </div>
-                    ) : (
-                        <ActivityTimeline logs={logs} />
-                    )}
-                </div>
+        <>
+            <div className="flex items-center gap-3 mb-2">
+                <Button variant="ghost" size="icon" onClick={() => router.back()} aria-label="Voltar">
+                    <ArrowLeft />
+                </Button>
+                <h1 className="text-2xl font-semibold tracking-tight">Registro de atividades</h1>
             </div>
-        </main>
+            <p className="text-sm text-muted-foreground mb-6 ml-12">
+                Histórico automático das alterações no sistema — as 100 ocorrências mais recentes.
+            </p>
+
+            {loading ? (
+                <div className="space-y-2">
+                    {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-20 rounded-xl" />)}
+                </div>
+            ) : (
+                <ActivityTimeline logs={logs} />
+            )}
+        </>
     )
 }

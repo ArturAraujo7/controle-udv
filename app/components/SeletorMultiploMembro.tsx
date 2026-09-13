@@ -114,8 +114,9 @@ export function SeletorMultiploMembro({
       setNewVisNome('')
       setNewVisOrigem('')
       setQuery('')
-    } catch (error: any) {
-      toast.error("Erro ao cadastrar visitante", { description: error.message })
+    } catch (error) {
+      const mensagem = error instanceof Error ? error.message : "Erro desconhecido"
+      toast.error("Erro ao cadastrar visitante", { description: mensagem })
     } finally {
       setIsSaving(false)
     }
@@ -196,7 +197,7 @@ export function SeletorMultiploMembro({
               className="w-full flex items-center justify-center gap-2 text-sm text-primary hover:text-primary/80 py-2 rounded-lg font-medium transition"
               onClick={handleOpenVisitanteModal}
             >
-              <UserPlus className="w-4 h-4" /> Cadastrar "{query}" como Visitante
+              <UserPlus className="w-4 h-4" /> Cadastrar &ldquo;{query}&rdquo; como visitante
             </button>
           </div>
         </div>
