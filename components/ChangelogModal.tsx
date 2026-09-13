@@ -1,44 +1,44 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { Moon, Search, FileText, Layout, User, Sparkles, type LucideIcon } from 'lucide-react'
+import { CalendarDays, LayoutDashboard, Navigation, Package, ShieldCheck, UserRound, type LucideIcon } from 'lucide-react'
 
 import {
     Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 
-const CURRENT_VERSION = 'v3.0'
+const CURRENT_VERSION = 'v4.0'
 
 const NOVIDADES: { icone: LucideIcon; titulo: string; descricao: string }[] = [
     {
-        icone: Sparkles,
-        titulo: 'Nova identidade visual',
-        descricao: 'Interface redesenhada: mais limpa, mais legível e com a identidade do Guardião em verde.',
+        icone: Navigation,
+        titulo: 'Nova navegação',
+        descricao: 'No celular, a barra de baixo leva a Início, Estoque, Sessões e Relatórios. O botão + registra sessões, preparos e saídas.',
     },
     {
-        icone: Layout,
-        titulo: 'Navegação em todas as telas',
-        descricao: 'Menu fixo no topo (e barra inferior no celular) para ir direto a qualquer área.',
+        icone: LayoutDashboard,
+        titulo: 'Início renovado',
+        descricao: 'Estoque disponível, quantas sessões ele atende, alertas, última sessão e os números do ano.',
     },
     {
-        icone: Moon,
-        titulo: 'Modo escuro',
-        descricao: 'Alterne entre tema claro e escuro pelo botão no topo da tela.',
+        icone: Package,
+        titulo: 'Estoque por lote',
+        descricao: 'Filtros por situação, extrato de movimentações com saldo e lotes em maturação.',
     },
     {
-        icone: FileText,
-        titulo: 'Relatórios & PDF',
-        descricao: 'Área de relatórios com gráficos e exportação para PDF / impressão.',
+        icone: CalendarDays,
+        titulo: 'Tela de cada sessão',
+        descricao: 'Condução, vegetal servido, documentos lidos, histórias, visitantes e observações num só lugar.',
     },
     {
-        icone: Search,
-        titulo: 'Busca',
-        descricao: 'Encontre sessões, dirigentes ou itens do estoque pela barra de pesquisa.',
+        icone: UserRound,
+        titulo: 'Ficha do membro',
+        descricao: 'Em Sessões → Membros: quantas vezes cada um dirigiu, leu, explanou ou foi mestre do preparo.',
     },
     {
-        icone: User,
-        titulo: 'Detalhes da sessão',
-        descricao: 'Toque em qualquer sessão para ver os dados completos e o que foi servido.',
+        icone: ShieldCheck,
+        titulo: 'Configurações e auditoria',
+        descricao: 'Administradores ajustam listas e alertas e veem exatamente o que mudou em cada registro.',
     },
 ]
 
@@ -63,7 +63,7 @@ export function ChangelogModal() {
             <DialogContent className="max-h-[85vh] overflow-y-auto">
                 <DialogHeader>
                     <DialogTitle>Novidades desta versão</DialogTitle>
-                    <DialogDescription>O que mudou no Guardião.</DialogDescription>
+                    <DialogDescription>O Guardião foi reorganizado para achar tudo mais rápido.</DialogDescription>
                 </DialogHeader>
 
                 <ul className="space-y-4">

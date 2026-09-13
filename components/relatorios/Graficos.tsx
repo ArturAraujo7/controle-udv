@@ -5,6 +5,7 @@ import {
 } from 'recharts'
 
 import { Skeleton } from '@/components/ui/skeleton'
+import { useItensLista } from '@/hooks/useListas'
 import { totalPorSessao } from '@/lib/estoque'
 import { formatarNumero } from '@/lib/formato'
 import type { ConsumoSessao, Sessao } from '@/lib/tipos'
@@ -114,13 +115,16 @@ export function GraficoConsumoMensal({
 }
 
 export function GraficoSessoesTipo({ sessoes, loading }: { sessoes: Sessao[]; loading: boolean }) {
+  // Cores definidas em Configurações → Tipos de sessão têm prioridade
+  const { itens } = useItensLista('tipos_sessao')
   const dados = useMemo(() => {
+    const corDoTipo = new Map((itens ?? []).filter(i => i.cor).map(i => [i.nome, i.cor as string]))
     const mapa = new Map<string, number>()
     for (const s of sessoes) mapa.set(s.tipo || 'Outro', (mapa.get(s.tipo || 'Outro') ?? 0) + 1)
     return [...mapa.entries()]
-      .map(([nome, valor]) => ({ name: `${nome} (${valor})`, value: valor }))
+      .map(([nome, valor]) => ({ name: `${nome} (${valor})`, value: valor, cor: corDoTipo.get(nome) }))
       .sort((a, b) => b.value - a.value)
-  }, [sessoes])
+  }, [sessoes, itens])
 
   if (loading) return <Skeleton className="h-[240px] w-full" />
   if (dados.length === 0) return <SemDados />
@@ -130,7 +134,7 @@ export function GraficoSessoesTipo({ sessoes, loading }: { sessoes: Sessao[]; lo
       <ResponsiveContainer width="100%" height="100%">
         <PieChart>
           <Pie data={dados} cx="50%" cy="50%" innerRadius={55} outerRadius={78} paddingAngle={2} dataKey="value" stroke="none">
-            {dados.map((_, i) => <Cell key={i} fill={CORES_SERIE[i % CORES_SERIE.length]} />)}
+            {dados.map((d, i) => <Cell key={i} fill={d.cor ?? CORES_SERIE[i % CORES_SERIE.length]} />)}
           </Pie>
           <Tooltip contentStyle={ESTILO_TOOLTIP} itemStyle={{ color: 'var(--popover-foreground)' }} />
           <Legend iconType="circle" wrapperStyle={{ fontSize: '11px' }} />

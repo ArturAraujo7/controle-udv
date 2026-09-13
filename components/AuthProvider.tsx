@@ -12,9 +12,16 @@ type AuthContextType = {
   session: Session | null
   profile: Perfil | null
   loading: boolean
+  /** Busca o perfil de novo (ex.: depois de editar o nome). */
+  recarregarPerfil: () => Promise<void>
 }
 
-const AuthContext = createContext<AuthContextType>({ session: null, profile: null, loading: true })
+const AuthContext = createContext<AuthContextType>({
+  session: null,
+  profile: null,
+  loading: true,
+  recarregarPerfil: async () => {},
+})
 
 export const useAuth = () => useContext(AuthContext)
 
@@ -103,6 +110,12 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     }
   }, [router, pathname, fetchProfile, isPublicRoute])
 
+  const userId = session?.user.id
+  const recarregarPerfil = useCallback(async () => {
+    if (!userId) return
+    setProfile(await fetchProfile(userId))
+  }, [userId, fetchProfile])
+
   if (loading && !isPublicRoute) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -136,7 +149,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
   }
 
   return (
-    <AuthContext.Provider value={{ session, profile, loading }}>
+    <AuthContext.Provider value={{ session, profile, loading, recarregarPerfil }}>
       {children}
     </AuthContext.Provider>
   )

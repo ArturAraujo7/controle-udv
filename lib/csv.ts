@@ -1,3 +1,10 @@
+/** Baixa registros do banco como CSV, usando as chaves do primeiro registro como cabeçalho. */
+export function baixarTabelaCSV(nomeArquivo: string, registros: Record<string, unknown>[]) {
+  const colunas = Object.keys(registros[0] ?? {})
+  const valor = (v: unknown) => (v === null || v === undefined ? '' : typeof v === 'object' ? JSON.stringify(v) : String(v))
+  baixarCSV(nomeArquivo, [colunas, ...registros.map(r => colunas.map(c => valor(r[c])))])
+}
+
 /** Gera e baixa um CSV (separador ";" e BOM, para abrir certo no Excel em português). */
 export function baixarCSV(nomeArquivo: string, linhas: (string | number | null | undefined)[][]) {
   const escapar = (valor: string | number | null | undefined) => {
