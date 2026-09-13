@@ -6,8 +6,8 @@ import { ArrowLeft, Save, Loader2, Plus, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { useAuth } from '@/components/AuthProvider'
-import { SeletorMembro, MembroSimples } from '@/app/components/SeletorMembro'
-import { SeletorMultiploMembro } from '@/app/components/SeletorMultiploMembro'
+import { MembroSimples } from '@/app/components/SeletorMembro'
+import { CamposCondutores } from '@/components/sessao/CamposCondutores'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -15,7 +15,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
-import { TIPOS_SESSAO, TIPOS_DELEGACAO } from '@/lib/constants'
+import { TIPOS_SESSAO } from '@/lib/constants'
 import { formatarData, formatarNumero } from '@/lib/formato'
 
 type PreparoSelect = {
@@ -293,57 +293,18 @@ export default function NovaSessao() {
         {/* Quem conduziu */}
         <Card>
           <CardContent className="space-y-5">
-            <div className="space-y-2">
-              <Label>Mestre dirigente</Label>
-              <SeletorMultiploMembro
-                placeholder="Quem dirigiu?"
-                value={formData.dirigentes}
-                onChange={(val) => setFormData({ ...formData, dirigentes: val })}
-                membros={membros}
-                onMembroAdicionado={handleMembroAdicionado}
-                max={2}
-              />
-            </div>
-
-            {formData.dirigentes.length > 1 && (
-              <div className="space-y-2">
-                <Label htmlFor="delegacao">Classificação da delegação</Label>
-                <Select
-                  value={formData.tipo_delegacao}
-                  onValueChange={tipo_delegacao => setFormData({ ...formData, tipo_delegacao })}
-                >
-                  <SelectTrigger id="delegacao" className="w-full"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {TIPOS_DELEGACAO.map(tipo => (
-                      <SelectItem key={tipo} value={tipo}>{tipo}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
-            <div className="grid sm:grid-cols-2 gap-5">
-              <div className="space-y-2">
-                <Label>Leitor de documentos</Label>
-                <SeletorMembro
-                  placeholder="Quem leu?"
-                  value={formData.leitor_documentos}
-                  onChange={(val) => setFormData({ ...formData, leitor_documentos: val })}
-                  membros={membros}
-                  onMembroAdicionado={handleMembroAdicionado}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Explanador</Label>
-                <SeletorMembro
-                  placeholder="Quem explanou?"
-                  value={formData.explanador}
-                  onChange={(val) => setFormData({ ...formData, explanador: val })}
-                  membros={membros}
-                  onMembroAdicionado={handleMembroAdicionado}
-                />
-              </div>
-            </div>
+            <CamposCondutores
+              dirigentes={formData.dirigentes}
+              tipoDelegacao={formData.tipo_delegacao}
+              leitor={formData.leitor_documentos}
+              explanador={formData.explanador}
+              membros={membros}
+              onDirigentesChange={val => setFormData({ ...formData, dirigentes: val })}
+              onTipoDelegacaoChange={tipo_delegacao => setFormData({ ...formData, tipo_delegacao })}
+              onLeitorChange={val => setFormData({ ...formData, leitor_documentos: val })}
+              onExplanadorChange={val => setFormData({ ...formData, explanador: val })}
+              onMembroAdicionado={handleMembroAdicionado}
+            />
 
             <div className="space-y-2">
               <Label htmlFor="participantes">Total de participantes</Label>

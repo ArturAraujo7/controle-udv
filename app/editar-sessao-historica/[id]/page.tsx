@@ -2,37 +2,34 @@
 import { useState, useEffect, use } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Save, User, BookOpen, Mic, Trash2 } from 'lucide-react'
-import { useAuth } from '@/components/AuthProvider'
+import { ArrowLeft, Save, Loader2 } from 'lucide-react'
+import { toast } from 'sonner'
+
+import { BotaoExcluir } from '@/components/BotaoExcluir'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Card, CardContent } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select'
+import { TIPOS_SESSAO } from '@/lib/constants'
 
 export default function EditarSessaoHistorica({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter()
   const { id } = use(params)
-  const { session } = useAuth()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
   const [formData, setFormData] = useState({
     data_realizacao: '',
     hora: '',
-    tipo: '',
+    tipo: '' as string,
     dirigente: '',
     explanador: '',
     leitor_documentos: '',
   })
-
-  const tiposSessao = [
-    'Escala',
-    'Escala Anual',
-    'Casal',
-    'Extra',
-    'Instrutiva',
-    'Da Direção',
-    'Quadro de Mestres',
-    'Adventício',
-    'Preparo',
-    'Caráter Instrutivo'
-  ]
 
   useEffect(() => {
     async function loadData() {
@@ -43,7 +40,7 @@ export default function EditarSessaoHistorica({ params }: { params: Promise<{ id
         .single()
 
       if (error) {
-        alert('Sessão histórica não encontrada!')
+        toast.error('Sessão histórica não encontrada')
         router.replace('/sessoes')
         return
       }
@@ -101,155 +98,131 @@ export default function EditarSessaoHistorica({ params }: { params: Promise<{ id
     setSaving(false)
 
     if (erroSessao) {
-      alert('Erro ao atualizar sessão histórica: ' + erroSessao.message)
+      toast.error('Erro ao atualizar', { description: erroSessao.message })
       return
     }
 
-    alert('Atualizado com sucesso!')
+    toast.success('Sessão histórica atualizada')
     router.back()
   }
 
   const handleDelete = async () => {
-    if (confirm('Tem certeza que deseja EXCLUIR essa sessão histórica?')) {
-      setSaving(true)
-      const { error } = await supabase.from('sessoes').delete().eq('id', id)
-      if (error) alert('Erro ao excluir: ' + error.message)
-      else router.back()
+    setSaving(true)
+    const { error } = await supabase.from('sessoes').delete().eq('id', id)
+    if (error) {
+      toast.error('Erro ao excluir', { description: error.message })
+      setSaving(false)
+    } else {
+      toast.success('Sessão histórica excluída')
+      router.back()
     }
   }
 
-  if (loading) return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-500 dark:text-gray-400 transition-colors duration-300">
-      <div className="animate-pulse">Carregando dados da sessão histórica...</div>
-    </div>
-  )
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <Skeleton className="h-9 w-64" />
+        <Skeleton className="h-72 rounded-xl" />
+      </div>
+    )
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 pb-20 text-gray-900 dark:text-white font-sans transition-colors duration-300">
-      <header className="flex items-center justify-between mb-6 pt-2">
-        <div className="flex items-center">
-          <button type="button" onClick={() => router.back()} className="p-2 bg-white dark:bg-gray-800 rounded-full shadow-sm mr-4 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
-            <ArrowLeft className="w-5 h-5 text-gray-500 dark:text-gray-300" />
-          </button>
-          <div>
-            <h1 className="text-xl font-bold tracking-tight text-gray-900 dark:text-white">Editar Registro Histórico</h1>
-            <p className="text-xs text-gray-500 dark:text-gray-400">Registro Histórico do DMC</p>
-          </div>
+    <>
+      <div className="flex items-center justify-between gap-3 mb-6">
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="icon" onClick={() => router.back()} aria-label="Voltar">
+            <ArrowLeft />
+          </Button>
+          <h1 className="text-2xl font-semibold tracking-tight">Editar registro histórico</h1>
         </div>
-        <button
-          onClick={handleDelete}
+        <BotaoExcluir
+          titulo="Excluir este registro histórico?"
+          descricao="A memória desta sessão será removida permanentemente. Esta ação não pode ser desfeita."
           disabled={saving}
-          className="p-2 text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/50 rounded-full hover:bg-red-100 dark:hover:bg-red-900/40 transition disabled:opacity-50"
-          title="Excluir Sessão Histórica"
-        >
-          <Trash2 className="w-5 h-5" />
-        </button>
-      </header>
+          onConfirmar={handleDelete}
+        />
+      </div>
 
-      <form onSubmit={handleUpdate} className="space-y-6 max-w-lg mx-auto">
-
-        {/* Bloco 1: Data e Hora */}
-        <section className="grid grid-cols-2 gap-4">
-          <div className="bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-200 dark:border-gray-700/50 shadow-sm">
-            <label className="text-xs text-gray-500 dark:text-gray-400 font-medium block mb-1 uppercase tracking-wider">Data</label>
-            <input
-              type="date"
-              className="w-full bg-transparent font-semibold outline-none text-gray-900 dark:text-white dark:[color-scheme:dark] text-sm"
-              value={formData.data_realizacao}
-              onChange={e => setFormData({ ...formData, data_realizacao: e.target.value })}
-              required
-            />
-          </div>
-          <div className="bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-200 dark:border-gray-700/50 shadow-sm">
-            <label className="text-xs text-gray-500 dark:text-gray-400 font-medium block mb-1 uppercase tracking-wider">Hora</label>
-            <input
-              type="time"
-              className="w-full bg-transparent font-semibold outline-none text-gray-900 dark:text-white dark:[color-scheme:dark] text-sm"
-              value={formData.hora}
-              onChange={e => setFormData({ ...formData, hora: e.target.value })}
-              required
-            />
-          </div>
-        </section>
-
-        {/* Bloco 2: Tipo de Sessão */}
-        <section>
-          <label className="text-xs text-gray-500 dark:text-gray-400 font-medium block mb-3 ml-1 uppercase tracking-wider">Tipo de Sessão</label>
-          <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar mask-fade-right">
-            {tiposSessao.map(tipo => (
-              <button
-                key={tipo}
-                type="button"
-                onClick={() => setFormData({ ...formData, tipo })}
-                className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all border ${formData.tipo === tipo
-                  ? 'bg-amber-600 text-white border-amber-500 shadow-amber-900/20 shadow-lg'
-                  : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-amber-600 dark:hover:text-amber-400'
-                  }`}
-              >
-                {tipo}
-              </button>
-            ))}
-          </div>
-        </section>
-
-        {/* Bloco 4: Detalhes da Sessão */}
-        <section className="space-y-3">
-          <div className="bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-200 dark:border-gray-700/50 shadow-sm flex items-center gap-3">
-            <div className="p-2 bg-gray-50 dark:bg-gray-700/30 rounded-lg"><User className="w-4 h-4 text-amber-600 dark:text-amber-500" /></div>
-            <div className="flex-1">
-              <label className="text-[10px] text-gray-500 dark:text-gray-400 font-medium block uppercase">Dirigente</label>
-              <input
-                type="text"
-                placeholder="Nome do Mestre"
-                className="w-full bg-transparent outline-none font-medium text-sm placeholder-gray-400 dark:placeholder-gray-600 text-gray-900 dark:text-white"
-                value={formData.dirigente}
-                onChange={e => setFormData({ ...formData, dirigente: e.target.value })}
+      <form onSubmit={handleUpdate} className="space-y-5 max-w-2xl">
+        <Card>
+          <CardContent className="grid sm:grid-cols-3 gap-5">
+            <div className="space-y-2">
+              <Label htmlFor="data">Data</Label>
+              <Input
+                id="data"
+                type="date"
+                value={formData.data_realizacao}
+                onChange={e => setFormData({ ...formData, data_realizacao: e.target.value })}
                 required
               />
             </div>
-          </div>
-
-          <div className="bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-200 dark:border-gray-700/50 shadow-sm flex items-center gap-3">
-            <div className="p-2 bg-gray-50 dark:bg-gray-700/30 rounded-lg"><BookOpen className="w-4 h-4 text-amber-600 dark:text-amber-500" /></div>
-            <div className="flex-1">
-              <label className="text-[10px] text-gray-500 dark:text-gray-400 font-medium block uppercase">Leitura (Opcional)</label>
-              <input
-                type="text"
-                placeholder="Quem leu?"
-                className="w-full bg-transparent outline-none font-medium text-sm placeholder-gray-400 dark:placeholder-gray-600 text-gray-900 dark:text-white"
-                value={formData.leitor_documentos}
-                onChange={e => setFormData({ ...formData, leitor_documentos: e.target.value })}
+            <div className="space-y-2">
+              <Label htmlFor="hora">Hora</Label>
+              <Input
+                id="hora"
+                type="time"
+                value={formData.hora}
+                onChange={e => setFormData({ ...formData, hora: e.target.value })}
+                required
               />
             </div>
-          </div>
+            <div className="space-y-2">
+              <Label htmlFor="tipo">Tipo de sessão</Label>
+              <Select value={formData.tipo} onValueChange={tipo => setFormData({ ...formData, tipo })}>
+                <SelectTrigger id="tipo" className="w-full"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {TIPOS_SESSAO.map(tipo => (
+                    <SelectItem key={tipo} value={tipo}>{tipo}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
 
-          <div className="bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-200 dark:border-gray-700/50 shadow-sm flex items-center gap-3">
-            <div className="p-2 bg-gray-50 dark:bg-gray-700/30 rounded-lg"><Mic className="w-4 h-4 text-amber-600 dark:text-amber-500" /></div>
-            <div className="flex-1">
-              <label className="text-[10px] text-gray-500 dark:text-gray-400 font-medium block uppercase">Explanação (Opcional)</label>
-              <input
-                type="text"
-                placeholder="Quem explanou?"
-                className="w-full bg-transparent outline-none font-medium text-sm placeholder-gray-400 dark:placeholder-gray-600 text-gray-900 dark:text-white"
-                value={formData.explanador}
-                onChange={e => setFormData({ ...formData, explanador: e.target.value })}
+        <Card>
+          <CardContent className="space-y-5">
+            <div className="space-y-2">
+              <Label htmlFor="dirigente">Mestre dirigente</Label>
+              <Input
+                id="dirigente"
+                value={formData.dirigente}
+                onChange={e => setFormData({ ...formData, dirigente: e.target.value })}
+                placeholder="Nome de quem estava na responsabilidade"
               />
             </div>
-          </div>
-        </section>
+            <div className="grid sm:grid-cols-2 gap-5">
+              <div className="space-y-2">
+                <Label htmlFor="leitor">Leitor de documentos</Label>
+                <Input
+                  id="leitor"
+                  value={formData.leitor_documentos}
+                  onChange={e => setFormData({ ...formData, leitor_documentos: e.target.value })}
+                  placeholder="Quem leu?"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="explanador">Explanador</Label>
+                <Input
+                  id="explanador"
+                  value={formData.explanador}
+                  onChange={e => setFormData({ ...formData, explanador: e.target.value })}
+                  placeholder="Quem explanou?"
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-        <button
-          type="submit"
-          disabled={saving}
-          className="w-full bg-gradient-to-r from-amber-500 to-amber-600 text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:shadow-amber-900/20 hover:from-amber-400 hover:to-amber-500 transition-all flex items-center justify-center gap-2 mt-6 active:scale-[0.98]"
-        >
-          {saving ? (
-            <span className="animate-pulse">Atualizando...</span>
-          ) : (
-            <><Save className="w-5 h-5" /> Salvar Alterações</>
-          )}
-        </button>
+        <div className="flex gap-3">
+          <Button type="submit" disabled={saving}>
+            {saving ? <Loader2 data-slot="icon" className="animate-spin" /> : <Save data-slot="icon" />}
+            {saving ? 'Salvando…' : 'Salvar alterações'}
+          </Button>
+          <Button type="button" variant="ghost" onClick={() => router.back()}>Cancelar</Button>
+        </div>
       </form>
-    </div>
+    </>
   )
 }
