@@ -1,10 +1,49 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { X, Moon, Search, FileText, Layout, User } from 'lucide-react'
+import { Moon, Search, FileText, Layout, User, Sparkles, type LucideIcon } from 'lucide-react'
+
+import {
+    Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+} from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
+
+const CURRENT_VERSION = 'v3.0'
+
+const NOVIDADES: { icone: LucideIcon; titulo: string; descricao: string }[] = [
+    {
+        icone: Sparkles,
+        titulo: 'Nova identidade visual',
+        descricao: 'Interface redesenhada: mais limpa, mais legível e com a identidade do Guardião em verde.',
+    },
+    {
+        icone: Layout,
+        titulo: 'Navegação em todas as telas',
+        descricao: 'Menu fixo no topo (e barra inferior no celular) para ir direto a qualquer área.',
+    },
+    {
+        icone: Moon,
+        titulo: 'Modo escuro',
+        descricao: 'Alterne entre tema claro e escuro pelo botão no topo da tela.',
+    },
+    {
+        icone: FileText,
+        titulo: 'Relatórios & PDF',
+        descricao: 'Área de relatórios com gráficos e exportação para PDF / impressão.',
+    },
+    {
+        icone: Search,
+        titulo: 'Busca',
+        descricao: 'Encontre sessões, dirigentes ou itens do estoque pela barra de pesquisa.',
+    },
+    {
+        icone: User,
+        titulo: 'Detalhes da sessão',
+        descricao: 'Toque em qualquer sessão para ver os dados completos e o que foi servido.',
+    },
+]
 
 export function ChangelogModal() {
     const [isOpen, setIsOpen] = useState(false)
-    const CURRENT_VERSION = 'v2.0' // Increment this to show modal again in future updates
 
     useEffect(() => {
         const savedVersion = localStorage.getItem('changelog_viewed_version')
@@ -19,93 +58,30 @@ export function ChangelogModal() {
         setIsOpen(false)
     }
 
-    if (!isOpen) return null
-
     return (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
-            <div className="bg-white dark:bg-gray-800 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 border border-gray-100 dark:border-gray-700">
+        <Dialog open={isOpen} onOpenChange={aberto => { if (!aberto) handleClose() }}>
+            <DialogContent className="max-h-[85vh] overflow-y-auto">
+                <DialogHeader>
+                    <DialogTitle>Novidades desta versão</DialogTitle>
+                    <DialogDescription>O que mudou no Guardião.</DialogDescription>
+                </DialogHeader>
 
-                {/* Header */}
-                <div className="bg-gradient-to-r from-celestial-600 to-indigo-600 p-6 text-white relative overflow-hidden">
-                    <div className="absolute top-0 right-0 p-4 opacity-10">
-                        <Layout className="w-32 h-32 transform rotate-12 translate-x-8 -translate-y-8" />
-                    </div>
-                    <h2 className="text-2xl font-bold relative z-10">Novidades! 🎉</h2>
-                    <p className="text-celestial-100 text-sm relative z-10 mt-1">Confira o que mudou nesta atualização.</p>
-                    <button
-                        onClick={handleClose}
-                        className="absolute top-4 right-4 text-white/70 hover:text-white bg-white/10 hover:bg-white/20 rounded-full p-1 transition-colors z-20"
-                    >
-                        <X className="w-5 h-5" />
-                    </button>
-                </div>
+                <ul className="space-y-4">
+                    {NOVIDADES.map(({ icone: Icone, titulo, descricao }) => (
+                        <li key={titulo} className="flex gap-3">
+                            <Icone className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                            <div>
+                                <h3 className="text-sm font-medium leading-tight">{titulo}</h3>
+                                <p className="text-sm text-muted-foreground mt-0.5">{descricao}</p>
+                            </div>
+                        </li>
+                    ))}
+                </ul>
 
-                {/* Lista de Novidades */}
-                <div className="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
-
-                    <div className="flex gap-4">
-                        <div className="bg-indigo-100 dark:bg-indigo-900/30 p-2 rounded-xl h-fit">
-                            <Moon className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
-                        </div>
-                        <div>
-                            <h3 className="font-bold text-gray-900 dark:text-white">Modo Escuro</h3>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">Descanse seus olhos! Agora você pode alternar entre temas claro e escuro no topo da tela.</p>
-                        </div>
-                    </div>
-
-                    <div className="flex gap-4">
-                        <div className="bg-celestial-100 dark:bg-celestial-900/30 p-2 rounded-xl h-fit">
-                            <FileText className="w-6 h-6 text-celestial-600 dark:text-celestial-400" />
-                        </div>
-                        <div>
-                            <h3 className="font-bold text-gray-900 dark:text-white">Relatórios & PDF</h3>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">Nova área de relatórios com gráficos e exportação profissional para PDF / Impressão.</p>
-                        </div>
-                    </div>
-
-                    <div className="flex gap-4">
-                        <div className="bg-gold-100 dark:bg-gold-900/30 p-2 rounded-xl h-fit">
-                            <Search className="w-6 h-6 text-gold-600 dark:text-gold-400" />
-                        </div>
-                        <div>
-                            <h3 className="font-bold text-gray-900 dark:text-white">Busca Inteligente</h3>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">Encontre rapidamente sessões, dirigentes ou itens do estoque com a nova barra de pesquisa.</p>
-                        </div>
-                    </div>
-
-                    <div className="flex gap-4">
-                        <div className="bg-purple-100 dark:bg-purple-900/30 p-2 rounded-xl h-fit">
-                            <Layout className="w-6 h-6 text-purple-600 dark:text-purple-400" />
-                        </div>
-                        <div>
-                            <h3 className="font-bold text-gray-900 dark:text-white">Detalhes da Sessão</h3>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">Clique em qualquer sessão (no histórico ou na home) para ver todos os detalhes e o que foi servido.</p>
-                        </div>
-                    </div>
-
-                    <div className="flex gap-4">
-                        <div className="bg-orange-100 dark:bg-orange-900/30 p-2 rounded-xl h-fit">
-                            <User className="w-6 h-6 text-orange-600 dark:text-orange-400" />
-                        </div>
-                        <div>
-                            <h3 className="font-bold text-gray-900 dark:text-white">Quem Registrou?</h3>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">Agora mostramos qual usuário realizou o cadastro de cada sessão.</p>
-                        </div>
-                    </div>
-
-                </div>
-
-                {/* Footer */}
-                <div className="p-4 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
-                    <button
-                        onClick={handleClose}
-                        className="w-full bg-celestial-600 hover:bg-celestial-700 text-white font-bold py-3 rounded-xl transition-colors shadow-lg shadow-celestial-900/20"
-                    >
-                        Entendi, vamos lá! 🚀
-                    </button>
-                </div>
-
-            </div>
-        </div>
+                <DialogFooter>
+                    <Button onClick={handleClose} className="w-full">Entendi</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     )
 }
