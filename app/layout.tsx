@@ -4,7 +4,7 @@ import './globals.css'
 import { ThemeProvider } from './providers'
 import AuthProvider from '@/components/AuthProvider'
 
-const inter = Inter({ subsets: ['latin'] })
+const inter = Inter({ subsets: ['latin'], variable: '--font-sans' })
 
 export const metadata: Metadata = {
   title: 'Guardião',
@@ -29,6 +29,8 @@ export const viewport: Viewport = {
 }
 
 import { AIChatWidget } from '@/components/AIChatWidget'
+import { Toaster } from '@/components/ui/sonner'
+import { cn } from '@/lib/utils'
 
 export default function RootLayout({
   children,
@@ -36,14 +38,15 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="pt-BR" suppressHydrationWarning>
-      <body className={`${inter.className} transition-colors duration-300 bg-gray-100 dark:bg-black text-foreground antialiased`}>
+    <html lang="pt-BR" suppressHydrationWarning className={cn('font-sans', inter.variable)}>
+      <body className="transition-colors duration-300 bg-gray-100 dark:bg-black text-foreground antialiased">
         <ThemeProvider>
           <AuthProvider>
             <div className="max-w-5xl mx-auto min-h-screen sm:min-h-[calc(100vh-2rem)] sm:my-4 sm:rounded-3xl bg-gray-50 dark:bg-gray-900 shadow-2xl sm:border border-x-0 sm:border-x border-gray-200 dark:border-gray-800 relative overflow-hidden">
               {children}
             </div>
             <AIChatWidget />
+            <Toaster richColors position="top-center" />
           </AuthProvider>
         </ThemeProvider>
       </body>

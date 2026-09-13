@@ -1,20 +1,180 @@
 @import "tailwindcss";
-@config "../tailwind.config.ts";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
+@custom-variant dark (&:is(.dark *));
 
+/* ============================================================
+   Guardião v2 — Design tokens
+   Base neutra: stone (quente) · Acento: verde mariri
+   ============================================================ */
 
 :root {
-  --background: #f8fafc; /* slate-50 */
-  --foreground: #0f172a; /* slate-900 */
+  --background: #fafaf9;
+  --foreground: #1c1917;
+  --card: #ffffff;
+  --card-foreground: #1c1917;
+  --popover: #ffffff;
+  --popover-foreground: #1c1917;
+  --primary: #2a523c;
+  --primary-foreground: #f2f7f4;
+  --secondary: #f5f5f4;
+  --secondary-foreground: #1c1917;
+  --muted: #f5f5f4;
+  --muted-foreground: #78716c;
+  --accent: #f5f5f4;
+  --accent-foreground: #1c1917;
+  --destructive: #b91c1c;
+  --border: #e7e5e4;
+  --input: #e7e5e4;
+  --ring: #4a805f;
+  /* Contrato de cores dos gráficos (Recharts aceita CSS vars em fill/stroke):
+     séries = --chart-1..5 · grid/eixos = --border / --muted-foreground · tooltip = --popover */
+  --chart-1: #2a523c;
+  --chart-2: #78716c;
+  --chart-3: #6c9f80;
+  --chart-4: #44403c;
+  --chart-5: #8a6e4b;
+  --radius: 0.5rem;
+  --sidebar: #fafaf9;
+  --sidebar-foreground: #1c1917;
+  --sidebar-primary: #2a523c;
+  --sidebar-primary-foreground: #f2f7f4;
+  --sidebar-accent: #f5f5f4;
+  --sidebar-accent-foreground: #1c1917;
+  --sidebar-border: #e7e5e4;
+  --sidebar-ring: #4a805f;
 }
 
 .dark {
-  --background: #020617; /* slate-950 */
-  --foreground: #f8fafc; /* slate-50 */
+  --background: #0c0a09;
+  --foreground: #f5f5f4;
+  --card: #1c1917;
+  --card-foreground: #f5f5f4;
+  --popover: #1c1917;
+  --popover-foreground: #f5f5f4;
+  --primary: #6c9f80;
+  --primary-foreground: #0f211a;
+  --secondary: #292524;
+  --secondary-foreground: #f5f5f4;
+  --muted: #292524;
+  --muted-foreground: #a8a29e;
+  --accent: #292524;
+  --accent-foreground: #f5f5f4;
+  --destructive: #ef4444;
+  --border: #292524;
+  --input: #292524;
+  --ring: #6c9f80;
+  --chart-1: #6c9f80;
+  --chart-2: #a8a29e;
+  --chart-3: #c4dbcc;
+  --chart-4: #57534e;
+  --chart-5: #b39770;
+  --sidebar: #1c1917;
+  --sidebar-foreground: #f5f5f4;
+  --sidebar-primary: #6c9f80;
+  --sidebar-primary-foreground: #0f211a;
+  --sidebar-accent: #292524;
+  --sidebar-accent-foreground: #f5f5f4;
+  --sidebar-border: #292524;
+  --sidebar-ring: #6c9f80;
 }
 
-body {
-  background-color: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@theme inline {
+  --font-heading: var(--font-sans);
+  --font-sans: var(--font-sans);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  /* 2xl+ mantêm os valores padrão do Tailwind: as páginas ainda não migradas
+     dependem deles (cartão do layout em rounded-3xl etc.) */
+  --radius-2xl: 1rem;
+  --radius-3xl: 1.5rem;
+  --radius-4xl: 2rem;
+}
+
+@theme {
+  /* Rampa da marca — verde mariri (uso pontual via classes verde-*) */
+  --color-verde-50: #f2f7f4;
+  --color-verde-100: #e1ede5;
+  --color-verde-200: #c4dbcc;
+  --color-verde-300: #9bc0a9;
+  --color-verde-400: #6c9f80;
+  --color-verde-500: #4a805f;
+  --color-verde-600: #35664a;
+  --color-verde-700: #2a523c;
+  --color-verde-800: #234433;
+  --color-verde-900: #1d382b;
+  --color-verde-950: #0f211a;
+
+  /* ============================================================
+     LEGACY — paletas da UI antiga (gold/celestial).
+     Remover este bloco quando a última tela for migrada.
+     ============================================================ */
+  --color-gold-50: #fffdeb;
+  --color-gold-100: #fef7c3;
+  --color-gold-200: #fde68a;
+  --color-gold-300: #fcd34d;
+  --color-gold-400: #fbbf24;
+  --color-gold-500: #f59e0b;
+  --color-gold-600: #d97706;
+  --color-gold-700: #b45309;
+  --color-gold-800: #92400e;
+  --color-gold-900: #78350f;
+  --color-gold-950: #451a03;
+  --color-celestial-50: #f0f9ff;
+  --color-celestial-100: #e0f2fe;
+  --color-celestial-200: #bae6fd;
+  --color-celestial-300: #7dd3fc;
+  --color-celestial-400: #38bdf8;
+  --color-celestial-500: #0ea5e9;
+  --color-celestial-600: #0284c7;
+  --color-celestial-700: #0369a1;
+  --color-celestial-800: #075985;
+  --color-celestial-900: #0c4a6e;
+  --color-celestial-950: #082f49;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
 }
