@@ -1,9 +1,17 @@
 'use client'
 import { useState, useEffect, use } from 'react'
 import { supabase } from '@/lib/supabaseClient'
-import { ArrowLeft, Calendar, Droplets, FlaskConical, Users, History } from 'lucide-react'
+import { ArrowLeft, History } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
+
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Card, CardContent } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Separator } from '@/components/ui/separator'
+import { formatarData, formatarNumero } from '@/lib/formato'
 
 export default function DetalheEstoque({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
@@ -48,7 +56,7 @@ export default function DetalheEstoque({ params }: { params: Promise<{ id: strin
         .single()
 
       if (errPrep) {
-        alert('Preparo não encontrado')
+        toast.error('Preparo não encontrado')
         router.push('/estoque')
         return
       }
@@ -84,7 +92,6 @@ export default function DetalheEstoque({ params }: { params: Promise<{ id: strin
         console.error('Erro ao buscar saídas:', errSaidas)
       }
 
-      // 4. Formata a lista de sessões a partir dos consumos
       // 4. Formata a lista de sessões a partir dos consumos
       const listaSessoes = consumos?.map((c) => {
         const sessao = c.sessoes as unknown as { id: number, data_realizacao: string, tipo: string, dirigente: string, quantidade_participantes: number }
@@ -125,139 +132,116 @@ export default function DetalheEstoque({ params }: { params: Promise<{ id: strin
     loadData()
   }, [id, router])
 
-  if (loading) return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-500 dark:text-gray-400">
-      <div className="animate-pulse">Carregando histórico...</div>
-    </div>
-  )
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <Skeleton className="h-9 w-52" />
+        <Skeleton className="h-56 rounded-xl" />
+        <Skeleton className="h-24 rounded-xl" />
+      </div>
+    )
+  }
 
   if (!preparo) return null
 
+  const saldoAtual = preparo.quantidade_preparada - historico.reduce((acc, item) => acc + (Number(item.quantidade) || 0), 0)
+
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 text-gray-900 dark:text-white pb-20 transition-colors duration-300">
-
-      {/* Cabeçalho */}
-      <div className="flex items-center gap-4 mb-6">
-        <button type="button" onClick={() => router.back()} className="p-2 bg-white dark:bg-gray-800 rounded-full border border-gray-200 dark:border-gray-700 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition">
-          <ArrowLeft className="w-5 h-5 text-gray-500 dark:text-gray-300" />
-        </button>
+    <>
+      <div className="flex items-center gap-3 mb-6">
+        <Button variant="ghost" size="icon" onClick={() => router.back()} aria-label="Voltar">
+          <ArrowLeft />
+        </Button>
         <div>
-          <h1 className="text-xl font-bold">Detalhes do Vegetal</h1>
-          <p className="text-xs text-gray-500 dark:text-gray-400">Lote #{id.slice(0, 6)}</p>
+          <h1 className="text-2xl font-semibold tracking-tight">Detalhes do Vegetal</h1>
+          <p className="text-sm text-muted-foreground">Lote #{id}</p>
         </div>
       </div>
 
-      {/* Card Principal do Vegetal */}
-      <div className="bg-white dark:bg-gray-800 rounded-2xl p-5 border border-gray-200 dark:border-gray-700 shadow-sm mb-8 relative overflow-hidden">
-        <div className="absolute top-0 right-0 p-4 opacity-5 dark:opacity-5 text-gray-900 dark:text-white">
-          <FlaskConical size={100} />
-        </div>
-
-        <div className="flex justify-between items-start mb-4">
-          <div>
-            <span className={`text-xs font-bold px-2 py-1 rounded-full border ${preparo.status === 'Disponível' ? 'bg-gold-100 dark:bg-gold-900/30 text-gold-700 dark:text-gold-400 border-gold-200 dark:border-gold-800' :
-              preparo.status === 'Esgotado' ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800' :
-                'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800'
-              }`}>
+      <Card className="mb-8">
+        <CardContent className="space-y-5">
+          <div className="flex items-center justify-between gap-3">
+            <Badge variant={preparo.status === 'Esgotado' ? 'secondary' : 'outline'}>
               {preparo.status}
-            </span>
+            </Badge>
+            <Button variant="outline" size="sm" asChild>
+              <Link href={`/editar-preparo/${id}`}>Editar</Link>
+            </Button>
           </div>
-          <Link
-            href={`/editar-preparo/${id}`}
-            className="text-xs text-celestial-600 dark:text-celestial-400 hover:text-celestial-500 dark:hover:text-celestial-300 font-bold underline"
-          >
-            Editar
-          </Link>
-        </div>
 
-        <div className="grid grid-cols-2 gap-4 mb-4">
-          <div>
-            <p className="text-xs text-gray-500 dark:text-gray-400">Mestre</p>
-            <p className="font-semibold text-gray-900 dark:text-white">{preparo.mestre_preparo}</p>
+          <div className="grid grid-cols-2 gap-5">
+            <div>
+              <p className="text-xs text-muted-foreground">Mestre</p>
+              <p className="font-medium">{preparo.mestre_preparo}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Grau</p>
+              <p className="font-medium">{preparo.grau}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Quantidade inicial</p>
+              <p className="font-medium tabular-nums">{formatarNumero(preparo.quantidade_preparada)} L</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Saldo atual</p>
+              <p className="text-xl font-semibold tabular-nums leading-tight">{formatarNumero(saldoAtual)} L</p>
+            </div>
           </div>
-          <div>
-            <p className="text-xs text-gray-500 dark:text-gray-400">Grau</p>
-            <p className="font-semibold text-gray-900 dark:text-white">{preparo.grau}</p>
-          </div>
-          <div>
-            <p className="text-xs text-gray-500 dark:text-gray-400">Qtd. Inicial</p>
-            <p className="font-semibold text-gray-700 dark:text-gray-300">{preparo.quantidade_preparada} L</p>
-          </div>
-          <div>
-            <p className="text-xs text-gray-500 dark:text-gray-400">Qtd. Atual</p>
-            <p className="font-bold text-gray-900 dark:text-white text-lg">
-              {(preparo.quantidade_preparada - historico.reduce((acc, item) => acc + (Number(item.quantidade) || 0), 0)).toFixed(2).replace('.', ',')} L
-            </p>
-          </div>
-        </div>
 
-        <div className="border-t border-gray-100 dark:border-gray-700 pt-3 mt-2 grid grid-cols-2 gap-2 text-xs">
-          <div>
-            <span className="text-gray-500 dark:text-gray-400 block">Mariri</span>
-            <span className="text-gray-700 dark:text-gray-300">{preparo.procedencia_mariri || '-'}</span>
-          </div>
-          <div>
-            <span className="text-gray-500 dark:text-gray-400 block">Chacrona</span>
-            <span className="text-gray-700 dark:text-gray-300">{preparo.procedencia_chacrona || '-'}</span>
-          </div>
-        </div>
-      </div>
+          <Separator />
 
-      {/* Histórico de Consumo e Saídas */}
-      <h2 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2">
-        <History className="w-4 h-4" /> Histórico de Movimentação
+          <div className="grid grid-cols-2 gap-5 text-sm">
+            <div>
+              <p className="text-xs text-muted-foreground">Mariri</p>
+              <p>{preparo.procedencia_mariri || '—'}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Chacrona</p>
+              <p>{preparo.procedencia_chacrona || '—'}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <h2 className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
+        <History className="w-4 h-4" /> Histórico de movimentação
       </h2>
 
       {historico.length === 0 ? (
-        <div className="text-center py-10 text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800/30 rounded-xl border border-dashed border-gray-200 dark:border-gray-800">
-          <p>Nenhuma movimentação registrada.</p>
-        </div>
+        <Card className="border-dashed">
+          <CardContent className="py-10 text-center">
+            <History className="w-6 h-6 text-muted-foreground mx-auto mb-2" />
+            <p className="text-sm text-muted-foreground">Nenhuma movimentação registrada neste lote.</p>
+          </CardContent>
+        </Card>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-2">
           {historico.map((item) => (
             <Link
               key={item.id}
               href={item.isSaida ? `/editar-saida/${item.realId}` : `/editar-sessao/${item.realId}`}
-              className="block group"
+              className="block bg-card rounded-xl border p-4 transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
             >
-              <div className={`p-4 rounded-xl border flex justify-between items-center transition-all shadow-sm hover:shadow-md ${item.isSaida
-                ? 'bg-red-50 dark:bg-gray-800/50 border-red-100 dark:border-red-900/30 group-hover:border-red-400 dark:group-hover:border-red-500/50'
-                : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 group-hover:border-celestial-300 dark:group-hover:border-celestial-500/50'
-                }`}>
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    {item.isSaida && <span className="text-[10px] font-bold bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 px-1.5 py-0.5 rounded">SAÍDA</span>}
-                    <p className="font-bold text-gray-900 dark:text-white group-hover:text-celestial-600 dark:group-hover:text-celestial-300 transition-colors">{item.titulo}</p>
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    {item.isSaida && <Badge variant="secondary">Saída</Badge>}
+                    <p className="font-medium text-sm truncate">{item.titulo}</p>
                   </div>
-
-                  <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-                    <Calendar className="w-3 h-3" />
-                    {new Date(item.data).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}
-                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">{formatarData(item.data)}</p>
                 </div>
-
-                <div className="text-right">
-                  <div className={`flex items-center justify-end gap-1 font-bold ${item.isSaida ? 'text-red-600 dark:text-red-400' : 'text-celestial-600 dark:text-celestial-300'
-                    }`}>
-                    <Droplets className="w-3 h-3" />
-                    -{Number(item.quantidade).toFixed(2).replace('.', ',')} L
-                  </div>
-                  <div className="text-xs text-gray-500 dark:text-gray-500 mt-1 flex items-center justify-end gap-1">
-                    {item.isSaida ? (
-                      <span className="italic">{item.subtitulo}</span>
-                    ) : (
-                      <>
-                        <Users className="w-3 h-3" />
-                        {item.subtitulo}
-                      </>
-                    )}
-                  </div>
+                <div className="text-right shrink-0">
+                  <p className="text-sm font-medium tabular-nums text-destructive">
+                    −{formatarNumero(item.quantidade)}
+                    <span className="text-xs font-normal text-muted-foreground ml-0.5">L</span>
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1 truncate max-w-[10rem]">{item.subtitulo}</p>
                 </div>
               </div>
             </Link>
           ))}
         </div>
       )}
-    </div>
+    </>
   )
 }

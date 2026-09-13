@@ -2,8 +2,15 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { ArrowLeft, Beaker, Plus, Truck, GlassWater, Pencil, Search, Users } from 'lucide-react'
+import { Beaker, Plus, Truck, Pencil, Search, Package } from 'lucide-react'
+
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
+import { Card, CardContent } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
+import { formatarData, formatarNumero } from '@/lib/formato'
+import { cn } from '@/lib/utils'
 
 type PreparoComSaldo = {
   id: number
@@ -20,7 +27,6 @@ type PreparoComSaldo = {
 }
 
 export default function GerenciarEstoque() {
-  const router = useRouter()
   const [preparos, setPreparos] = useState<PreparoComSaldo[]>([])
   const [saldoTotal, setSaldoTotal] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -63,155 +69,140 @@ export default function GerenciarEstoque() {
     fetchEstoque()
   }, [])
 
+  const busca = searchTerm.toLowerCase()
+  const filtrados = preparos.filter(preparo => {
+    const mestre = preparo.mestre_preparo?.toLowerCase() || ''
+    const nucleo = preparo.nucleo_origem?.toLowerCase() || ''
+    const grau = preparo.grau?.toLowerCase() || ''
+    return mestre.includes(busca) || nucleo.includes(busca) || grau.includes(busca)
+  })
+
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 pb-20 text-gray-900 dark:text-white transition-colors duration-300">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center">
-          <button type="button" onClick={() => router.back()} className="p-2 bg-white dark:bg-gray-800 rounded-full shadow-sm mr-4 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
-            <ArrowLeft className="w-5 h-5 text-gray-500 dark:text-gray-300" />
-          </button>
-          <h1 className="text-xl font-bold">Estoque</h1>
-        </div>
-        <Link href="/novo-preparo" className="p-2 bg-gold-600 rounded-full shadow-lg text-white hover:bg-gold-700 active:scale-95 transition-all">
-          <Plus className="w-5 h-5" />
-        </Link>
+    <>
+      <div className="flex items-center justify-between gap-4 mb-6">
+        <h1 className="text-2xl font-semibold tracking-tight">Estoque</h1>
+        <Button asChild>
+          <Link href="/novo-preparo"><Plus data-slot="icon" /> Novo preparo</Link>
+        </Button>
       </div>
 
-      {loading ? (
-        <p className="text-center text-gray-500 dark:text-gray-400 mt-10">Calculando...</p>
-      ) : (
-        <div className="space-y-6">
+      {/* Saldo total */}
+      <Card className="mb-6">
+        <CardContent className="text-center py-2">
+          <p className="text-sm text-muted-foreground">Saldo total disponível</p>
+          {loading ? (
+            <Skeleton className="h-12 w-40 mx-auto mt-2" />
+          ) : (
+            <p className="text-4xl font-semibold tabular-nums tracking-tight mt-1">
+              {formatarNumero(saldoTotal)}{' '}
+              <span className="text-lg font-normal text-muted-foreground">litros</span>
+            </p>
+          )}
+        </CardContent>
+      </Card>
 
-          {/* CARD DESTAQUE TOTAL */}
-          <div className="bg-white dark:bg-gradient-to-br dark:from-gray-800 dark:to-gray-900 p-6 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-lg text-center relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-4 opacity-5">
-              <GlassWater className="w-32 h-32 text-gold-600 dark:text-white" />
-            </div>
-            <p className="text-sm text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wider mb-1">Saldo Total Disponível</p>
-            <div className="flex items-baseline justify-center gap-1">
-              <span className="text-5xl font-bold text-gray-900 dark:text-white tracking-tight">{saldoTotal.toFixed(2).replace('.', ',')}</span>
-              <span className="text-xl text-gray-500 font-medium">Litros</span>
-            </div>
-          </div>
+      <div className="flex items-center justify-between gap-4 mb-3">
+        <h2 className="text-sm font-medium text-muted-foreground">Lotes individuais</h2>
+        {!loading && (
+          <span className="text-sm text-muted-foreground tabular-nums">
+            {filtrados.length} de {preparos.length}
+          </span>
+        )}
+      </div>
 
-          <h2 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider px-1">Lotes Individuais</h2>
+      <div className="relative mb-4">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+        <Input
+          className="pl-9"
+          placeholder="Buscar por mestre, núcleo ou grau…"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          aria-label="Buscar preparo"
+        />
+      </div>
 
-          {/* BARRA DE PESQUISA */}
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Search className="h-5 w-5 text-gray-400" />
-            </div>
-            <input
-              type="text"
-              className="block w-full pl-10 pr-3 py-3 border border-gray-200 dark:border-gray-700 rounded-xl leading-5 bg-white dark:bg-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gold-500/50 focus:border-gold-500 transition-all text-gray-900 dark:text-white"
-              placeholder="Buscar por mestre, núcleo ou grau..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
+      <div className="space-y-3">
+        {loading ? (
+          Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-[132px] rounded-xl" />)
+        ) : filtrados.length === 0 ? (
+          <Card className="border-dashed">
+            <CardContent className="py-10 text-center">
+              <Package className="w-6 h-6 text-muted-foreground mx-auto mb-2" />
+              <p className="text-sm text-muted-foreground">
+                {preparos.length === 0
+                  ? 'Nenhum preparo registrado ainda.'
+                  : 'Nenhum preparo corresponde à busca.'}
+              </p>
+              {preparos.length === 0 && (
+                <Button variant="outline" asChild className="mt-4">
+                  <Link href="/novo-preparo">Registrar primeiro preparo</Link>
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        ) : (
+          filtrados.map(preparo => {
+            const isDoacao = preparo.tipo === 'Doação'
+            const esgotado = preparo.saldo <= 0
+            const percentual = preparo.quantidade_preparada > 0
+              ? Math.max(0, (preparo.saldo / preparo.quantidade_preparada) * 100)
+              : 0
 
-          {/* LISTA DE PREPAROS */}
-          <div className="space-y-4">
-            {preparos
-              .filter(preparo => {
-                const searchLower = searchTerm.toLowerCase()
-                const mestre = preparo.mestre_preparo?.toLowerCase() || ''
-                const nucleo = preparo.nucleo_origem?.toLowerCase() || ''
-                const grau = preparo.grau?.toLowerCase() || ''
-                return mestre.includes(searchLower) || nucleo.includes(searchLower) || grau.includes(searchLower)
-              })
-              .map(preparo => {
-                const isDoacao = preparo.tipo === 'Doação'
+            return (
+              <Card key={preparo.id} className={cn('overflow-hidden transition-colors', !esgotado && 'hover:border-primary/40')}>
+                <CardContent className="p-0">
+                  <div className="flex items-start justify-between gap-3 p-4 pb-3">
+                    <Link href={`/estoque/${preparo.id}`} className="min-w-0 flex-1 rounded-md focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50">
+                      <Badge variant="outline" className="mb-2 gap-1">
+                        {isDoacao ? <Truck data-slot="icon" /> : <Beaker data-slot="icon" />}
+                        {isDoacao ? 'Doação externa' : 'Produção local'}
+                      </Badge>
 
-                return (
-                  <div key={preparo.id} className={`bg-white dark:bg-gray-800 rounded-xl shadow-sm border ${isDoacao ? 'border-celestial-200 dark:border-celestial-900/50' : 'border-gold-200 dark:border-gold-900/30'} relative overflow-hidden group`}>
+                      <h3 className={cn('font-medium leading-tight truncate', esgotado && 'text-muted-foreground')}>
+                        {isDoacao ? preparo.nucleo_origem : `M. ${preparo.mestre_preparo}`}
+                      </h3>
 
-                    {/* Barra de Progresso */}
-                    <div
-                      className={`absolute bottom-0 left-0 h-1 transition-all duration-1000 ${isDoacao ? 'bg-celestial-500' : 'bg-gold-500'}`}
-                      style={{ width: `${(preparo.saldo / preparo.quantidade_preparada) * 100}%` }}
-                    />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {formatarData(preparo.data_preparo)} · Grau {preparo.grau}
+                        {isDoacao && ` · Resp. M. ${preparo.mestre_preparo}`}
+                      </p>
+                    </Link>
 
-                    {/* Card clicável leva pro Detalhe */}
-                    <Link href={`/estoque/${preparo.id}`} className="block p-4 pb-2">
-                      <div className="flex justify-between items-start mb-3">
-                        <div>
-                          {/* Badge de Tipo */}
-                          <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase mb-2 ${isDoacao ? 'bg-celestial-100 dark:bg-celestial-900/40 text-celestial-600 dark:text-celestial-400' : 'bg-gold-100 dark:bg-gold-900/40 text-gold-600 dark:text-gold-400'
-                            }`}>
-                            {isDoacao ? <Truck className="w-3 h-3" /> : <Beaker className="w-3 h-3" />}
-                            {isDoacao ? 'Doação Externa' : 'Produção Local'}
-                          </div>
-
-                          <h3 className="font-bold text-gray-900 dark:text-white text-lg leading-tight">
-                            {isDoacao ? preparo.nucleo_origem : `M. ${preparo.mestre_preparo}`}
-                          </h3>
-
-                          <div className="flex flex-col mt-1">
-                            <span className="text-xs text-gray-500 dark:text-gray-400">
-                              {new Date(preparo.data_preparo).toLocaleDateString('pt-BR')} • Grau {preparo.grau}
-                            </span>
-                            {isDoacao && (
-                              <span className="text-xs text-celestial-500/70 dark:text-celestial-300/70 mt-0.5">
-                                Resp: M. {preparo.mestre_preparo}
-                              </span>
-                            )}
-                            {preparo.user_id && (
-                              <span className="text-[10px] text-gray-400 dark:text-gray-500 mt-1 flex items-center gap-1" title={`ID: ${preparo.user_id}`}>
-                                <Users className="w-3 h-3" /> {preparo.user_id.slice(0, 8)}...
-                              </span>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* LADO DIREITO: Saldo */}
-                        <div className="text-right flex flex-col items-end gap-2">
-                          {/* Botão Editar (Absolute pra não conflitar com o Link principal) */}
-                          <object className="absolute top-4 right-2 z-10"> {/* Object/div trick to prevent nesting links */}
-                            <Link href={`/editar-preparo/${preparo.id}`} className="p-2 text-gray-400 dark:text-gray-500 hover:text-gold-600 dark:hover:text-white transition-colors">
-                              <Pencil className="w-4 h-4" />
-                            </Link>
-                          </object>
-
-                          <div className="mt-8"> {/* Espaço pra compensar o botão editar */}
-                            <p className={`text-2xl font-bold ${isDoacao ? 'text-celestial-600 dark:text-celestial-100' : 'text-gold-600 dark:text-gold-50'}`}>
-                              {preparo.saldo.toFixed(2).replace('.', ',')} <span className="text-sm font-normal text-gray-500">L</span>
+                    <div className="flex items-start gap-1 shrink-0">
+                      <div className="text-right">
+                        {esgotado ? (
+                          <Badge variant="secondary">Esgotado</Badge>
+                        ) : (
+                          <>
+                            <p className="text-xl font-semibold tabular-nums leading-none">
+                              {formatarNumero(preparo.saldo)}
+                              <span className="text-sm font-normal text-muted-foreground ml-1">L</span>
                             </p>
-                            <p className="text-xs text-gray-500">restantes</p>
-                          </div>
-                        </div>
+                            <p className="text-xs text-muted-foreground mt-1">restantes</p>
+                          </>
+                        )}
                       </div>
-
-                      {/* Detalhes de Consumo */}
-                      <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-3 flex justify-between items-center text-xs text-gray-500 dark:text-gray-400 border border-gray-100 dark:border-gray-700/50">
-                        <div>
-                          Inicial: <strong className="text-gray-700 dark:text-gray-300">{preparo.quantidade_preparada} L</strong>
-                        </div>
-                        <div>
-                          Consumido: <strong className="text-gray-700 dark:text-gray-300">{preparo.total_consumido.toFixed(2).replace('.', ',')} L</strong>
-                        </div>
-                      </div>
-                    </Link> {/* Fim do Link principal */}
-
-                    {/* Alertas */}
-
-                    {preparo.saldo <= 0 && (
-                      <div className="absolute inset-0 bg-white/80 dark:bg-gray-900/80 backdrop-blur-[1px] flex items-center justify-center z-20">
-                        <span className="bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 px-3 py-1 rounded-full text-xs font-bold border border-gray-200 dark:border-gray-600 uppercase tracking-widest">Esgotado</span>
-
-                        <Link href={`/editar-preparo/${preparo.id}`} className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 dark:hover:text-white z-30 pointer-events-auto">
-                          <Pencil className="w-4 h-4" />
-                        </Link>
-                        <Link href={`/estoque/${preparo.id}`} className="absolute inset-0 z-20" /> {/* Link invisível pra funcionar o clique no card esgotado */}
-                      </div>
-                    )}
-
+                      <Button variant="ghost" size="icon" asChild aria-label="Editar preparo">
+                        <Link href={`/editar-preparo/${preparo.id}`}><Pencil /></Link>
+                      </Button>
+                    </div>
                   </div>
-                )
-              })}
-          </div>
-        </div>
-      )}
-    </div>
+
+                  <div className="px-4 pb-3 flex items-center justify-between text-xs text-muted-foreground">
+                    <span>Inicial: <span className="text-foreground tabular-nums">{formatarNumero(preparo.quantidade_preparada)} L</span></span>
+                    <span>Consumido: <span className="text-foreground tabular-nums">{formatarNumero(preparo.total_consumido)} L</span></span>
+                  </div>
+
+                  {/* Barra de saldo restante */}
+                  <div className="h-1 bg-muted" role="presentation">
+                    <div className="h-full bg-primary transition-all" style={{ width: `${percentual}%` }} />
+                  </div>
+                </CardContent>
+              </Card>
+            )
+          })
+        )}
+      </div>
+    </>
   )
 }
