@@ -12,7 +12,7 @@ export const metadata: Metadata = {
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
-    statusBarStyle: 'black-translucent',
+    statusBarStyle: 'default',
     title: 'Guardião',
   },
   formatDetection: {
@@ -21,7 +21,10 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  themeColor: '#111827',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#FAFAF9' },
+    { media: '(prefers-color-scheme: dark)', color: '#0C0A09' },
+  ],
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
