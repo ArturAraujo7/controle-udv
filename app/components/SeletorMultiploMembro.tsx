@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react'
+import { toast } from 'sonner'
 import { Check, Search, X, UserPlus } from 'lucide-react'
 import { MembroSimples } from './SeletorMembro'
 import { supabase } from '@/lib/supabaseClient'
@@ -114,7 +115,7 @@ export function SeletorMultiploMembro({
       setNewVisOrigem('')
       setQuery('')
     } catch (error: any) {
-      alert("Erro ao cadastrar visitante: " + error.message)
+      toast.error("Erro ao cadastrar visitante", { description: error.message })
     } finally {
       setIsSaving(false)
     }
@@ -122,10 +123,10 @@ export function SeletorMultiploMembro({
 
   return (
     <div className="relative w-full" ref={dropdownRef}>
-      <div className="min-h-[42px] relative w-full bg-gray-50 dark:bg-gray-900/50 rounded-lg border border-gray-200 dark:border-gray-600 focus-within:border-gold-500 transition-colors flex flex-wrap items-center gap-1.5 p-1.5">
+      <div className="min-h-[42px] relative w-full bg-background rounded-lg border border-input focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50 transition-colors flex flex-wrap items-center gap-1.5 p-1.5">
         
         {value.map((v, idx) => (
-            <div key={idx} className="flex items-center gap-1 bg-gold-100 text-gold-800 dark:bg-gold-900/30 dark:text-gold-300 px-2.5 py-1 rounded-md text-sm font-medium">
+            <div key={idx} className="flex items-center gap-1 bg-secondary text-secondary-foreground px-2.5 py-1 rounded-md text-sm font-medium">
                 {v.nome}
                 <button type="button" onClick={() => handleRemove(idx)} className="hover:text-red-500 opacity-70 hover:opacity-100 transition-opacity">
                     <X className="w-3.5 h-3.5" />
@@ -135,10 +136,10 @@ export function SeletorMultiploMembro({
         
         {value.length < max && (
             <div className="flex-1 min-w-[120px] relative flex items-center">
-                <Search className="w-4 h-4 text-gray-400 absolute left-2 pointer-events-none" />
+                <Search className="w-4 h-4 text-muted-foreground absolute left-2 pointer-events-none" />
                 <input
                     type="text"
-                    className="w-full bg-transparent outline-none pl-8 py-1.5 text-sm font-medium text-gray-900 dark:text-white"
+                    className="w-full bg-transparent outline-none pl-8 py-1.5 text-sm font-medium text-foreground"
                     placeholder={value.length === 0 ? placeholder : "Adicionar outro..."}
                     value={query}
                     onChange={(e) => {
@@ -152,7 +153,7 @@ export function SeletorMultiploMembro({
       </div>
 
       {isOpen && query.length > 0 && (
-        <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg max-h-60 overflow-y-auto overflow-x-hidden flex flex-col">
+        <div className="absolute z-50 w-full mt-1 bg-popover border border-border rounded-lg shadow-lg max-h-60 overflow-y-auto overflow-x-hidden flex flex-col">
           {query.length >= 3 ? (
             <>
               {membrosFiltrados.length > 0 ? (
@@ -167,32 +168,32 @@ export function SeletorMultiploMembro({
                     return (
                       <li
                         key={membro.id}
-                        className={`px-4 py-2 cursor-pointer flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/50 ${isSelected ? 'bg-gold-50 dark:bg-gold-900/10' : ''}`}
+                        className={`px-4 py-2 cursor-pointer flex items-center justify-between hover:bg-accent ${isSelected ? 'bg-accent' : ''}`}
                         onClick={() => handleSelect(membro)}
                       >
                         <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{previewName}</span>
-                        {isSelected && <Check className="w-4 h-4 text-gold-600 dark:text-gold-400" />}
+                        {isSelected && <Check className="w-4 h-4 text-primary" />}
                       </li>
                     )
                   })}
                 </ul>
               ) : (
-                <div className="p-4 text-center text-sm text-gray-500">
+                <div className="p-4 text-center text-sm text-muted-foreground">
                   Nenhum membro ativo encontrado.
                 </div>
               )}
             </>
           ) : (
-            <div className="p-4 text-center text-[10px] text-gray-500 uppercase tracking-widest font-bold">
+            <div className="p-4 text-center text-[10px] text-muted-foreground uppercase tracking-widest font-bold">
               Digite mais {3 - query.length} letras para buscar...
             </div>
           )}
 
           {/* Rodapé de Cadastro Rápido */}
-          <div className="p-2 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 m-1 rounded-lg">
+          <div className="p-2 border-t border-border bg-background m-1 rounded-lg">
             <button
               type="button"
-              className="w-full flex items-center justify-center gap-2 text-sm text-gold-600 hover:text-gold-700 py-2 rounded-lg font-medium transition"
+              className="w-full flex items-center justify-center gap-2 text-sm text-primary hover:text-primary/80 py-2 rounded-lg font-medium transition"
               onClick={handleOpenVisitanteModal}
             >
               <UserPlus className="w-4 h-4" /> Cadastrar "{query}" como Visitante
@@ -204,16 +205,16 @@ export function SeletorMultiploMembro({
       {/* Modal Quick Add Visitante */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200">
-            <div className="p-4 border-b border-gray-100 dark:border-gray-700 font-bold text-gray-900 dark:text-white flex justify-between items-center">
+          <div className="bg-popover rounded-2xl shadow-xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="p-4 border-b border-border font-bold text-foreground flex justify-between items-center">
               <span>Cadastrar Visitante Rápido</span>
-              <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1">
+              <button onClick={() => setIsModalOpen(false)} className="text-muted-foreground hover:text-foreground p-1">
                 <X className="w-5 h-5" />
               </button>
             </div>
             <form onSubmit={handleSaveVisitante} className="p-4 space-y-4">
               <div>
-                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 uppercase tracking-wider">
+                <label className="block text-xs font-medium text-foreground mb-1 uppercase tracking-wider">
                   Nome do Visitante
                 </label>
                 <input
@@ -221,17 +222,17 @@ export function SeletorMultiploMembro({
                   required
                   value={newVisNome}
                   onChange={e => setNewVisNome(e.target.value)}
-                  className="w-full p-2.5 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-900 focus:ring-2 focus:ring-gold-500/50 outline-none text-sm font-medium"
+                  className="w-full p-2.5 border border-border rounded-xl bg-background focus-visible:ring-[3px] focus-visible:ring-ring/50 outline-none text-sm font-medium"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 uppercase tracking-wider">
+                <label className="block text-xs font-medium text-foreground mb-1 uppercase tracking-wider">
                   Grau
                 </label>
                 <select
                   value={newVisGrau}
                   onChange={e => setNewVisGrau(e.target.value)}
-                  className="w-full p-2.5 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-900 focus:ring-2 focus:ring-gold-500/50 outline-none text-sm font-medium"
+                  className="w-full p-2.5 border border-border rounded-xl bg-background focus-visible:ring-[3px] focus-visible:ring-ring/50 outline-none text-sm font-medium"
                 >
                   <option value="Sócio">Sócio</option>
                   <option value="Corpo Instrutivo">Corpo Instrutivo</option>
@@ -240,7 +241,7 @@ export function SeletorMultiploMembro({
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 uppercase tracking-wider">
+                <label className="block text-xs font-medium text-foreground mb-1 uppercase tracking-wider">
                   Núcleo de Origem
                 </label>
                 <input
@@ -248,7 +249,7 @@ export function SeletorMultiploMembro({
                   required
                   value={newVisOrigem}
                   onChange={e => setNewVisOrigem(e.target.value)}
-                  className="w-full p-2.5 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-900 focus:ring-2 focus:ring-gold-500/50 outline-none text-sm font-medium"
+                  className="w-full p-2.5 border border-border rounded-xl bg-background focus-visible:ring-[3px] focus-visible:ring-ring/50 outline-none text-sm font-medium"
                   placeholder="Ex: Núcleo Sede Geral"
                 />
               </div>
@@ -256,7 +257,7 @@ export function SeletorMultiploMembro({
                 <button
                   type="submit"
                   disabled={isSaving}
-                  className="w-full py-2.5 bg-celestial-600 hover:bg-celestial-700 text-white rounded-xl font-bold transition-all shadow-md active:scale-[0.98] disabled:opacity-50"
+                  className="w-full py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl font-bold transition-all shadow-md active:scale-[0.98] disabled:opacity-50"
                 >
                   {isSaving ? 'Salvando...' : 'Salvar Visitante e Selecionar'}
                 </button>

@@ -2,8 +2,20 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { ArrowLeft, Users, GlassWater, Search, X, User, BookOpen, Mic } from 'lucide-react'
+import { Search, Plus, CalendarDays } from 'lucide-react'
+
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
+import { Card, CardContent } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from '@/components/ui/table'
+import {
+  SessionDetailDialog, type ConsumoDetalhado,
+} from '@/components/dashboard/SessionDetailDialog'
+import { formatarData, formatarNumero } from '@/lib/formato'
 
 type Sessao = {
   id: number
@@ -18,23 +30,12 @@ type Sessao = {
   user_name?: string
 }
 
-type ConsumoDetalhado = {
-  id: number
-  quantidade_consumida: number
-  preparos: {
-    data_preparo: string
-    mestre_preparo: string
-    grau: string
-  }
-}
-
 export default function HistoricoSessoes() {
-  const router = useRouter()
   const [sessoes, setSessoes] = useState<Sessao[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
 
-  // Estado para o Modal
+  // Estado do diálogo de detalhes
   const [selectedSession, setSelectedSession] = useState<Sessao | null>(null)
   const [loadingDetails, setLoadingDetails] = useState(false)
   const [sessionConsumos, setSessionConsumos] = useState<ConsumoDetalhado[]>([])
@@ -99,224 +100,125 @@ export default function HistoricoSessoes() {
     setLoadingDetails(false)
   }
 
-  const handleCloseModal = () => {
-    setSelectedSession(null)
-    setSessionConsumos([])
-  }
+  const busca = searchTerm.toLowerCase()
+  const filtradas = sessoes.filter(sessao => {
+    const dirigente = sessao.dirigente?.toLowerCase() || ''
+    const tipo = sessao.tipo?.toLowerCase() || ''
+    const data = formatarData(sessao.data_realizacao).toLowerCase()
+    return dirigente.includes(busca) || tipo.includes(busca) || data.includes(busca)
+  })
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 text-gray-900 dark:text-white transition-colors duration-300">
-      <div className="flex items-center mb-6">
-        <button type="button" onClick={() => router.back()} className="p-2 bg-white dark:bg-gray-800 rounded-full shadow-sm mr-4 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
-          <ArrowLeft className="w-5 h-5 text-gray-500 dark:text-gray-300" />
-        </button>
-        <h1 className="text-xl font-bold">Histórico de Sessões</h1>
+    <>
+      <div className="flex items-center justify-between gap-4 mb-6">
+        <h1 className="text-2xl font-semibold tracking-tight">Sessões</h1>
+        <Button asChild>
+          <Link href="/nova-sessao"><Plus data-slot="icon" /> Nova sessão</Link>
+        </Button>
+      </div>
+
+      <div className="relative mb-4">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+        <Input
+          className="pl-9"
+          placeholder="Buscar por dirigente, tipo ou data…"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          aria-label="Buscar sessão"
+        />
       </div>
 
       {loading ? (
-        <p className="text-center text-gray-500 dark:text-gray-400 mt-10 animate-pulse">Carregando sessões...</p>
+        <div className="space-y-2">
+          {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-14 rounded-lg" />)}
+        </div>
+      ) : filtradas.length === 0 ? (
+        <Card className="border-dashed">
+          <CardContent className="py-10 text-center">
+            <CalendarDays className="w-6 h-6 text-muted-foreground mx-auto mb-2" />
+            <p className="text-sm text-muted-foreground">
+              {sessoes.length === 0
+                ? 'Nenhuma sessão registrada ainda.'
+                : 'Nenhuma sessão corresponde à busca.'}
+            </p>
+            {sessoes.length === 0 && (
+              <Button variant="outline" asChild className="mt-4">
+                <Link href="/nova-sessao">Registrar primeira sessão</Link>
+              </Button>
+            )}
+          </CardContent>
+        </Card>
       ) : (
-        <div className="space-y-4">
-          {/* BARRA DE PESQUISA */}
-          <div className="relative mb-6">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Search className="h-5 w-5 text-gray-400" />
-            </div>
-            <input
-              type="text"
-              className="block w-full pl-10 pr-3 py-3 border border-gray-200 dark:border-gray-700 rounded-xl leading-5 bg-white dark:bg-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gold-500/50 focus:border-gold-500 transition-all text-gray-900 dark:text-white"
-              placeholder="Buscar por dirigente, tipo ou data..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
+        <Card className="overflow-hidden py-0">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Data</TableHead>
+                  <TableHead>Tipo</TableHead>
+                  <TableHead className="hidden sm:table-cell">Dirigente</TableHead>
+                  <TableHead className="text-right hidden sm:table-cell">Participantes</TableHead>
+                  <TableHead className="text-right">Consumo</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filtradas.map(sessao => {
+                  const ehHistorica = sessao.quantidade_participantes === 0
+                  return (
+                    <TableRow
+                      key={sessao.id}
+                      onClick={() => handleOpenModal(sessao)}
+                      tabIndex={0}
+                      role="button"
+                      onKeyDown={e => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          handleOpenModal(sessao)
+                        }
+                      }}
+                      className="cursor-pointer"
+                    >
+                      <TableCell className="tabular-nums whitespace-nowrap">
+                        {formatarData(sessao.data_realizacao)}
+                        <span className="block sm:hidden text-xs text-muted-foreground mt-0.5 font-normal truncate max-w-[8rem]">
+                          {sessao.dirigente}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={ehHistorica ? 'outline' : 'secondary'}>
+                          {ehHistorica ? 'Histórica' : sessao.tipo}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="hidden sm:table-cell text-muted-foreground">
+                        {sessao.dirigente || '—'}
+                      </TableCell>
+                      <TableCell className="hidden sm:table-cell text-right tabular-nums">
+                        {ehHistorica ? '—' : sessao.quantidade_participantes}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums font-medium whitespace-nowrap">
+                        {ehHistorica ? '—' : `${formatarNumero(sessao.quantidade_consumida)} L`}
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
+              </TableBody>
+            </Table>
           </div>
-
-          {sessoes.filter(sessao => {
-            const searchLower = searchTerm.toLowerCase()
-            const dirigente = sessao.dirigente?.toLowerCase() || ''
-            const tipo = sessao.tipo?.toLowerCase() || ''
-            const data = new Date(sessao.data_realizacao).toLocaleDateString('pt-BR').toLowerCase()
-            return dirigente.includes(searchLower) || tipo.includes(searchLower) || data.includes(searchLower)
-          }).map(sessao => (
-            <div
-              key={sessao.id}
-              onClick={() => handleOpenModal(sessao)}
-              className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm cursor-pointer hover:shadow-md hover:border-celestial-300 dark:hover:border-celestial-700 transition-all"
-            >
-              <div className="flex justify-between items-start mb-2">
-                <div>
-                  <span className="text-xs font-bold text-gold-600 dark:text-gold-400 bg-gold-100 dark:bg-gold-900/30 px-2 py-1 rounded-md uppercase tracking-wide">
-                    {sessao.tipo}
-                  </span>
-                  <h3 className="font-bold text-gray-900 dark:text-white mt-2 text-lg">
-                    {new Date(sessao.data_realizacao).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
-                  </h3>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Dirigente: {sessao.dirigente}</p>
-                  {sessao.user_id && (
-                    <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1 flex items-center gap-1" title={`ID: ${sessao.user_id}`}>
-                      <Users className="w-3 h-3" /> {sessao.user_name || sessao.user_id.slice(0, 8) + '...'}
-                    </p>
-                  )}
-                </div>
-                <div className="text-right">
-                  <span className="p-2 text-gray-400 dark:text-gray-500">
-                    <ArrowLeft className="w-5 h-5 rotate-180" />
-                  </span>
-                </div>
-              </div>
-
-              <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-                {sessao.quantidade_participantes === 0 ? (
-                  <div className="flex items-center justify-center gap-2 text-amber-600 dark:text-amber-500 bg-amber-50 dark:bg-amber-900/10 p-2 rounded-lg border border-amber-100 dark:border-amber-900/30">
-                    <BookOpen className="w-4 h-4" />
-                    <span className="text-xs font-bold uppercase tracking-wider">Registro Histórico</span>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="flex items-center gap-2">
-                      <Users className="w-4 h-4 text-celestial-500 dark:text-celestial-400" />
-                      <span className="text-sm font-medium text-gray-600 dark:text-gray-300">{sessao.quantidade_participantes} pessoas</span>
-                    </div>
-                    <div className="flex items-center gap-2 justify-end">
-                      <GlassWater className="w-4 h-4 text-gold-600 dark:text-gold-500" />
-                      <span className="text-sm font-bold text-gray-900 dark:text-white">{Number(sessao.quantidade_consumida).toFixed(2).replace('.', ',')} L</span>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
+        </Card>
       )}
 
-      {/* MODAL DE DETALHES */}
-      {selectedSession && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 dark:bg-black/80 backdrop-blur-sm animate-in fade-in duration-200" onClick={handleCloseModal}>
-          <div className="bg-white dark:bg-gray-800 w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
-
-            {/* Header do Modal */}
-            <div className="bg-gray-50 dark:bg-gray-900/50 p-6 border-b border-gray-100 dark:border-gray-700 flex justify-between items-start">
-              <div>
-                <p className="text-xs font-bold text-celestial-600 dark:text-celestial-400 uppercase tracking-widest mb-1">{selectedSession.tipo}</p>
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-                  {new Date(selectedSession.data_realizacao).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
-                </h2>
-                <div className="flex items-center gap-2 mt-2 text-sm text-gray-500 dark:text-gray-400">
-                  <Users className="w-4 h-4" />
-                  {selectedSession.quantidade_participantes === 0 ? (
-                    <span>Registro Histórico (S/ Participantes)</span>
-                  ) : (
-                    <span>{selectedSession.quantidade_participantes} participantes</span>
-                  )}
-                </div>
-              </div>
-              <button onClick={handleCloseModal} className="p-2 bg-gray-200 dark:bg-gray-700 rounded-full hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
-                <X className="w-5 h-5 text-gray-600 dark:text-gray-300" />
-              </button>
-            </div>
-
-            {/* Corpo do Modal */}
-            <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
-
-              {/* Grid de Pessoas */}
-              <div className="grid grid-cols-1 gap-4">
-                <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700/30 rounded-xl border border-gray-100 dark:border-gray-700/50">
-                  <div className="p-2 bg-celestial-100 dark:bg-celestial-900/30 rounded-lg text-celestial-600 dark:text-celestial-400">
-                    <User className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 uppercase">Dirigente</p>
-                    <p className="font-medium text-gray-900 dark:text-white">{selectedSession.dirigente || '-'}</p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700/30 rounded-xl border border-gray-100 dark:border-gray-700/50">
-                    <div className="p-2 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg text-yellow-600 dark:text-yellow-400">
-                      <BookOpen className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 uppercase">Leitor</p>
-                      <p className="font-medium text-gray-900 dark:text-white text-sm">{selectedSession.leitor_documentos || '-'}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700/30 rounded-xl border border-gray-100 dark:border-gray-700/50">
-                    <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg text-purple-600 dark:text-purple-400">
-                      <Mic className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 uppercase">Explanação</p>
-                      <p className="font-medium text-gray-900 dark:text-white text-sm">{selectedSession.explanador || '-'}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Lista de Consumo */}
-              {selectedSession.quantidade_participantes === 0 ? (
-                <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 p-6 rounded-xl text-center">
-                  <BookOpen className="w-8 h-8 text-amber-500 dark:text-amber-600 mx-auto mb-3" />
-                  <h3 className="font-bold text-amber-800 dark:text-amber-400 mb-1">Registro de Memória Institucional</h3>
-                  <p className="text-sm text-amber-700/80 dark:text-amber-500/80">
-                    Sessão histórica inserida sem registro quantitativo de participantes ou consumo de vegetal.
-                  </p>
-                </div>
-              ) : (
-                <div>
-                  <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-3">
-                    <GlassWater className="w-5 h-5 text-gold-600 dark:text-gold-500" />
-                    O que foi servido
-                  </h3>
-
-                  {loadingDetails ? (
-                    <div className="space-y-3">
-                      <div className="h-16 bg-gray-100 dark:bg-gray-700 rounded-xl animate-pulse"></div>
-                      <div className="h-16 bg-gray-100 dark:bg-gray-700 rounded-xl animate-pulse"></div>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {sessionConsumos.length > 0 ? (
-                        sessionConsumos.map((item) => (
-                          <div key={item.id} className="bg-gold-50 dark:bg-gold-900/10 border border-gold-100 dark:border-gold-900/30 p-4 rounded-xl flex justify-between items-center">
-                            <div>
-                              <p className="font-bold text-gray-900 dark:text-white">
-                                {item.preparos?.mestre_preparo || 'Mestre Desconhecido'}
-                              </p>
-                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                                {item.preparos?.data_preparo ? new Date(item.preparos.data_preparo).toLocaleDateString('pt-BR') : '-'} • {item.preparos?.grau || '-'}
-                              </p>
-                            </div>
-                            <div className="text-right">
-                              <span className="block text-xl font-bold text-gold-700 dark:text-gold-400">
-                                {Number(item.quantidade_consumida).toFixed(2).replace('.', ',')} <span className="text-sm font-normal">L</span>
-                              </span>
-                            </div>
-                          </div>
-                        ))
-                      ) : (
-                        <p className="text-center text-gray-400 italic py-4">Nenhum registro de consumo encontrado.</p>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Botão de Editar */}
-              <div className="pt-2">
-                <Link href={selectedSession.quantidade_participantes === 0 ? `/editar-sessao-historica/${selectedSession.id}` : `/editar-sessao/${selectedSession.id}`} className="block w-full text-center py-3 rounded-xl bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-medium transition-colors">
-                  Editar Dados da Sessão
-                </Link>
-                {selectedSession.user_id && (
-                  <p className="text-[10px] text-center text-gray-400 dark:text-gray-500 mt-4 flex items-center justify-center gap-1">
-                    <User className="w-3 h-3" /> Registrado por: <span className="font-mono">{selectedSession.user_name || selectedSession.user_id}</span>
-                  </p>
-                )}
-              </div>
-
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+      <SessionDetailDialog
+        sessao={selectedSession}
+        consumos={sessionConsumos}
+        loading={loadingDetails}
+        registradoPor={selectedSession?.user_name}
+        onOpenChange={aberto => {
+          if (!aberto) {
+            setSelectedSession(null)
+            setSessionConsumos([])
+          }
+        }}
+      />
+    </>
   )
 }

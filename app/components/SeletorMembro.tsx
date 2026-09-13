@@ -1,4 +1,5 @@
 'use client'
+import { toast } from 'sonner'
 
 import { useState, useEffect, useRef } from 'react'
 import { Check, ChevronsUpDown, UserPlus, Search, X } from 'lucide-react'
@@ -109,7 +110,7 @@ export function SeletorMembro({ placeholder = "Selecione ou digite...", value, o
       setNewVisNome('')
       setNewVisOrigem('')
     } catch (error: any) {
-      alert("Erro ao cadastrar visitante: " + error.message)
+      toast.error("Erro ao cadastrar visitante", { description: error.message })
     } finally {
       setIsSaving(false)
     }
@@ -119,12 +120,12 @@ export function SeletorMembro({ placeholder = "Selecione ou digite...", value, o
     <div className="relative w-full" ref={wrapperRef}>
       {/* Combobox Trigger */}
       <div 
-        className="flex items-center w-full bg-transparent border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-900/50 cursor-text group focus-within:border-gold-500 focus-within:ring-1 focus-within:ring-gold-500 transition-colors"
+        className="flex items-center w-full bg-transparent border border-input rounded-lg bg-background cursor-text group focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50 transition-colors"
         onClick={() => setIsOpen(true)}
       >
         <input
           type="text"
-          className="w-full bg-transparent outline-none py-2 px-3 text-sm text-gray-900 dark:text-white placeholder-gray-400 font-medium"
+          className="w-full bg-transparent outline-none py-2 px-3 text-sm text-foreground placeholder:text-muted-foreground font-medium"
           placeholder={placeholder}
           value={isOpen ? search : getDisplayValue()}
           onChange={(e) => {
@@ -134,14 +135,14 @@ export function SeletorMembro({ placeholder = "Selecione ou digite...", value, o
             onChange({ id: null, nome: e.target.value }) 
           }}
         />
-        <div className="p-2 text-gray-400">
+        <div className="p-2 text-muted-foreground">
           <Search className="w-4 h-4" />
         </div>
       </div>
 
       {/* Dropdown Menu */}
       {isOpen && search.length > 0 && (
-        <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-xl rounded-xl max-h-60 overflow-y-auto overflow-x-hidden flex flex-col">
+        <div className="absolute z-50 w-full mt-1 bg-popover border border-border shadow-xl rounded-xl max-h-60 overflow-y-auto overflow-x-hidden flex flex-col">
           {search.length >= 3 ? (
             <>
               {filteredMembros.length > 0 ? (
@@ -150,40 +151,40 @@ export function SeletorMembro({ placeholder = "Selecione ou digite...", value, o
                     <div
                       key={m.id}
                       onClick={() => handleSelect(m)}
-                      className={`px-3 py-2 cursor-pointer text-sm flex items-center justify-between hover:bg-gold-50 dark:hover:bg-gray-700 transition-colors ${value.id === m.id ? 'bg-gold-100/50 dark:bg-gold-900/20 text-gold-700 dark:text-gold-400 font-semibold' : 'text-gray-700 dark:text-gray-200'}`}
+                      className={`px-3 py-2 cursor-pointer text-sm flex items-center justify-between hover:bg-accent transition-colors ${value.id === m.id ? 'bg-accent text-accent-foreground font-medium' : 'text-foreground'}`}
                     >
                       <div className="flex flex-col truncate">
                         <span className="truncate">{formatarNome(m.nome_exibicao || m.nome, m.grau)}</span>
-                        <div className="flex gap-2 items-center text-[10px] text-gray-500 dark:text-gray-400 font-medium mt-0.5">
+                        <div className="flex gap-2 items-center text-[10px] text-muted-foreground font-medium mt-0.5">
                           <span>{m.grau}</span>
-                          <span className="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600"></span>
+                          <span className="w-1 h-1 rounded-full bg-border"></span>
                           <span className={m.tipo_vinculo === 'Local' ? 'text-green-600 dark:text-green-500' : 'text-purple-600 dark:text-purple-400'}>
                             {m.tipo_vinculo} {m.nucleo_origem ? `- ${m.nucleo_origem}` : ''}
                           </span>
                         </div>
                       </div>
-                      {value.id === m.id && <Check className="w-4 h-4 text-gold-600 dark:text-gold-500 flex-shrink-0 ml-2" />}
+                      {value.id === m.id && <Check className="w-4 h-4 text-primary flex-shrink-0 ml-2" />}
                     </div>
                   ))}
                 </div>
               ) : (
-                <div className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 text-center">
+                <div className="px-4 py-3 text-sm text-muted-foreground text-center">
                   Nenhum membro encontrado.
                 </div>
               )}
             </>
           ) : (
-            <div className="p-4 text-center text-[10px] text-gray-500 uppercase tracking-widest font-bold">
+            <div className="p-4 text-center text-[10px] text-muted-foreground uppercase tracking-widest font-bold">
                Digite mais {3 - search.length} letras para buscar...
             </div>
           )}
 
           {/* Quick Add Button */}
-          <div className="p-2 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 m-1 rounded-lg">
+          <div className="p-2 border-t border-border bg-background m-1 rounded-lg">
             <button
               type="button"
               onClick={handleOpenVisitanteModal}
-              className="w-full flex items-center justify-center gap-2 text-sm font-medium text-celestial-600 dark:text-celestial-400 hover:text-celestial-700 dark:hover:text-celestial-300 py-1.5 transition-colors"
+              className="w-full flex items-center justify-center gap-2 text-sm font-medium text-primary hover:text-primary/80 py-1.5 transition-colors"
             >
               <UserPlus className="w-4 h-4" />
               Adicionar "{search}" como Visitante
@@ -195,16 +196,16 @@ export function SeletorMembro({ placeholder = "Selecione ou digite...", value, o
       {/* Modal Quick Add Visitante */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200">
-            <div className="p-4 border-b border-gray-100 dark:border-gray-700 font-bold text-gray-900 dark:text-white flex justify-between items-center">
+          <div className="bg-popover rounded-2xl shadow-xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="p-4 border-b border-border font-bold text-foreground flex justify-between items-center">
               <span>Cadastrar Visitante Rápido</span>
-              <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1">
+              <button onClick={() => setIsModalOpen(false)} className="text-muted-foreground hover:text-foreground p-1">
                 <X className="w-5 h-5" />
               </button>
             </div>
             <form onSubmit={handleSaveVisitante} className="p-4 space-y-4">
               <div>
-                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 uppercase tracking-wider">
+                <label className="block text-xs font-medium text-foreground mb-1 uppercase tracking-wider">
                   Nome do Visitante
                 </label>
                 <input
@@ -212,17 +213,17 @@ export function SeletorMembro({ placeholder = "Selecione ou digite...", value, o
                   required
                   value={newVisNome}
                   onChange={e => setNewVisNome(e.target.value)}
-                  className="w-full p-2.5 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-900 focus:ring-2 focus:ring-gold-500/50 outline-none text-sm font-medium"
+                  className="w-full p-2.5 border border-border rounded-xl bg-background focus-visible:ring-[3px] focus-visible:ring-ring/50 outline-none text-sm font-medium"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 uppercase tracking-wider">
+                <label className="block text-xs font-medium text-foreground mb-1 uppercase tracking-wider">
                   Grau
                 </label>
                 <select
                   value={newVisGrau}
                   onChange={e => setNewVisGrau(e.target.value)}
-                  className="w-full p-2.5 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-900 focus:ring-2 focus:ring-gold-500/50 outline-none text-sm font-medium"
+                  className="w-full p-2.5 border border-border rounded-xl bg-background focus-visible:ring-[3px] focus-visible:ring-ring/50 outline-none text-sm font-medium"
                 >
                   <option value="Sócio">Sócio</option>
                   <option value="Corpo Instrutivo">Corpo Instrutivo</option>
@@ -231,7 +232,7 @@ export function SeletorMembro({ placeholder = "Selecione ou digite...", value, o
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 uppercase tracking-wider">
+                <label className="block text-xs font-medium text-foreground mb-1 uppercase tracking-wider">
                   Núcleo de Origem
                 </label>
                 <input
@@ -239,7 +240,7 @@ export function SeletorMembro({ placeholder = "Selecione ou digite...", value, o
                   required
                   value={newVisOrigem}
                   onChange={e => setNewVisOrigem(e.target.value)}
-                  className="w-full p-2.5 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-900 focus:ring-2 focus:ring-gold-500/50 outline-none text-sm font-medium"
+                  className="w-full p-2.5 border border-border rounded-xl bg-background focus-visible:ring-[3px] focus-visible:ring-ring/50 outline-none text-sm font-medium"
                   placeholder="Ex: Núcleo Sede Geral"
                 />
               </div>
@@ -247,7 +248,7 @@ export function SeletorMembro({ placeholder = "Selecione ou digite...", value, o
                 <button
                   type="submit"
                   disabled={isSaving}
-                  className="w-full py-2.5 bg-celestial-600 hover:bg-celestial-700 text-white rounded-xl font-bold transition-all shadow-md active:scale-[0.98] disabled:opacity-50"
+                  className="w-full py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl font-bold transition-all shadow-md active:scale-[0.98] disabled:opacity-50"
                 >
                   {isSaving ? 'Salvando...' : 'Salvar Visitante e Selecionar'}
                 </button>
