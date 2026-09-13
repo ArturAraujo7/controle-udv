@@ -28,6 +28,9 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
 
+  // Rotas acessíveis sem sessão (a vitrine do design system só tem dados fictícios)
+  const isPublicRoute = pathname === '/login' || pathname === '/design-system'
+
   const fetchProfile = useCallback(async (userId: string) => {
     try {
       const { data, error } = await supabase
@@ -68,7 +71,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
 
       setLoading(false)
       
-      if (!session && pathname !== '/login') {
+      if (!session && !isPublicRoute) {
         router.push('/login')
       }
     }
@@ -91,7 +94,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
         }
       } else {
         setProfile(null)
-        if (pathname !== '/login') {
+        if (!isPublicRoute) {
           router.push('/login')
         }
       }
@@ -101,9 +104,9 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
       mounted = false
       subscription.unsubscribe()
     }
-  }, [router, pathname, fetchProfile])
+  }, [router, pathname, fetchProfile, isPublicRoute])
 
-  if (loading && pathname !== '/login') {
+  if (loading && !isPublicRoute) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center transition-colors duration-300">
         <div className="w-8 h-8 border-4 border-gold-600 border-t-transparent rounded-full animate-spin"></div>
