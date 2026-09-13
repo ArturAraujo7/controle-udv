@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { MessageCircle, X, Send, Bot, User as UserIcon } from 'lucide-react'
+import { X, Send, Bot, User as UserIcon } from 'lucide-react'
 import { useAuth } from '@/components/AuthProvider'
 
 type Message = {
@@ -108,7 +108,7 @@ export function AIChatWidget() {
       )}
 
       <div className={`fixed z-50 flex flex-col items-end transition-all pb-safe-bottom
-          ${isOpen ? 'bottom-20 right-4 sm:bottom-24 sm:right-6' : 'bottom-6 right-6'}
+          ${isOpen ? 'bottom-24 right-4 md:bottom-24 md:right-6' : 'bottom-20 right-6 md:bottom-6'}
         `}>
         
         {/* Chat Window */}
@@ -119,12 +119,12 @@ export function AIChatWidget() {
           `}
         >
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-celestial-600 to-celestial-700 dark:from-celestial-800 dark:to-celestial-900 text-white shadow-sm flex-shrink-0">
+          <div className="flex items-center justify-between px-4 py-3 bg-primary text-primary-foreground flex-shrink-0">
             <div className="flex items-center gap-2">
-              <Bot className="w-5 h-5 text-celestial-100" />
+              <Bot className="w-5 h-5" />
               <div>
-                <h3 className="font-bold text-sm leading-tight">Assistente do Núcleo</h3>
-                <p className="text-[10px] text-celestial-200">Alimentado por IA</p>
+                <h3 className="font-medium text-sm leading-tight">Assistente do Núcleo</h3>
+                <p className="text-[10px] opacity-80">Alimentado por IA</p>
               </div>
             </div>
             <button
@@ -144,12 +144,12 @@ export function AIChatWidget() {
               return (
                 <div key={idx} className={`flex gap-3 max-w-[85%] ${isUser ? 'ml-auto flex-row-reverse' : ''}`}>
                   <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center
-                    ${isUser ? 'bg-gold-500 text-white' : 'bg-celestial-100 dark:bg-celestial-900/40 text-celestial-600 dark:text-celestial-400'}`}>
+                    ${isUser ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
                     {isUser ? <UserIcon className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
                   </div>
                   <div className={`px-4 py-3 rounded-2xl text-sm shadow-sm whitespace-pre-wrap ${
                     isUser 
-                      ? 'bg-gold-500 text-white rounded-tr-none' 
+                      ? 'bg-primary text-primary-foreground rounded-tr-none'
                       : 'bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 border border-gray-100 dark:border-gray-800 rounded-tl-none'
                   }`}>
                     {msg.text}
@@ -161,7 +161,7 @@ export function AIChatWidget() {
             {/* Indicador de carregando antes da stream começar */}
             {isLoading && messages[messages.length - 1].text === '' && (
                <div className="flex gap-3 max-w-[85%]">
-                 <div className="flex-shrink-0 w-8 h-8 rounded-full bg-celestial-100 dark:bg-celestial-900/40 flex items-center justify-center text-celestial-600 dark:text-celestial-400">
+                 <div className="flex-shrink-0 w-8 h-8 rounded-full bg-muted flex items-center justify-center text-muted-foreground">
                    <Bot className="w-4 h-4" />
                  </div>
                  <div className="px-4 py-3 rounded-2xl text-sm shadow-sm bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-800 rounded-tl-none flex items-center gap-1.5">
@@ -176,7 +176,7 @@ export function AIChatWidget() {
 
           {/* Input Area */}
           <div className="p-3 bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800 flex-shrink-0">
-            <div className="flex items-end gap-2 bg-gray-50 dark:bg-gray-950 p-1.5 rounded-xl border border-gray-200 dark:border-gray-800 focus-within:ring-2 focus-within:ring-celestial-500/50 transition-all">
+            <div className="flex items-end gap-2 bg-gray-50 dark:bg-gray-950 p-1.5 rounded-xl border border-gray-200 dark:border-gray-800 focus-within:ring-2 focus-within:ring-ring/50 transition-all">
               <textarea
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
@@ -194,7 +194,7 @@ export function AIChatWidget() {
               <button
                 onClick={handleSend}
                 disabled={!inputValue.trim() || isLoading}
-                className="flex-shrink-0 p-2.5 bg-celestial-600 dark:bg-celestial-700 text-white rounded-lg hover:bg-celestial-700 dark:hover:bg-celestial-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="flex-shrink-0 p-2.5 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 <Send className="w-4 h-4" />
               </button>
@@ -211,12 +211,11 @@ export function AIChatWidget() {
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 z-40 bg-celestial-600 hover:bg-celestial-700 dark:bg-celestial-700 dark:hover:bg-celestial-600 text-white px-5 py-3 rounded-full shadow-xl shadow-celestial-900/20 active:scale-95 transition-all group flex items-center justify-center gap-2 border-2 border-white/20"
+          className="fixed bottom-20 md:bottom-6 right-6 z-40 bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2.5 rounded-full shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2"
           title="Falar com Assistente IA"
         >
-          <Bot className="w-5 h-5 group-hover:scale-110 transition-transform" />
-          <span className="font-semibold text-sm">Pergunte ao Guardião</span>
-          <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 border-2 border-white dark:border-gray-900 rounded-full"></span>
+          <Bot className="w-4 h-4" />
+          <span className="font-medium text-sm">Pergunte ao Guardião</span>
         </button>
       )}
     </>
