@@ -3,6 +3,10 @@ import { Inter } from 'next/font/google'
 import './globals.css'
 import { ThemeProvider } from './providers'
 import AuthProvider from '@/components/AuthProvider'
+import { ChatProvider } from '@/components/AIChatWidget'
+import { AppShell } from '@/components/layout/AppShell'
+import { Toaster } from '@/components/ui/sonner'
+import { cn } from '@/lib/utils'
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-sans' })
 
@@ -29,12 +33,9 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
+  // Permite usar env(safe-area-inset-*) na barra flutuante e nos rodapés fixos
+  viewportFit: 'cover',
 }
-
-import { AIChatWidget } from '@/components/AIChatWidget'
-import { AppShell } from '@/components/layout/AppShell'
-import { Toaster } from '@/components/ui/sonner'
-import { cn } from '@/lib/utils'
 
 export default function RootLayout({
   children,
@@ -46,8 +47,9 @@ export default function RootLayout({
       <body className="bg-background text-foreground antialiased">
         <ThemeProvider>
           <AuthProvider>
-            <AppShell>{children}</AppShell>
-            <AIChatWidget />
+            <ChatProvider>
+              <AppShell>{children}</AppShell>
+            </ChatProvider>
             <Toaster richColors position="top-center" />
           </AuthProvider>
         </ThemeProvider>

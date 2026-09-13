@@ -1,20 +1,44 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
-import { X, Send, Bot, User as UserIcon } from 'lucide-react'
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react'
+import { Bot, Send, Sparkles, User as UserIcon, X } from 'lucide-react'
+
 import { useAuth } from '@/components/AuthProvider'
+import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 
 type Message = {
   role: 'user' | 'model'
   text: string
 }
 
-export function AIChatWidget() {
+type ChatContexto = { abrir: () => void; fechar: () => void }
+
+const ChatContext = createContext<ChatContexto>({ abrir: () => {}, fechar: () => {} })
+
+/** Abre o assistente de qualquer lugar (ex.: folha do botão "+"). */
+export const useChat = () => useContext(ChatContext)
+
+export function ChatProvider({ children }: { children: React.ReactNode }) {
+  const [aberto, setAberto] = useState(false)
+  const valor = useMemo(() => ({ abrir: () => setAberto(true), fechar: () => setAberto(false) }), [])
+
+  return (
+    <ChatContext.Provider value={valor}>
+      {children}
+      <AIChatWidget aberto={aberto} onAbertoChange={setAberto} />
+    </ChatContext.Provider>
+  )
+}
+
+const BOAS_VINDAS: Message = {
+  role: 'model',
+  text: 'Olá! Sou o assistente do Guardião. Pergunte sobre sessões, preparos, estoque e atividades do núcleo.',
+}
+
+function AIChatWidget({ aberto, onAbertoChange }: { aberto: boolean; onAbertoChange: (aberto: boolean) => void }) {
   const { session } = useAuth()
-  const [isOpen, setIsOpen] = useState(false)
-  const [messages, setMessages] = useState<Message[]>([
-    { role: 'model', text: 'Olá! Sou o Assistente de Inteligência Artificial do Guardião. Você pode me perguntar informações sobre as sessões, preparos e atividades do Núcleo. Como posso ajudar?' }
-  ])
+  const [messages, setMessages] = useState<Message[]>([BOAS_VINDAS])
   const [inputValue, setInputValue] = useState('')
   const [isLoading, setIsLoading] = useState(false)
 
@@ -23,46 +47,45 @@ export function AIChatWidget() {
   // Rolagem automática para a última mensagem
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
+  }, [messages, aberto])
+
+  // Esc fecha
+  useEffect(() => {
+    if (!aberto) return
+    const aoTeclar = (e: KeyboardEvent) => { if (e.key === 'Escape') onAbertoChange(false) }
+    window.addEventListener('keydown', aoTeclar)
+    return () => window.removeEventListener('keydown', aoTeclar)
+  }, [aberto, onAbertoChange])
+
+  const atualizarUltima = (text: string) => {
+    setMessages(prev => [...prev.slice(0, -1), { role: 'model', text }])
+  }
 
   const handleSend = async () => {
     if (!inputValue.trim() || !session) return
 
-    const newMessages: Message[] = [
-      ...messages,
-      { role: 'user', text: inputValue.trim() }
-    ]
+    const newMessages: Message[] = [...messages, { role: 'user', text: inputValue.trim() }]
 
-    setMessages(newMessages)
+    // Mensagem vazia que será preenchida via stream
+    setMessages([...newMessages, { role: 'model', text: '' }])
     setInputValue('')
     setIsLoading(true)
 
-    // Adiciona uma mensagem vazia que será preenchida via stream
-    setMessages((prev) => [...prev, { role: 'model', text: '' }])
-
     try {
-      // Pega as últimas 10 mensagens (para não estourar contexto do prompt)
-      const historicMessages = newMessages.slice(-10).map(m => ({
-        role: m.role,
-        text: m.text
-      }))
+      // Últimas 10 mensagens, para não estourar o contexto do prompt
+      const historicMessages = newMessages.slice(-10).map(m => ({ role: m.role, text: m.text }))
 
       const response = await fetch('/api/ia/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`
+          Authorization: `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify({ messages: historicMessages })
+        body: JSON.stringify({ messages: historicMessages }),
       })
 
-      if (!response.ok) {
-        throw new Error('Erro na requisição')
-      }
-
-      if (!response.body) {
-        throw new Error('Nenhum body retornado')
-      }
+      if (!response.ok) throw new Error('Erro na requisição')
+      if (!response.body) throw new Error('Nenhum body retornado')
 
       const reader = response.body.getReader()
       const decoder = new TextDecoder()
@@ -71,151 +94,141 @@ export function AIChatWidget() {
       while (true) {
         const { done, value } = await reader.read()
         if (done) break
-
-        const chunk = decoder.decode(value, { stream: true })
-        streamText += chunk
-
-        // Atualiza a última mensagem dinamicamente (efeito de digitação real)
-        setMessages((prev) => {
-          const updated = [...prev]
-          updated[updated.length - 1].text = streamText
-          return updated
-        })
+        streamText += decoder.decode(value, { stream: true })
+        atualizarUltima(streamText)
       }
     } catch (error) {
       console.error('Chat Error:', error)
-      setMessages((prev) => {
-        const updated = [...prev]
-        updated[updated.length - 1].text = 'Houve um problema ao conectar com a IA. Tente novamente mais tarde.'
-        return updated
-      })
+      atualizarUltima('Houve um problema ao conectar com a IA. Tente novamente mais tarde.')
     } finally {
       setIsLoading(false)
     }
   }
 
-  // Se não estiver logado, não renderiza o chat widget
   if (!session) return null
+
+  const esperandoStream = isLoading && messages[messages.length - 1]?.text === ''
 
   return (
     <>
-      {/* Background Overlay */}
-      {isOpen && (
-        <div 
-          className="fixed inset-0 bg-black/20 dark:bg-black/60 backdrop-blur-sm z-40 transition-opacity cursor-pointer"
-          onClick={() => setIsOpen(false)}
-        />
-      )}
+      {aberto && (
+        <>
+          <div
+            className="fixed inset-0 z-50 bg-black/20 backdrop-blur-sm animate-in fade-in dark:bg-black/60"
+            onClick={() => onAbertoChange(false)}
+            aria-hidden="true"
+          />
 
-      <div className={`fixed z-50 flex flex-col items-end transition-all pb-safe-bottom
-          ${isOpen ? 'bottom-24 right-4 md:bottom-24 md:right-6' : 'bottom-20 right-6 md:bottom-6'}
-        `}>
-        
-        {/* Chat Window */}
-        <div
-          className={`flex flex-col bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800 
-            shadow-2xl overflow-hidden transition-all duration-300 origin-bottom-right
-            ${isOpen ? 'scale-100 opacity-100 w-[calc(100vw-2rem)] h-[65vh] sm:w-[380px] sm:h-[500px] rounded-2xl border' : 'scale-0 opacity-0 w-0 h-0'}
-          `}
-        >
-          {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 bg-primary text-primary-foreground flex-shrink-0">
-            <div className="flex items-center gap-2">
-              <Bot className="w-5 h-5" />
-              <div>
-                <h3 className="font-medium text-sm leading-tight">Assistente do Núcleo</h3>
-                <p className="text-[10px] opacity-80">Alimentado por IA</p>
-              </div>
-            </div>
-            <button
-              onClick={() => setIsOpen(false)}
-              className="p-1 rounded-full hover:bg-white/20 transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-
-          {/* Messages Area */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 dark:bg-gray-950">
-            {messages.map((msg, idx) => {
-              if (msg.role === 'model' && msg.text === '' && isLoading && idx === messages.length - 1) return null;
-              
-              const isUser = msg.role === 'user'
-              return (
-                <div key={idx} className={`flex gap-3 max-w-[85%] ${isUser ? 'ml-auto flex-row-reverse' : ''}`}>
-                  <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center
-                    ${isUser ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
-                    {isUser ? <UserIcon className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
-                  </div>
-                  <div className={`px-4 py-3 rounded-2xl text-sm shadow-sm whitespace-pre-wrap ${
-                    isUser 
-                      ? 'bg-primary text-primary-foreground rounded-tr-none'
-                      : 'bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 border border-gray-100 dark:border-gray-800 rounded-tl-none'
-                  }`}>
-                    {msg.text}
-                  </div>
+          <div
+            role="dialog"
+            aria-label="Assistente do Guardião"
+            className="fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+0.75rem)] z-50 flex h-[72dvh] flex-col overflow-hidden rounded-2xl border bg-card shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-200 sm:inset-x-auto sm:right-6 sm:bottom-6 sm:h-[520px] sm:w-[380px]"
+          >
+            <div className="flex shrink-0 items-center justify-between bg-primary px-4 py-3 text-primary-foreground">
+              <div className="flex items-center gap-2">
+                <Bot className="size-5" />
+                <div>
+                  <h3 className="text-sm font-medium leading-tight">Assistente do Guardião</h3>
+                  <p className="text-[10px] opacity-80">Responde com base nos dados do núcleo</p>
                 </div>
-              )
-            })}
-            
-            {/* Indicador de carregando antes da stream começar */}
-            {isLoading && messages[messages.length - 1].text === '' && (
-               <div className="flex gap-3 max-w-[85%]">
-                 <div className="flex-shrink-0 w-8 h-8 rounded-full bg-muted flex items-center justify-center text-muted-foreground">
-                   <Bot className="w-4 h-4" />
-                 </div>
-                 <div className="px-4 py-3 rounded-2xl text-sm shadow-sm bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-800 rounded-tl-none flex items-center gap-1.5">
-                   <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce"></div>
-                   <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.15s' }}></div>
-                   <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.3s' }}></div>
-                 </div>
-               </div>
-            )}
-            <div ref={messagesEndRef} />
-          </div>
-
-          {/* Input Area */}
-          <div className="p-3 bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800 flex-shrink-0">
-            <div className="flex items-end gap-2 bg-gray-50 dark:bg-gray-950 p-1.5 rounded-xl border border-gray-200 dark:border-gray-800 focus-within:ring-2 focus-within:ring-ring/50 transition-all">
-              <textarea
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault()
-                    handleSend()
-                  }
-                }}
-                placeholder="Pergunte algo ao Assistente..."
-                className="w-full max-h-32 min-h-[40px] bg-transparent text-sm text-gray-900 dark:text-gray-100 resize-none outline-none py-2.5 px-3"
-                rows={1}
-                disabled={isLoading}
-              />
+              </div>
               <button
-                onClick={handleSend}
-                disabled={!inputValue.trim() || isLoading}
-                className="flex-shrink-0 p-2.5 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                type="button"
+                onClick={() => onAbertoChange(false)}
+                className="rounded-full p-1 transition-colors hover:bg-white/20"
+                aria-label="Fechar assistente"
               >
-                <Send className="w-4 h-4" />
+                <X className="size-5" />
               </button>
             </div>
-            <p className="text-[10px] text-center text-gray-400 dark:text-gray-500 mt-2">
-              A inteligência artificial pode cometer erros.
-            </p>
+
+            <div className="flex-1 space-y-4 overflow-y-auto bg-background p-4">
+              {messages.map((msg, idx) => {
+                if (msg.role === 'model' && msg.text === '' && idx === messages.length - 1) return null
+                const isUser = msg.role === 'user'
+                return (
+                  <div key={idx} className={cn('flex max-w-[85%] gap-3', isUser && 'ml-auto flex-row-reverse')}>
+                    <div
+                      className={cn(
+                        'flex size-8 shrink-0 items-center justify-center rounded-full',
+                        isUser ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
+                      )}
+                    >
+                      {isUser ? <UserIcon className="size-4" /> : <Bot className="size-4" />}
+                    </div>
+                    <div
+                      className={cn(
+                        'whitespace-pre-wrap rounded-2xl px-4 py-3 text-sm shadow-sm',
+                        isUser
+                          ? 'rounded-tr-none bg-primary text-primary-foreground'
+                          : 'rounded-tl-none border bg-card text-card-foreground'
+                      )}
+                    >
+                      {msg.text}
+                    </div>
+                  </div>
+                )
+              })}
+
+              {esperandoStream && (
+                <div className="flex max-w-[85%] gap-3">
+                  <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                    <Bot className="size-4" />
+                  </div>
+                  <div className="flex items-center gap-1.5 rounded-2xl rounded-tl-none border bg-card px-4 py-3 shadow-sm">
+                    <span className="size-1.5 animate-bounce rounded-full bg-muted-foreground" />
+                    <span className="size-1.5 animate-bounce rounded-full bg-muted-foreground [animation-delay:0.15s]" />
+                    <span className="size-1.5 animate-bounce rounded-full bg-muted-foreground [animation-delay:0.3s]" />
+                  </div>
+                </div>
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+
+            <div className="shrink-0 border-t bg-card p-3">
+              <div className="flex items-end gap-2 rounded-xl border bg-background p-1.5 transition-shadow focus-within:ring-3 focus-within:ring-ring/50">
+                <textarea
+                  value={inputValue}
+                  onChange={e => setInputValue(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault()
+                      handleSend()
+                    }
+                  }}
+                  placeholder="Pergunte algo ao assistente…"
+                  aria-label="Mensagem para o assistente"
+                  className="max-h-32 min-h-10 w-full resize-none bg-transparent px-3 py-2.5 text-sm outline-none placeholder:text-muted-foreground"
+                  rows={1}
+                  disabled={isLoading}
+                />
+                <Button
+                  type="button"
+                  size="icon-lg"
+                  onClick={handleSend}
+                  disabled={!inputValue.trim() || isLoading}
+                  aria-label="Enviar"
+                >
+                  <Send />
+                </Button>
+              </div>
+              <p className="mt-2 text-center text-[10px] text-muted-foreground">
+                A inteligência artificial pode cometer erros.
+              </p>
+            </div>
           </div>
-        </div>
+        </>
+      )}
 
-      </div>
-
-      {/* Floating Button (Only visible on Desktop or when closed on mobile) */}
-      {!isOpen && (
+      {/* Desktop: botão flutuante. No celular o assistente abre pela folha do "+". */}
+      {!aberto && (
         <button
-          onClick={() => setIsOpen(true)}
-          className="fixed bottom-20 md:bottom-6 right-6 z-40 bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2.5 rounded-full shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2"
-          title="Falar com Assistente IA"
+          type="button"
+          onClick={() => onAbertoChange(true)}
+          className="fixed right-6 bottom-6 z-40 hidden items-center gap-2 rounded-full bg-primary px-4 py-2.5 text-primary-foreground shadow-lg transition-all hover:bg-primary/90 active:scale-95 md:flex print:hidden"
         >
-          <Bot className="w-4 h-4" />
-          <span className="font-medium text-sm">Pergunte ao Guardião</span>
+          <Sparkles className="size-4" />
+          <span className="text-sm font-medium">Pergunte ao Guardião</span>
         </button>
       )}
     </>

@@ -3,18 +3,14 @@ import { createContext, useContext, useEffect, useState, useCallback } from 'rea
 import { supabase } from '@/lib/supabaseClient'
 import { useRouter, usePathname } from 'next/navigation'
 import { Session } from '@supabase/supabase-js'
-import { Loader2 } from 'lucide-react'
+import { Loader2, ShieldOff } from 'lucide-react'
 
-type Profile = {
-  id: string
-  full_name: string | null
-  email: string | null
-  role: 'admin' | 'representante' | 'assistente' | 'mestre'
-}
+import { Button } from '@/components/ui/button'
+import type { Perfil } from '@/lib/tipos'
 
 type AuthContextType = {
   session: Session | null
-  profile: Profile | null
+  profile: Perfil | null
   loading: boolean
 }
 
@@ -26,7 +22,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
   const router = useRouter()
   const pathname = usePathname()
   const [session, setSession] = useState<Session | null>(null)
-  const [profile, setProfile] = useState<Profile | null>(null)
+  const [profile, setProfile] = useState<Perfil | null>(null)
   const [loading, setLoading] = useState(true)
 
   // Rotas acessíveis sem sessão (a vitrine do design system só tem dados fictícios)
@@ -34,9 +30,10 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
 
   const fetchProfile = useCallback(async (userId: string) => {
     try {
+      // `*` para funcionar antes e depois das migrations (status, membro_id)
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, full_name, email, role')
+        .select('*')
         .eq('id', userId)
         .single()
 
@@ -44,7 +41,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
         console.error('Erro ao buscar perfil:', error.message)
         return null
       }
-      return data as Profile
+      return data as Perfil
     } catch (err) {
       console.error('Erro inesperado ao buscar perfil:', err)
       return null
@@ -56,7 +53,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
 
     const initializeAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession()
-      
+
       if (!mounted) return
 
       if (session) {
@@ -71,7 +68,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
       }
 
       setLoading(false)
-      
+
       if (!session && !isPublicRoute) {
         router.push('/login')
       }
@@ -81,15 +78,14 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!mounted) return
-      
+
       setSession(session)
-      
+
       if (session) {
-        // Busca perfil em segundo plano
         fetchProfile(session.user.id).then(userProfile => {
           if (mounted) setProfile(userProfile)
         })
-        
+
         if (pathname === '/login') {
           router.push('/')
         }
@@ -111,6 +107,30 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="w-6 h-6 text-muted-foreground animate-spin" />
+      </div>
+    )
+  }
+
+  if (profile?.status === 'desativado' && !isPublicRoute) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background p-6">
+        <div className="max-w-sm text-center">
+          <ShieldOff className="mx-auto mb-3 size-8 text-muted-foreground" />
+          <h1 className="text-lg font-semibold">Acesso desativado</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Seu acesso ao Guardião foi desativado por um administrador. Fale com a direção do núcleo se achar que é um engano.
+          </p>
+          <Button
+            variant="outline"
+            className="mt-5"
+            onClick={async () => {
+              await supabase.auth.signOut()
+              router.push('/login')
+            }}
+          >
+            Sair
+          </Button>
+        </div>
       </div>
     )
   }
