@@ -87,12 +87,12 @@ function Swatch({ cls, name, hex }: { cls: string; name: string; hex?: string })
 }
 
 const VERDE = [
-  ['50', '#F2F7F4', 'bg-verde-50'], ['100', '#E1EDE5', 'bg-verde-100'],
-  ['200', '#C4DBCC', 'bg-verde-200'], ['300', '#9BC0A9', 'bg-verde-300'],
-  ['400', '#6C9F80', 'bg-verde-400'], ['500', '#4A805F', 'bg-verde-500'],
-  ['600', '#35664A', 'bg-verde-600'], ['700', '#2A523C', 'bg-verde-700'],
-  ['800', '#234433', 'bg-verde-800'], ['900', '#1D382B', 'bg-verde-900'],
-  ['950', '#0F211A', 'bg-verde-950'],
+  ['50', '#EDF9F0', 'bg-verde-50'], ['100', '#D6F1DF', 'bg-verde-100'],
+  ['200', '#ACE3C1', 'bg-verde-200'], ['300', '#79CE9B', 'bg-verde-300'],
+  ['400', '#45B472', 'bg-verde-400'], ['500', '#1D9550', 'bg-verde-500'],
+  ['600', '#00803D', 'bg-verde-600'], ['700', '#006D33', 'bg-verde-700'],
+  ['800', '#045829', 'bg-verde-800'], ['900', '#074822', 'bg-verde-900'],
+  ['950', '#032B14', 'bg-verde-950'],
 ] as const
 
 const STONE = [
@@ -142,8 +142,8 @@ export default function DesignSystemPage() {
             <h1 className="text-2xl font-semibold tracking-tight">Proposta de identidade — Guardião v2</h1>
             <p className="text-sm text-muted-foreground max-w-prose">
               Minimalista, institucional: base neutra stone e um único acento — o verde
-              mariri. Sem gradientes, sem dourado/celestial. Alterne o tema no canto
-              superior direito e navegue pelas seções antes de aprovar.
+              UDV (#006D33). Sem gradientes, sem dourado/celestial. Alterne o tema no
+              canto superior direito e navegue pelas seções antes de aprovar.
             </p>
           </div>
 
@@ -191,9 +191,9 @@ export default function DesignSystemPage() {
           </Section>
 
           {/* ═══ 2. CORES ═══ */}
-          <Section id="cores" title="Cores" subtitle="Rampa verde mariri, neutros stone e tokens semânticos (mudam com o tema).">
+          <Section id="cores" title="Cores" subtitle="Rampa verde UDV, neutros stone e tokens semânticos (mudam com o tema).">
             <div className="space-y-4">
-              <p className="text-sm font-medium">Verde mariri</p>
+              <p className="text-sm font-medium">Verde UDV</p>
               <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-11 gap-2">
                 {VERDE.map(([n, hex, cls]) => (
                   <Swatch key={n} cls={cls} name={n} hex={hex} />

@@ -16,8 +16,8 @@
   --card-foreground: #1c1917;
   --popover: #ffffff;
   --popover-foreground: #1c1917;
-  --primary: #2a523c;
-  --primary-foreground: #f2f7f4;
+  --primary: #006d33;
+  --primary-foreground: #edf9f0;
   --secondary: #f5f5f4;
   --secondary-foreground: #1c1917;
   --muted: #f5f5f4;
@@ -27,23 +27,23 @@
   --destructive: #b91c1c;
   --border: #e7e5e4;
   --input: #e7e5e4;
-  --ring: #4a805f;
+  --ring: #1d9550;
   /* Contrato de cores dos gráficos (Recharts aceita CSS vars em fill/stroke):
      séries = --chart-1..5 · grid/eixos = --border / --muted-foreground · tooltip = --popover */
-  --chart-1: #2a523c;
+  --chart-1: #006d33;
   --chart-2: #78716c;
-  --chart-3: #6c9f80;
+  --chart-3: #45b472;
   --chart-4: #44403c;
   --chart-5: #8a6e4b;
   --radius: 0.5rem;
   --sidebar: #fafaf9;
   --sidebar-foreground: #1c1917;
-  --sidebar-primary: #2a523c;
-  --sidebar-primary-foreground: #f2f7f4;
+  --sidebar-primary: #006d33;
+  --sidebar-primary-foreground: #edf9f0;
   --sidebar-accent: #f5f5f4;
   --sidebar-accent-foreground: #1c1917;
   --sidebar-border: #e7e5e4;
-  --sidebar-ring: #4a805f;
+  --sidebar-ring: #1d9550;
 }
 
 .dark {
@@ -53,8 +53,8 @@
   --card-foreground: #f5f5f4;
   --popover: #1c1917;
   --popover-foreground: #f5f5f4;
-  --primary: #6c9f80;
-  --primary-foreground: #0f211a;
+  --primary: #45b472;
+  --primary-foreground: #032b14;
   --secondary: #292524;
   --secondary-foreground: #f5f5f4;
   --muted: #292524;
@@ -64,20 +64,20 @@
   --destructive: #ef4444;
   --border: #292524;
   --input: #292524;
-  --ring: #6c9f80;
-  --chart-1: #6c9f80;
+  --ring: #45b472;
+  --chart-1: #45b472;
   --chart-2: #a8a29e;
-  --chart-3: #c4dbcc;
+  --chart-3: #ace3c1;
   --chart-4: #57534e;
   --chart-5: #b39770;
   --sidebar: #1c1917;
   --sidebar-foreground: #f5f5f4;
-  --sidebar-primary: #6c9f80;
-  --sidebar-primary-foreground: #0f211a;
+  --sidebar-primary: #45b472;
+  --sidebar-primary-foreground: #032b14;
   --sidebar-accent: #292524;
   --sidebar-accent-foreground: #f5f5f4;
   --sidebar-border: #292524;
-  --sidebar-ring: #6c9f80;
+  --sidebar-ring: #45b472;
 }
 
 @theme inline {
@@ -126,18 +126,18 @@
 }
 
 @theme {
-  /* Rampa da marca — verde mariri (uso pontual via classes verde-*) */
-  --color-verde-50: #f2f7f4;
-  --color-verde-100: #e1ede5;
-  --color-verde-200: #c4dbcc;
-  --color-verde-300: #9bc0a9;
-  --color-verde-400: #6c9f80;
-  --color-verde-500: #4a805f;
-  --color-verde-600: #35664a;
-  --color-verde-700: #2a523c;
-  --color-verde-800: #234433;
-  --color-verde-900: #1d382b;
-  --color-verde-950: #0f211a;
+  /* Rampa da marca — verde UDV (âncora #006D33 no 700; uso pontual via classes verde-*) */
+  --color-verde-50: #edf9f0;
+  --color-verde-100: #d6f1df;
+  --color-verde-200: #ace3c1;
+  --color-verde-300: #79ce9b;
+  --color-verde-400: #45b472;
+  --color-verde-500: #1d9550;
+  --color-verde-600: #00803d;
+  --color-verde-700: #006d33;
+  --color-verde-800: #045829;
+  --color-verde-900: #074822;
+  --color-verde-950: #032b14;
 
   /* ============================================================
      LEGACY — paletas da UI antiga (gold/celestial).
