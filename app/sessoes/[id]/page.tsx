@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { use, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
-  BookOpen, ChevronLeft, ChevronRight, Copy, Droplets, History, MoreHorizontal, Pencil, Printer, Trash2,
+  BookOpen, ChevronLeft, ChevronRight, Copy, Droplets, History, MoreHorizontal, Music, Pencil, Printer, Trash2,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -32,12 +32,12 @@ import {
 import { nomeMembro, rotuloMestre } from '@/lib/membros'
 import { ehAdmin, podeEditar } from '@/lib/permissoes'
 import { supabase } from '@/lib/supabaseClient'
-import type { Historia, Leitura, Membro, Visitante } from '@/lib/tipos'
+import type { ChamadaSessao, Historia, Membro, Visitante } from '@/lib/tipos'
 
 type Extras = {
   carregando: boolean
   membros: Membro[]
-  leituras: Leitura[]
+  chamadas: ChamadaSessao[]
   historias: Historia[]
   visitantes: Visitante[]
 }
@@ -56,7 +56,7 @@ export default function DetalheSessao({ params }: { params: Promise<{ id: string
   const admin = ehAdmin(profile)
   const estoque = useDadosEstoque()
 
-  const [extras, setExtras] = useState<Extras>({ carregando: true, membros: [], leituras: [], historias: [], visitantes: [] })
+  const [extras, setExtras] = useState<Extras>({ carregando: true, membros: [], chamadas: [], historias: [], visitantes: [] })
   const [registro, setRegistro] = useState<Registro>({ registradoPor: null, ultimaAlteracao: null })
   const [confirmarExclusao, setConfirmarExclusao] = useState(false)
   const [excluindo, setExcluindo] = useState(false)
@@ -67,9 +67,9 @@ export default function DetalheSessao({ params }: { params: Promise<{ id: string
   useEffect(() => {
     let ativo = true
     async function carregar() {
-      const [membros, leituras, historias, visitantes] = await Promise.all([
+      const [membros, chamadas, historias, visitantes] = await Promise.all([
         supabase.from('membros').select('*'),
-        supabase.from('leituras').select('*').eq('id_sessao', idSessao).order('id'),
+        supabase.from('chamadas_sessao').select('*').eq('id_sessao', idSessao).order('id'),
         supabase.from('historias').select('*').eq('id_sessao', idSessao).order('id'),
         supabase.from('visitantes').select('*').eq('id_sessao', idSessao).order('nome'),
       ])
@@ -77,7 +77,7 @@ export default function DetalheSessao({ params }: { params: Promise<{ id: string
       setExtras({
         carregando: false,
         membros: (membros.data ?? []) as Membro[],
-        leituras: (leituras.data ?? []) as Leitura[],
+        chamadas: (chamadas.data ?? []) as ChamadaSessao[],
         historias: (historias.data ?? []) as Historia[],
         visitantes: (visitantes.data ?? []) as Visitante[],
       })
@@ -355,18 +355,19 @@ export default function DetalheSessao({ params }: { params: Promise<{ id: string
           </Secao>
         )}
 
-        {extras.leituras.length > 0 && (
-          <Secao titulo="Documentos lidos">
+        {extras.chamadas.length > 0 && (
+          <Secao titulo="Chamadas" acao={`${extras.chamadas.length} ${extras.chamadas.length === 1 ? 'chamada' : 'chamadas'}`}>
             <ListaCard>
-              {extras.leituras.map(l => {
-                const leitor = l.leitor_id ? membroPorId.get(l.leitor_id) : undefined
+              {extras.chamadas.map(c => {
+                const quem = c.membro_id ? membroPorId.get(c.membro_id) : undefined
                 return (
                   <ItemLista
-                    key={l.id}
-                    href={leitor ? `/membros/${leitor.id}` : undefined}
-                    inicio={<IconeLinha><BookOpen /></IconeLinha>}
-                    titulo={l.documento}
-                    subtitulo={`Lido por ${leitor ? nomeMembro(leitor) : l.leitor || '—'}`}
+                    key={c.id}
+                    href={quem ? `/membros/${quem.id}` : undefined}
+                    inicio={<IconeLinha><Music /></IconeLinha>}
+                    sobre={c.autor ? <span className="text-[11px] text-muted-foreground">{c.autor}</span> : undefined}
+                    titulo={c.chamada}
+                    subtitulo={`Feita por ${quem ? nomeMembro(quem) : c.pessoa || '—'}`}
                   />
                 )
               })}
@@ -444,9 +445,9 @@ export default function DetalheSessao({ params }: { params: Promise<{ id: string
         </Secao>
       </div>
 
-      {editor && !extras.carregando && extras.leituras.length + extras.historias.length === 0 && (
+      {editor && !extras.carregando && extras.chamadas.length + extras.historias.length === 0 && (
         <p className="mt-4 text-xs text-muted-foreground print:hidden">
-          Documentos lidos, histórias contadas e visitantes podem ser adicionados em Editar.
+          Chamadas, histórias contadas e visitantes podem ser adicionados em Editar.
         </p>
       )}
 
@@ -466,7 +467,7 @@ export default function DetalheSessao({ params }: { params: Promise<{ id: string
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir esta sessão?</AlertDialogTitle>
             <AlertDialogDescription>
-              A sessão, os consumos, leituras, histórias e visitantes vinculados serão removidos e o vegetal volta ao saldo dos lotes.
+              A sessão, os consumos, chamadas, histórias e visitantes vinculados serão removidos e o vegetal volta ao saldo dos lotes.
               A exclusão fica registrada na auditoria.
             </AlertDialogDescription>
           </AlertDialogHeader>

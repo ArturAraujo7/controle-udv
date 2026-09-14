@@ -27,11 +27,11 @@ import { supabase } from '@/lib/supabaseClient'
 import type { DadosRegionais, ItemLista, NomeLista } from '@/lib/tipos'
 
 /** De onde vem o uso de cada lista nos registros da região. */
-const FONTES_USO: Record<NomeLista, { tabela: 'sessoes' | 'membros' | 'leituras' | 'historias' | 'preparos' | 'saidas'; coluna: string }[]> = {
+const FONTES_USO: Record<NomeLista, { tabela: 'sessoes' | 'membros' | 'chamadas' | 'historias' | 'preparos' | 'saidas'; coluna: string }[]> = {
   tipos_sessao: [{ tabela: 'sessoes', coluna: 'tipo' }],
   graus: [{ tabela: 'membros', coluna: 'grau' }],
   tipos_delegacao: [{ tabela: 'sessoes', coluna: 'tipo_delegacao' }],
-  documentos: [{ tabela: 'leituras', coluna: 'documento' }],
+  chamadas: [{ tabela: 'chamadas', coluna: 'chamada' }],
   historias: [{ tabela: 'historias', coluna: 'titulo_historia' }],
   nucleos: [
     { tabela: 'preparos', coluna: 'nucleo_origem' },
@@ -52,7 +52,7 @@ const CORES = [
 const SEM_COR = 'sem-cor'
 
 /** Listas longas, sem ordem de exibição própria: mostradas de A a Z ou pelas mais usadas. */
-const LISTAS_ALFABETICAS: NomeLista[] = ['historias']
+const LISTAS_ALFABETICAS: NomeLista[] = ['historias', 'chamadas']
 
 type Ordenacao = 'alfabetica' | 'uso'
 
@@ -83,7 +83,7 @@ export default function PaginaLista({
   )
 }
 
-type Edicao = { item: ItemLista | null; nome: string; cor: string; exigeExplanador: boolean }
+type Edicao = { item: ItemLista | null; nome: string; autor: string; cor: string; exigeExplanador: boolean }
 
 function EditorLista({ lista, rotulo, regiaoParametro }: { lista: NomeLista; rotulo: string; regiaoParametro: number | null }) {
   const router = useRouter()
@@ -145,7 +145,13 @@ function EditorLista({ lista, rotulo, regiaoParametro }: { lista: NomeLista; rot
   }
 
   const abrir = (item: ItemLista | null) =>
-    setEdicao({ item, nome: item?.nome ?? '', cor: item?.cor ?? SEM_COR, exigeExplanador: item?.exige_explanador ?? false })
+    setEdicao({
+      item,
+      nome: item?.nome ?? '',
+      autor: item?.autor ?? '',
+      cor: item?.cor ?? SEM_COR,
+      exigeExplanador: item?.exige_explanador ?? false,
+    })
 
   const salvarEdicao = async () => {
     if (!edicao) return
@@ -159,6 +165,7 @@ function EditorLista({ lista, rotulo, regiaoParametro }: { lista: NomeLista; rot
       nome,
       cor: edicao.cor === SEM_COR ? null : edicao.cor,
       exige_explanador: lista === 'tipos_sessao' ? edicao.exigeExplanador : false,
+      ...(lista === 'chamadas' ? { autor: edicao.autor.trim() || null } : {}),
     }
     const { error } = edicao.item
       ? await supabase.from('listas_sistema').update(dados).eq('id', edicao.item.id)
@@ -245,7 +252,7 @@ function EditorLista({ lista, rotulo, regiaoParametro }: { lista: NomeLista; rot
           onChange={setOrdenacao}
           opcoes={[
             { valor: 'alfabetica', rotulo: 'A–Z' },
-            { valor: 'uso', rotulo: 'Mais contadas' },
+            { valor: 'uso', rotulo: lista === 'chamadas' ? 'Mais feitas' : 'Mais contadas' },
           ]}
         />
       )}
@@ -279,6 +286,7 @@ function EditorLista({ lista, rotulo, regiaoParametro }: { lista: NomeLista; rot
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-medium">{item.nome}</span>
                   <span className="block text-xs text-muted-foreground">
+                    {item.autor && `${item.autor} · `}
                     {rotuloUso(item.nome)}
                     {item.exige_explanador && ' · exige explanador'}
                   </span>
@@ -323,6 +331,11 @@ function EditorLista({ lista, rotulo, regiaoParametro }: { lista: NomeLista; rot
               <Campo rotulo="Nome" htmlFor="item-nome" obrigatorio>
                 <Input id="item-nome" className="h-10" autoFocus value={edicao.nome} onChange={e => setEdicao({ ...edicao, nome: e.target.value })} />
               </Campo>
+              {lista === 'chamadas' && (
+                <Campo rotulo="Autor" htmlFor="item-autor">
+                  <Input id="item-autor" className="h-10" value={edicao.autor} onChange={e => setEdicao({ ...edicao, autor: e.target.value })} />
+                </Campo>
+              )}
               {lista === 'tipos_sessao' && (
                 <>
                   <Campo rotulo="Cor na lista e nos gráficos">

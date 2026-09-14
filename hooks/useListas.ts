@@ -12,7 +12,7 @@ const PADRAO: Record<NomeLista, readonly string[]> = {
   graus: GRAUS_MEMBRO,
   tipos_delegacao: TIPOS_DELEGACAO,
   motivos_saida: MOTIVOS_SAIDA,
-  documentos: [],
+  chamadas: [],
   historias: [],
   nucleos: [],
 }

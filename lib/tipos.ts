@@ -89,12 +89,14 @@ export type MudancaGrau = {
   created_at: string
 }
 
-export type Leitura = {
+/** Chamada feita numa sessão (tabela chamadas_sessao). */
+export type ChamadaSessao = {
   id: number
   id_sessao: number
-  documento: string
-  leitor: string | null
-  leitor_id: number | null
+  chamada: string
+  autor: string | null
+  pessoa: string | null
+  membro_id: number | null
 }
 
 export type Historia = {
@@ -147,7 +149,7 @@ export type NomeLista =
   | 'tipos_sessao'
   | 'graus'
   | 'tipos_delegacao'
-  | 'documentos'
+  | 'chamadas'
   | 'historias'
   | 'nucleos'
   | 'motivos_saida'
@@ -176,7 +178,7 @@ export type DadosRegionais = {
   preparos: (Preparo & { nucleo_id: number })[]
   saidas: (Saida & { nucleo_id: number })[]
   membros: (Membro & { nucleo_id: number })[]
-  leituras: (Leitura & { nucleo_id: number })[]
+  chamadas: (ChamadaSessao & { nucleo_id: number })[]
   historias: (Historia & { nucleo_id: number })[]
   visitantes: (Visitante & { nucleo_id: number })[]
   graus: (MudancaGrau & { nucleo_id: number })[]
@@ -192,6 +194,8 @@ export type ItemLista = {
   ativo: boolean
   cor: string | null
   exige_explanador: boolean
+  /** Só na lista de chamadas. */
+  autor?: string | null
 }
 
 export type RegistroAtividade = {

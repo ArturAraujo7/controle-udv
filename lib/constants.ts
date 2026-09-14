@@ -49,7 +49,7 @@ export const LISTAS_SISTEMA: { lista: NomeLista; rotulo: string; descricao?: str
   { lista: 'tipos_sessao', rotulo: 'Tipos de sessão' },
   { lista: 'graus', rotulo: 'Graus institucionais' },
   { lista: 'tipos_delegacao', rotulo: 'Tipos de delegação' },
-  { lista: 'documentos', rotulo: 'Documentos', descricao: 'Catálogo para "Documentos lidos"' },
+  { lista: 'chamadas', rotulo: 'Chamadas', descricao: 'Nome e autor das chamadas feitas nas sessões' },
   { lista: 'historias', rotulo: 'Histórias', descricao: 'Catálogo para "Histórias contadas"' },
   { lista: 'nucleos', rotulo: 'Núcleos conhecidos', descricao: 'Origem de doações e destino de saídas' },
   { lista: 'motivos_saida', rotulo: 'Motivos de saída' },

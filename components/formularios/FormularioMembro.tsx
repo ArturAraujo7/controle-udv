@@ -228,12 +228,12 @@ export function FormularioMembro({ id }: { id?: number }) {
   const excluir = async () => {
     setSalvando(true)
     const condutor = `dirigente_id.eq.${id},dirigente_2_id.eq.${id},leitor_documentos_id.eq.${id},explanador_id.eq.${id}`
-    const [sessoes, preparos, leituras] = await Promise.all([
+    const [sessoes, preparos, chamadas] = await Promise.all([
       supabase.from('sessoes').select('id', { count: 'exact', head: true }).or(condutor),
       supabase.from('preparos').select('id', { count: 'exact', head: true }).eq('mestre_preparo_id', id),
-      supabase.from('leituras').select('id', { count: 'exact', head: true }).eq('leitor_id', id),
+      supabase.from('chamadas_sessao').select('id', { count: 'exact', head: true }).eq('membro_id', id),
     ])
-    const participacoes = (sessoes.count ?? 0) + (preparos.count ?? 0) + (leituras.count ?? 0)
+    const participacoes = (sessoes.count ?? 0) + (preparos.count ?? 0) + (chamadas.count ?? 0)
     if (participacoes > 0) {
       setSalvando(false)
       toast.error('Este membro tem participações registradas', {

@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { use } from 'react'
-import { BookOpen, ChevronLeft, ChevronRight, Droplets, History, Printer } from 'lucide-react'
+import { BookOpen, ChevronLeft, ChevronRight, Droplets, History, Music, Printer } from 'lucide-react'
 
 import { ArquivoAnexo } from '@/components/comum/ArquivoAnexo'
 import { Avatar } from '@/components/comum/Avatar'
@@ -64,7 +64,7 @@ export default function SessaoRegional({ params }: { params: Promise<{ id: strin
     { papel: 'Explanador', ...pessoa(sessao.explanador_id, sessao.explanador) },
   ]
 
-  const leituras = d.leituras.filter(l => l.id_sessao === sessao.id)
+  const chamadas = d.chamadas.filter(c => c.id_sessao === sessao.id)
   const historias = d.historias.filter(h => h.id_sessao === sessao.id)
   const visitantes = d.visitantes.filter(v => v.id_sessao === sessao.id)
   const porPessoa = sessao.quantidade_participantes > 0 ? (total * 1000) / sessao.quantidade_participantes : 0
@@ -156,18 +156,19 @@ export default function SessaoRegional({ params }: { params: Promise<{ id: strin
           </Secao>
         )}
 
-        {leituras.length > 0 && (
-          <Secao titulo="Documentos lidos">
+        {chamadas.length > 0 && (
+          <Secao titulo="Chamadas" acao={`${chamadas.length} ${chamadas.length === 1 ? 'chamada' : 'chamadas'}`}>
             <ListaCard>
-              {leituras.map(l => {
-                const leitor = l.leitor_id ? membroPorId.get(l.leitor_id) : undefined
+              {chamadas.map(c => {
+                const quem = c.membro_id ? membroPorId.get(c.membro_id) : undefined
                 return (
                   <ItemLista
-                    key={l.id}
-                    href={leitor ? `/regional/membros/${leitor.id}` : undefined}
-                    inicio={<IconeLinha><BookOpen /></IconeLinha>}
-                    titulo={l.documento}
-                    subtitulo={`Lido por ${leitor ? nomeMembro(leitor) : l.leitor || '—'}`}
+                    key={c.id}
+                    href={quem ? `/regional/membros/${quem.id}` : undefined}
+                    inicio={<IconeLinha><Music /></IconeLinha>}
+                    sobre={c.autor ? <span className="text-[11px] text-muted-foreground">{c.autor}</span> : undefined}
+                    titulo={c.chamada}
+                    subtitulo={`Feita por ${quem ? nomeMembro(quem) : c.pessoa || '—'}`}
                   />
                 )
               })}

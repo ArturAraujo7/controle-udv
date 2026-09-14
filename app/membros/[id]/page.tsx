@@ -25,8 +25,8 @@ import { podeEditar } from '@/lib/permissoes'
 import { supabase } from '@/lib/supabaseClient'
 import type { ConsumoSessao, Membro, MudancaGrau, Preparo, Saida, Sessao } from '@/lib/tipos'
 
-type Papel = 'dirigente' | 'delegacao' | 'leitor' | 'explanador' | 'preparo'
-type FiltroPapel = 'todas' | 'dirigente' | 'leitor' | 'explanador' | 'preparo'
+type Papel = 'dirigente' | 'delegacao' | 'leitor' | 'explanador' | 'chamada' | 'preparo'
+type FiltroPapel = 'todas' | 'dirigente' | 'leitor' | 'explanador' | 'chamada' | 'preparo'
 type Periodo = 'ano' | 'anterior' | 'todos'
 
 const ROTULO_PAPEL: Record<Papel, string> = {
@@ -34,6 +34,7 @@ const ROTULO_PAPEL: Record<Papel, string> = {
   delegacao: 'Dirigiu · delegação',
   leitor: 'Leu documentos',
   explanador: 'Fez explanação',
+  chamada: 'Fez chamada',
   preparo: 'Mestre do preparo',
 }
 
@@ -53,9 +54,10 @@ type SessaoMembro = Pick<
   'explanador_id' | 'leitor_documentos' | 'explanador' | 'quantidade_participantes' | 'tipo_delegacao'
 >
 
-type LeituraSessao = {
+type ChamadaMembro = {
   id: number
-  documento: string
+  chamada: string
+  autor: string | null
   sessoes: { id: number; data_realizacao: string; tipo: string } | null
 }
 
@@ -63,7 +65,7 @@ type Dados = {
   membro: Membro
   sessoes: SessaoMembro[]
   preparos: Preparo[]
-  leituras: LeituraSessao[]
+  chamadas: ChamadaMembro[]
   graus: MudancaGrau[]
   usuario: { full_name: string | null; email: string | null } | null
   todas: Pick<Sessao, 'id' | 'data_realizacao' | 'quantidade_participantes'>[]
@@ -96,13 +98,13 @@ export default function FichaMembro({ params }: { params: Promise<{ id: string }
       }
 
       const condutor = `dirigente_id.eq.${idMembro},dirigente_2_id.eq.${idMembro},leitor_documentos_id.eq.${idMembro},explanador_id.eq.${idMembro}`
-      const [sessoes, preparos, leituras, graus, usuario, todas] = await Promise.all([
+      const [sessoes, preparos, chamadas, graus, usuario, todas] = await Promise.all([
         supabase
           .from('sessoes')
           .select('id, data_realizacao, tipo, dirigente, dirigente_id, dirigente_2_id, leitor_documentos_id, explanador_id, leitor_documentos, explanador, quantidade_participantes, tipo_delegacao')
           .or(condutor),
         supabase.from('preparos').select('*').eq('mestre_preparo_id', idMembro),
-        supabase.from('leituras').select('id, documento, sessoes ( id, data_realizacao, tipo )').eq('leitor_id', idMembro),
+        supabase.from('chamadas_sessao').select('id, chamada, autor, sessoes ( id, data_realizacao, tipo )').eq('membro_id', idMembro),
         supabase.from('membros_graus_historico').select('*').eq('membro_id', idMembro).order('data', { ascending: false }),
         supabase.from('profiles').select('full_name, email').eq('membro_id', idMembro).maybeSingle(),
         buscarTodos<Dados['todas'][number]>((de, ate) =>
@@ -128,7 +130,7 @@ export default function FichaMembro({ params }: { params: Promise<{ id: string }
         membro: membro as Membro,
         sessoes: (sessoes.data ?? []) as SessaoMembro[],
         preparos: listaPreparos,
-        leituras: (leituras.data ?? []) as unknown as LeituraSessao[],
+        chamadas: (chamadas.data ?? []) as unknown as ChamadaMembro[],
         graus: (graus.data ?? []) as MudancaGrau[],
         usuario: usuario.error ? null : usuario.data,
         todas,
@@ -162,19 +164,16 @@ export default function FichaMembro({ params }: { params: Promise<{ id: string }
       }
     }
 
-    // Leituras registradas por documento que ainda não aparecem como "leitor" da sessão
-    const leitorEm = new Set(lista.filter(p => p.papel === 'leitor').map(p => p.sessaoId))
-    for (const l of dados.leituras) {
-      if (!l.sessoes || leitorEm.has(l.sessoes.id)) continue
-      leitorEm.add(l.sessoes.id)
+    for (const c of dados.chamadas) {
+      if (!c.sessoes) continue
       lista.push({
-        chave: `lt-${l.id}`,
-        papel: 'leitor',
-        sessaoId: l.sessoes.id,
-        data: l.sessoes.data_realizacao,
-        titulo: `${l.sessoes.tipo} · ${formatarData(l.sessoes.data_realizacao)}`,
-        subtitulo: l.documento,
-        href: `/sessoes/${l.sessoes.id}`,
+        chave: `c-${c.id}`,
+        papel: 'chamada',
+        sessaoId: c.sessoes.id,
+        data: c.sessoes.data_realizacao,
+        titulo: `${c.sessoes.tipo} · ${formatarData(c.sessoes.data_realizacao)}`,
+        subtitulo: [c.chamada, c.autor].filter(Boolean).join(' · '),
+        href: `/sessoes/${c.sessoes.id}`,
       })
     }
 
@@ -221,6 +220,7 @@ export default function FichaMembro({ params }: { params: Promise<{ id: string }
         Dirigiu: n('dirigente', 'delegacao'),
         Leitura: n('leitor'),
         Explanação: n('explanador'),
+        Chamada: n('chamada'),
         Preparo: n('preparo'),
       }
     })
@@ -234,7 +234,7 @@ export default function FichaMembro({ params }: { params: Promise<{ id: string }
       presenca: totalSessoes ? Math.round((conduzidas.size / totalSessoes) * 100) : null,
       ultimaVez: participacoes.find(p => p.papel !== 'preparo')?.data ?? null,
       grafico,
-      temGrafico: grafico.some(g => g.Dirigiu + g.Leitura + g.Explanação + g.Preparo > 0),
+      temGrafico: grafico.some(g => g.Dirigiu + g.Leitura + g.Explanação + g.Chamada + g.Preparo > 0),
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dados, participacoes, periodo, anoAtual, agora])
@@ -261,7 +261,7 @@ export default function FichaMembro({ params }: { params: Promise<{ id: string }
   )
   const visiveis = completo ? historicoFiltrado : historicoFiltrado.slice(0, 20)
 
-  const documentos = [...dados.leituras.reduce((mapa, l) => mapa.set(l.documento, (mapa.get(l.documento) ?? 0) + 1), new Map<string, number>())]
+  const chamadasFeitas = [...dados.chamadas.reduce((mapa, c) => mapa.set(c.chamada, (mapa.get(c.chamada) ?? 0) + 1), new Map<string, number>())]
     .sort((a, b) => b[1] - a[1])
     .slice(0, 5)
 
@@ -277,6 +277,7 @@ export default function FichaMembro({ params }: { params: Promise<{ id: string }
     delegacao: 'border-primary/40 text-primary',
     leitor: '',
     explanador: '',
+    chamada: '',
     preparo: 'border-amber-300 text-amber-700 dark:border-amber-500/40 dark:text-amber-300',
   }
 
@@ -346,6 +347,7 @@ export default function FichaMembro({ params }: { params: Promise<{ id: string }
                   <Bar dataKey="Dirigiu" stackId="p" fill="var(--chart-1)" />
                   <Bar dataKey="Leitura" stackId="p" fill="var(--chart-3)" />
                   <Bar dataKey="Explanação" stackId="p" fill="var(--chart-2)" />
+                  <Bar dataKey="Chamada" stackId="p" fill="var(--chart-4)" />
                   <Bar dataKey="Preparo" stackId="p" fill="var(--chart-5)" radius={[3, 3, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
@@ -365,6 +367,7 @@ export default function FichaMembro({ params }: { params: Promise<{ id: string }
             { valor: 'dirigente', rotulo: 'Dirigente' },
             { valor: 'leitor', rotulo: 'Leitor' },
             { valor: 'explanador', rotulo: 'Explanador' },
+            { valor: 'chamada', rotulo: 'Chamadas' },
             { valor: 'preparo', rotulo: 'Preparo' },
           ]}
         />
@@ -421,11 +424,11 @@ export default function FichaMembro({ params }: { params: Promise<{ id: string }
           </Secao>
         )}
 
-        {documentos.length > 0 && (
-          <Secao titulo="Documentos que mais leu">
+        {chamadasFeitas.length > 0 && (
+          <Secao titulo="Chamadas que mais fez">
             <ListaCard>
-              {documentos.map(([doc, n]) => (
-                <ItemLista key={doc} titulo={doc} fim={<ValorLinha valor={`${n}×`} />} />
+              {chamadasFeitas.map(([chamada, n]) => (
+                <ItemLista key={chamada} titulo={chamada} fim={<ValorLinha valor={`${n}×`} />} />
               ))}
             </ListaCard>
           </Secao>

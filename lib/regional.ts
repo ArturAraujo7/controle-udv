@@ -24,7 +24,7 @@ export function dadosDoNucleo(dados: DadosRegionais, nucleoId: number) {
     preparos: doNucleo(dados.preparos),
     saidas: doNucleo(dados.saidas),
     membros: doNucleo(dados.membros),
-    leituras: doNucleo(dados.leituras),
+    chamadas: doNucleo(dados.chamadas),
     historias: doNucleo(dados.historias),
     visitantes: doNucleo(dados.visitantes),
     graus: doNucleo(dados.graus),

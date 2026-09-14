@@ -32,7 +32,7 @@ const EXPORTACOES = [
   { tabela: 'preparos', rotulo: 'Preparos' },
   { tabela: 'saidas', rotulo: 'Saídas' },
   { tabela: 'membros', rotulo: 'Membros' },
-  { tabela: 'leituras', rotulo: 'Documentos lidos' },
+  { tabela: 'chamadas_sessao', rotulo: 'Chamadas das sessões' },
   { tabela: 'historias', rotulo: 'Histórias contadas' },
   { tabela: 'visitantes', rotulo: 'Visitantes' },
 ]

@@ -19,13 +19,14 @@ import { ROTULO_PARTICIPACAO, participacoesDoMembro, type PapelParticipacao } fr
 import { dadosDoNucleo } from '@/lib/regional'
 
 type Periodo = 'ano' | 'anterior' | 'todos'
-type Filtro = 'todas' | 'dirigente' | 'leitor' | 'explanador' | 'preparo'
+type Filtro = 'todas' | 'dirigente' | 'leitor' | 'explanador' | 'chamada' | 'preparo'
 
 const COR_PAPEL: Record<PapelParticipacao, string> = {
   dirigente: 'border-primary/40 text-primary',
   delegacao: 'border-primary/40 text-primary',
   leitor: '',
   explanador: '',
+  chamada: '',
   preparo: 'border-amber-300 text-amber-700 dark:border-amber-500/40 dark:text-amber-300',
 }
 
@@ -125,6 +126,7 @@ export default function MembroRegional({ params }: { params: Promise<{ id: strin
             { valor: 'dirigente', rotulo: 'Dirigente' },
             { valor: 'leitor', rotulo: 'Leitor' },
             { valor: 'explanador', rotulo: 'Explanador' },
+            { valor: 'chamada', rotulo: 'Chamadas' },
             { valor: 'preparo', rotulo: 'Preparo' },
           ]}
         />

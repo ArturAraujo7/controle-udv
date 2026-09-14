@@ -35,7 +35,7 @@ const base = (): DadosRegionais => ({
   saidas: [
     { id: 50, nucleo_id: 1, data_saida: '2026-09-01', quantidade: 3, destino: 'Beta', preparo_id: 10, observacoes: null, motivo: 'Doação', created_at: '2026-09-01T12:00:00Z' },
   ],
-  membros: [], leituras: [], historias: [], visitantes: [], graus: [], responsaveis: [],
+  membros: [], chamadas: [], historias: [], visitantes: [], graus: [], responsaveis: [],
 })
 
 const agora = new Date('2026-09-14T12:00:00Z')

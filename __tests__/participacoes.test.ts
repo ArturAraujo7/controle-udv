@@ -1,5 +1,5 @@
 import { participacoesDoMembro } from '@/lib/participacoes'
-import type { Leitura, Preparo, Sessao } from '@/lib/tipos'
+import type { ChamadaSessao, Preparo, Sessao } from '@/lib/tipos'
 
 const sessao = (s: Partial<Sessao> & { id: number }): Sessao => ({
   data_realizacao: '2026-09-06T20:00:00+00:00', tipo: 'Escala', dirigente: 'M. Fulano', dirigente_id: null,
@@ -8,26 +8,27 @@ const sessao = (s: Partial<Sessao> & { id: number }): Sessao => ({
 })
 
 describe('participacoesDoMembro', () => {
-  it('reúne funções nas sessões, leituras e preparos sem duplicar a leitura', () => {
+  it('reúne funções nas sessões, chamadas e preparos do membro', () => {
     const sessoes = [
       sessao({ id: 1, dirigente_id: 7, data_realizacao: '2026-08-01T20:00:00+00:00' }),
       sessao({ id: 2, leitor_documentos_id: 7, data_realizacao: '2026-09-01T20:00:00+00:00' }),
       sessao({ id: 3, data_realizacao: '2026-07-01T20:00:00+00:00' }),
     ]
-    const leituras: Leitura[] = [
-      { id: 10, id_sessao: 2, documento: 'Doc A', leitor: null, leitor_id: 7 },
-      { id: 11, id_sessao: 3, documento: 'Doc B', leitor: null, leitor_id: 7 },
+    const chamadas: ChamadaSessao[] = [
+      { id: 11, id_sessao: 3, chamada: 'Chamada A', autor: 'Autor A', pessoa: null, membro_id: 7 },
+      { id: 12, id_sessao: 3, chamada: 'Chamada B', autor: null, pessoa: 'Outra pessoa', membro_id: 8 },
     ]
     const preparos = [
       { id: 5, data_preparo: '2026-09-10', mestre_preparo_id: 7, grau: '1', quantidade_preparada: 12 } as Preparo,
     ]
 
-    const lista = participacoesDoMembro(7, { sessoes, leituras, preparos })
+    const lista = participacoesDoMembro(7, { sessoes, chamadas, preparos })
     expect(lista.map(p => [p.chave, p.papel])).toEqual([
       ['p-5', 'preparo'],
       ['l-2', 'leitor'],
       ['d-1', 'dirigente'],
-      ['lt-11', 'leitor'],
+      ['c-11', 'chamada'],
     ])
+    expect(lista[3].subtitulo).toBe('Chamada A · Autor A')
   })
 })

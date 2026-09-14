@@ -1,5 +1,5 @@
 import { supabase } from './supabaseClient'
-import type { ConsumoSessao, Historia, Leitura, Sessao, Visitante } from './tipos'
+import type { ChamadaSessao, ConsumoSessao, Historia, Sessao, Visitante } from './tipos'
 
 export type MembroRef = { id: number | null; nome: string }
 
@@ -46,26 +46,27 @@ export function colunasCondutores(c: CondutoresForm) {
   }
 }
 
-export type LeituraForm = { chave: string; documento: string; leitor: MembroRef }
+/** Chamada feita na sessão: item do catálogo (nome e autor) e quem fez. */
+export type ChamadaForm = { chave: string; chamada: string; autor: string | null; pessoa: MembroRef }
 export type HistoriaForm = { chave: string; titulo: string }
 export type VisitanteForm = { chave: string; nome: string; nucleo_origem: string }
 
 export type FilhosSessao = {
-  leituras: LeituraForm[]
+  chamadas: ChamadaForm[]
   historias: HistoriaForm[]
   visitantes: VisitanteForm[]
 }
 
-export const FILHOS_VAZIOS: FilhosSessao = { leituras: [], historias: [], visitantes: [] }
+export const FILHOS_VAZIOS: FilhosSessao = { chamadas: [], historias: [], visitantes: [] }
 
 export const novaChave = () => crypto.randomUUID()
 
-/** Sessão com consumos, leituras, histórias e visitantes — para editar ou duplicar. */
+/** Sessão com consumos, chamadas, histórias e visitantes — para editar ou duplicar. */
 export async function carregarSessaoCompleta(id: number) {
-  const [sessao, consumos, leituras, historias, visitantes] = await Promise.all([
+  const [sessao, consumos, chamadas, historias, visitantes] = await Promise.all([
     supabase.from('sessoes').select('*').eq('id', id).single(),
     supabase.from('consumos_sessao').select('id, id_sessao, id_preparo, quantidade_consumida').eq('id_sessao', id),
-    supabase.from('leituras').select('*').eq('id_sessao', id).order('id'),
+    supabase.from('chamadas_sessao').select('*').eq('id_sessao', id).order('id'),
     supabase.from('historias').select('*').eq('id_sessao', id).order('id'),
     supabase.from('visitantes').select('*').eq('id_sessao', id).order('id'),
   ])
@@ -76,10 +77,11 @@ export async function carregarSessaoCompleta(id: number) {
     sessao: sessao.data as Sessao,
     consumos: (consumos.data ?? []) as ConsumoSessao[],
     filhos: {
-      leituras: ((leituras.data ?? []) as Leitura[]).map(l => ({
+      chamadas: ((chamadas.data ?? []) as ChamadaSessao[]).map(c => ({
         chave: novaChave(),
-        documento: l.documento,
-        leitor: { id: l.leitor_id, nome: l.leitor || '' },
+        chamada: c.chamada,
+        autor: c.autor,
+        pessoa: { id: c.membro_id, nome: c.pessoa || '' },
       })),
       historias: ((historias.data ?? []) as Historia[]).map(h => ({ chave: novaChave(), titulo: h.titulo_historia })),
       visitantes: ((visitantes.data ?? []) as Visitante[]).map(v => ({
@@ -92,14 +94,20 @@ export async function carregarSessaoCompleta(id: number) {
 }
 
 /**
- * Grava leituras, histórias e visitantes da sessão. Com `substituir`, apaga os
+ * Grava chamadas, histórias e visitantes da sessão. Com `substituir`, apaga os
  * registros anteriores antes de inserir. Devolve as mensagens de erro, se houver.
  */
 export async function salvarFilhosSessao(idSessao: number, filhos: FilhosSessao, substituir: boolean) {
   const linhas = {
-    leituras: filhos.leituras
-      .filter(l => l.documento.trim())
-      .map(l => ({ id_sessao: idSessao, documento: l.documento.trim(), leitor: l.leitor.nome.trim() || null, leitor_id: l.leitor.id })),
+    chamadas_sessao: filhos.chamadas
+      .filter(c => c.chamada.trim())
+      .map(c => ({
+        id_sessao: idSessao,
+        chamada: c.chamada.trim(),
+        autor: c.autor?.trim() || null,
+        pessoa: c.pessoa.nome.trim() || null,
+        membro_id: c.pessoa.id,
+      })),
     historias: filhos.historias
       .filter(h => h.titulo.trim())
       .map(h => ({ id_sessao: idSessao, titulo_historia: h.titulo.trim() })),
@@ -109,7 +117,7 @@ export async function salvarFilhosSessao(idSessao: number, filhos: FilhosSessao,
   }
 
   const erros: string[] = []
-  for (const tabela of ['leituras', 'historias', 'visitantes'] as const) {
+  for (const tabela of ['chamadas_sessao', 'historias', 'visitantes'] as const) {
     if (substituir) {
       const { error } = await supabase.from(tabela).delete().eq('id_sessao', idSessao)
       if (error) { erros.push(error.message); continue }

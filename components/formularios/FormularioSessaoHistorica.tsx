@@ -9,7 +9,7 @@ import { toast } from 'sonner'
 import { useAuth } from '@/components/AuthProvider'
 import { ArquivoAnexo } from '@/components/comum/ArquivoAnexo'
 import { ChipsFiltro } from '@/components/comum/ChipsFiltro'
-import { BlocoHistorias, BlocoLeituras } from '@/components/formularios/BlocosSessao'
+import { BlocoChamadas, BlocoHistorias } from '@/components/formularios/BlocosSessao'
 import {
   BlocoFormulario, Campo, CampoMotivo, LinhaInterruptor, SkeletonFormulario,
 } from '@/components/formularios/Campos'
@@ -280,9 +280,9 @@ export function FormularioSessaoHistorica({ id }: { id?: number }) {
         />
       </BlocoFormulario>
 
-      <BlocoLeituras
-        itens={form.filhos.leituras}
-        onChange={leituras => atualizar('filhos', { ...form.filhos, leituras })}
+      <BlocoChamadas
+        itens={form.filhos.chamadas}
+        onChange={chamadas => atualizar('filhos', { ...form.filhos, chamadas })}
         membros={membros}
         onMembroAdicionado={adicionar}
       />

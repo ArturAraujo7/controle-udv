@@ -1,14 +1,15 @@
 import { ehSessaoHistorica } from './estoque'
 import { formatarData, formatarNumero } from './formato'
-import type { Leitura, Preparo, Sessao } from './tipos'
+import type { ChamadaSessao, Preparo, Sessao } from './tipos'
 
-export type PapelParticipacao = 'dirigente' | 'delegacao' | 'leitor' | 'explanador' | 'preparo'
+export type PapelParticipacao = 'dirigente' | 'delegacao' | 'leitor' | 'explanador' | 'chamada' | 'preparo'
 
 export const ROTULO_PARTICIPACAO: Record<PapelParticipacao, string> = {
   dirigente: 'Dirigiu',
   delegacao: 'Dirigiu · delegação',
   leitor: 'Leu documentos',
   explanador: 'Fez explanação',
+  chamada: 'Fez chamada',
   preparo: 'Mestre do preparo',
 }
 
@@ -22,10 +23,10 @@ export type Participacao = {
   subtitulo: string
 }
 
-/** Tudo que um membro fez: dirigiu, leu, explanou ou foi mestre do preparo. Mais recente primeiro. */
+/** Tudo que um membro fez: dirigiu, leu, explanou, fez chamada ou foi mestre do preparo. Mais recente primeiro. */
 export function participacoesDoMembro(
   membroId: number,
-  { sessoes, leituras, preparos }: { sessoes: Sessao[]; leituras: Leitura[]; preparos: Preparo[] }
+  { sessoes, chamadas, preparos }: { sessoes: Sessao[]; chamadas: ChamadaSessao[]; preparos: Preparo[] }
 ): Participacao[] {
   const lista: Participacao[] = []
 
@@ -46,22 +47,19 @@ export function participacoesDoMembro(
     }
   }
 
-  // Leituras por documento que ainda não aparecem como "leitor" da sessão
   const sessaoPorId = new Map(sessoes.map(s => [s.id, s]))
-  const leitorEm = new Set(lista.filter(p => p.papel === 'leitor').map(p => p.sessaoId))
-  for (const l of leituras) {
-    if (l.leitor_id !== membroId) continue
-    const s = sessaoPorId.get(l.id_sessao)
-    if (!s || leitorEm.has(s.id)) continue
-    leitorEm.add(s.id)
+  for (const c of chamadas) {
+    if (c.membro_id !== membroId) continue
+    const s = sessaoPorId.get(c.id_sessao)
+    if (!s) continue
     lista.push({
-      chave: `lt-${l.id}`,
-      papel: 'leitor',
+      chave: `c-${c.id}`,
+      papel: 'chamada',
       sessaoId: s.id,
       preparoId: null,
       data: s.data_realizacao,
       titulo: `${s.tipo} · ${formatarData(s.data_realizacao)}`,
-      subtitulo: l.documento,
+      subtitulo: [c.chamada, c.autor].filter(Boolean).join(' · '),
     })
   }
 

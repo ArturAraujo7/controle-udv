@@ -6,7 +6,7 @@ import { Plus, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { useAuth } from '@/components/AuthProvider'
-import { BlocoHistorias, BlocoLeituras, BlocoVisitantes } from '@/components/formularios/BlocosSessao'
+import { BlocoChamadas, BlocoHistorias, BlocoVisitantes } from '@/components/formularios/BlocosSessao'
 import { BlocoFormulario, Campo, CampoMotivo, InputUnidade, SkeletonFormulario } from '@/components/formularios/Campos'
 import { FormLayout } from '@/components/formularios/FormLayout'
 import { CamposCondutores } from '@/components/sessao/CamposCondutores'
@@ -391,9 +391,9 @@ export function FormularioSessao({ id, duplicarDe }: { id?: number; duplicarDe?:
         )}
       </BlocoFormulario>
 
-      <BlocoLeituras
-        itens={form.filhos.leituras}
-        onChange={leituras => atualizar('filhos', { ...form.filhos, leituras })}
+      <BlocoChamadas
+        itens={form.filhos.chamadas}
+        onChange={chamadas => atualizar('filhos', { ...form.filhos, chamadas })}
         membros={membros}
         onMembroAdicionado={adicionar}
       />
