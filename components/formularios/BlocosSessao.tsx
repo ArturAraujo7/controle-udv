@@ -80,7 +80,7 @@ export function BlocoLeituras({
 }
 
 export function BlocoHistorias({ itens, onChange }: { itens: HistoriaForm[]; onChange: (itens: HistoriaForm[]) => void }) {
-  const historias = useLista('historias')
+  const historias = [...useLista('historias')].sort((a, b) => a.localeCompare(b, 'pt-BR', { sensitivity: 'base' }))
 
   return (
     <BlocoFormulario titulo="Histórias contadas">

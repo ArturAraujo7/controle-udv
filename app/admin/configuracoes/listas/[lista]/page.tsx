@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 
 import { ExigirAdmin } from '@/components/admin/ExigirAdmin'
 import { useAuth } from '@/components/AuthProvider'
+import { ChipsFiltro } from '@/components/comum/ChipsFiltro'
 import { ListaCard, Vazio } from '@/components/comum/Lista'
 import { Cabecalho, Secao } from '@/components/comum/Secao'
 import { Campo, LinhaInterruptor } from '@/components/formularios/Campos'
@@ -50,6 +51,13 @@ const CORES = [
 
 const SEM_COR = 'sem-cor'
 
+/** Listas longas, sem ordem de exibição própria: mostradas de A a Z ou pelas mais usadas. */
+const LISTAS_ALFABETICAS: NomeLista[] = ['historias']
+
+type Ordenacao = 'alfabetica' | 'uso'
+
+const porNome = (a: ItemLista, b: ItemLista) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' })
+
 export default function PaginaLista({
   params,
   searchParams,
@@ -87,6 +95,8 @@ function EditorLista({ lista, rotulo, regiaoParametro }: { lista: NomeLista; rot
   const [uso, setUso] = useState<{ regiao: number | null; mapa: Map<string, number> }>({ regiao: null, mapa: new Map() })
   const [edicao, setEdicao] = useState<Edicao | null>(null)
   const [salvando, setSalvando] = useState(false)
+  const [ordenacao, setOrdenacao] = useState<Ordenacao>('alfabetica')
+  const alfabetica = LISTAS_ALFABETICAS.includes(lista)
 
   useEffect(() => {
     if (!regiao) return
@@ -114,6 +124,9 @@ function EditorLista({ lista, rotulo, regiaoParametro }: { lista: NomeLista; rot
   const ativos = (itens ?? []).filter(i => i.ativo)
   const arquivados = (itens ?? []).filter(i => !i.ativo)
   const usoDe = (nome: string) => (uso.regiao === regiao ? uso.mapa.get(nome) ?? 0 : 0)
+  const exibidos = !alfabetica
+    ? ativos
+    : [...ativos].sort((a, b) => (ordenacao === 'uso' ? usoDe(b.nome) - usoDe(a.nome) : 0) || porNome(a, b))
 
   const mover = async (indice: number, direcao: -1 | 1) => {
     const destino = indice + direcao
@@ -219,9 +232,23 @@ function EditorLista({ lista, rotulo, regiaoParametro }: { lista: NomeLista; rot
       )}
 
       <p className="mb-4 rounded-xl bg-muted px-4 py-3 text-sm text-muted-foreground">
-        A lista vale para todos os núcleos de {estrutura.nomeRegiao(regiao) ?? 'a região'}. Use as setas para reordenar.
-        Itens já usados em registros não podem ser excluídos, só arquivados.
+        A lista vale para todos os núcleos de {estrutura.nomeRegiao(regiao) ?? 'a região'}.
+        {alfabetica ? ' Os itens aparecem em ordem alfabética.' : ' Use as setas para reordenar.'}
+        {' '}Itens já usados em registros não podem ser excluídos, só arquivados.
       </p>
+
+      {alfabetica && ativos.length > 0 && (
+        <ChipsFiltro
+          className="mb-4"
+          rotulo="Ordenar itens"
+          valor={ordenacao}
+          onChange={setOrdenacao}
+          opcoes={[
+            { valor: 'alfabetica', rotulo: 'A–Z' },
+            { valor: 'uso', rotulo: 'Mais contadas' },
+          ]}
+        />
+      )}
 
       {itens === null ? (
         <div className="space-y-2">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-14 rounded-xl" />)}</div>
@@ -231,16 +258,18 @@ function EditorLista({ lista, rotulo, regiaoParametro }: { lista: NomeLista; rot
         </Vazio>
       ) : (
         <ListaCard>
-          {ativos.map((item, i) => (
+          {exibidos.map((item, i) => (
             <li key={item.id} className="flex items-center gap-2 px-2 py-2">
-              <div className="flex flex-col">
-                <Button variant="ghost" size="icon-sm" aria-label={`Subir ${item.nome}`} disabled={i === 0} onClick={() => mover(i, -1)}>
-                  <ArrowUp />
-                </Button>
-                <Button variant="ghost" size="icon-sm" aria-label={`Descer ${item.nome}`} disabled={i === ativos.length - 1} onClick={() => mover(i, 1)}>
-                  <ArrowDown />
-                </Button>
-              </div>
+              {!alfabetica && (
+                <div className="flex flex-col">
+                  <Button variant="ghost" size="icon-sm" aria-label={`Subir ${item.nome}`} disabled={i === 0} onClick={() => mover(i, -1)}>
+                    <ArrowUp />
+                  </Button>
+                  <Button variant="ghost" size="icon-sm" aria-label={`Descer ${item.nome}`} disabled={i === ativos.length - 1} onClick={() => mover(i, 1)}>
+                    <ArrowDown />
+                  </Button>
+                </div>
+              )}
               <button
                 type="button"
                 onClick={() => abrir(item)}
