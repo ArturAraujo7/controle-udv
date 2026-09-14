@@ -1,9 +1,11 @@
 'use client'
 import { use, useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { ArrowDown, ArrowUp, Database, Loader2, Plus } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { ExigirAdmin } from '@/components/admin/ExigirAdmin'
+import { useAuth } from '@/components/AuthProvider'
 import { ListaCard, Vazio } from '@/components/comum/Lista'
 import { Cabecalho, Secao } from '@/components/comum/Secao'
 import { Campo, LinhaInterruptor } from '@/components/formularios/Campos'
@@ -17,14 +19,14 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
+import { useEstrutura } from '@/hooks/useEstrutura'
 import { invalidarLista, useItensLista } from '@/hooks/useListas'
 import { LISTAS_SISTEMA } from '@/lib/constants'
-import { buscarTodos } from '@/lib/consultas'
 import { supabase } from '@/lib/supabaseClient'
-import type { ItemLista, NomeLista } from '@/lib/tipos'
+import type { DadosRegionais, ItemLista, NomeLista } from '@/lib/tipos'
 
-/** De onde vem o uso de cada lista nos registros. */
-const FONTES_USO: Record<NomeLista, { tabela: string; coluna: string }[]> = {
+/** De onde vem o uso de cada lista nos registros da região. */
+const FONTES_USO: Record<NomeLista, { tabela: 'sessoes' | 'membros' | 'leituras' | 'historias' | 'preparos' | 'saidas'; coluna: string }[]> = {
   tipos_sessao: [{ tabela: 'sessoes', coluna: 'tipo' }],
   graus: [{ tabela: 'membros', coluna: 'grau' }],
   tipos_delegacao: [{ tabela: 'sessoes', coluna: 'tipo_delegacao' }],
@@ -48,14 +50,21 @@ const CORES = [
 
 const SEM_COR = 'sem-cor'
 
-export default function PaginaLista({ params }: { params: Promise<{ lista: string }> }) {
+export default function PaginaLista({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ lista: string }>
+  searchParams: Promise<{ regiao?: string }>
+}) {
   const { lista } = use(params)
+  const { regiao } = use(searchParams)
   const meta = LISTAS_SISTEMA.find(l => l.lista === lista)
 
   return (
     <ExigirAdmin>
       {meta ? (
-        <EditorLista lista={meta.lista} rotulo={meta.rotulo} />
+        <EditorLista lista={meta.lista} rotulo={meta.rotulo} regiaoParametro={regiao ? Number(regiao) : null} />
       ) : (
         <>
           <Cabecalho voltar={{ href: '/admin/configuracoes', rotulo: 'Configurações' }} titulo="Lista" />
@@ -68,32 +77,34 @@ export default function PaginaLista({ params }: { params: Promise<{ lista: strin
 
 type Edicao = { item: ItemLista | null; nome: string; cor: string; exigeExplanador: boolean }
 
-function EditorLista({ lista, rotulo }: { lista: NomeLista; rotulo: string }) {
-  const { itens, indisponivel, recarregar } = useItensLista(lista)
-  const [uso, setUso] = useState<Map<string, number>>(new Map())
+function EditorLista({ lista, rotulo, regiaoParametro }: { lista: NomeLista; rotulo: string; regiaoParametro: number | null }) {
+  const router = useRouter()
+  const { regiaoId: minhaRegiao } = useAuth()
+  const estrutura = useEstrutura()
+  const regiao = regiaoParametro ?? minhaRegiao ?? estrutura.regioes[0]?.id ?? null
+
+  const { itens, indisponivel, recarregar } = useItensLista(lista, regiao)
+  const [uso, setUso] = useState<{ regiao: number | null; mapa: Map<string, number> }>({ regiao: null, mapa: new Map() })
   const [edicao, setEdicao] = useState<Edicao | null>(null)
   const [salvando, setSalvando] = useState(false)
 
   useEffect(() => {
+    if (!regiao) return
     let ativo = true
-    Promise.all(
-      FONTES_USO[lista].map(({ tabela, coluna }) =>
-        buscarTodos<Record<string, string | null>>((de, ate) =>
-          // Coluna dinâmica: o parser de tipos do supabase-js não consegue inferir o resultado
-          supabase.from(tabela).select(`id, ${coluna}`).order('id').range(de, ate) as unknown as PromiseLike<{
-            data: Record<string, string | null>[] | null
-            error: { message: string } | null
-          }>
-        ).then(linhas => linhas.map(l => l[coluna])).catch(() => [])
-      )
-    ).then(listas => {
+    supabase.rpc('dados_regionais', { p_regiao_id: regiao }).then(({ data }) => {
       if (!ativo) return
+      const dados = data as DadosRegionais | null
       const mapa = new Map<string, number>()
-      for (const valor of listas.flat()) if (valor) mapa.set(valor, (mapa.get(valor) ?? 0) + 1)
-      setUso(mapa)
+      for (const { tabela, coluna } of FONTES_USO[lista]) {
+        for (const linha of (dados?.[tabela] ?? []) as unknown as Record<string, unknown>[]) {
+          const valor = linha[coluna]
+          if (typeof valor === 'string' && valor) mapa.set(valor, (mapa.get(valor) ?? 0) + 1)
+        }
+      }
+      setUso({ regiao, mapa })
     })
     return () => { ativo = false }
-  }, [lista])
+  }, [lista, regiao])
 
   const atualizarLista = async () => {
     invalidarLista(lista)
@@ -102,6 +113,7 @@ function EditorLista({ lista, rotulo }: { lista: NomeLista; rotulo: string }) {
 
   const ativos = (itens ?? []).filter(i => i.ativo)
   const arquivados = (itens ?? []).filter(i => !i.ativo)
+  const usoDe = (nome: string) => (uso.regiao === regiao ? uso.mapa.get(nome) ?? 0 : 0)
 
   const mover = async (indice: number, direcao: -1 | 1) => {
     const destino = indice + direcao
@@ -137,7 +149,7 @@ function EditorLista({ lista, rotulo }: { lista: NomeLista; rotulo: string }) {
     }
     const { error } = edicao.item
       ? await supabase.from('listas_sistema').update(dados).eq('id', edicao.item.id)
-      : await supabase.from('listas_sistema').insert({ ...dados, lista, ordem: ativos.length + 1 })
+      : await supabase.from('listas_sistema').insert({ ...dados, lista, regiao_id: regiao, ordem: ativos.length + 1 })
     setSalvando(false)
     if (error) {
       toast.error('Erro ao salvar', { description: error.code === '23505' ? 'Já existe um item com esse nome.' : error.message })
@@ -149,7 +161,10 @@ function EditorLista({ lista, rotulo }: { lista: NomeLista; rotulo: string }) {
   }
 
   const alternarArquivo = async (item: ItemLista) => {
-    const { error } = await supabase.from('listas_sistema').update({ ativo: !item.ativo, ordem: item.ativo ? item.ordem : ativos.length + 1 }).eq('id', item.id)
+    const { error } = await supabase
+      .from('listas_sistema')
+      .update({ ativo: !item.ativo, ordem: item.ativo ? item.ordem : ativos.length + 1 })
+      .eq('id', item.id)
     if (error) {
       toast.error('Erro ao atualizar', { description: error.message })
       return
@@ -174,15 +189,14 @@ function EditorLista({ lista, rotulo }: { lista: NomeLista; rotulo: string }) {
     return (
       <>
         <Cabecalho voltar={{ href: '/admin/configuracoes', rotulo: 'Configurações' }} titulo={rotulo} />
-        <Vazio icone={<Database />}>A tabela de listas ainda não existe. Aplique as migrations de 13/09/2026.</Vazio>
+        <Vazio icone={<Database />}>A tabela de listas ainda não existe. Aplique as migrations de 13 e 14/09/2026.</Vazio>
       </>
     )
   }
 
-  const usoDe = (nome: string) => uso.get(nome) ?? 0
   const rotuloUso = (nome: string) => {
     const n = usoDe(nome)
-    return n === 0 ? 'Sem uso nos registros' : `Usado em ${n} ${n === 1 ? 'registro' : 'registros'}`
+    return n === 0 ? 'Sem uso na região' : `Usado em ${n} ${n === 1 ? 'registro' : 'registros'} da região`
   }
 
   return (
@@ -190,12 +204,23 @@ function EditorLista({ lista, rotulo }: { lista: NomeLista; rotulo: string }) {
       <Cabecalho
         voltar={{ href: '/admin/configuracoes', rotulo: 'Configurações' }}
         titulo={rotulo}
-        acoes={<Button onClick={() => abrir(null)}><Plus /> Novo</Button>}
+        acoes={<Button onClick={() => abrir(null)} disabled={!regiao}><Plus /> Novo</Button>}
       />
 
+      {estrutura.regioes.length > 1 && (
+        <div className="mb-4">
+          <Select value={regiao ? String(regiao) : ''} onValueChange={v => router.replace(`/admin/configuracoes/listas/${lista}?regiao=${v}`)}>
+            <SelectTrigger className="h-10 w-full bg-card" aria-label="Região"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {estrutura.regioes.map(r => <SelectItem key={r.id} value={String(r.id)}>Região: {r.nome}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
       <p className="mb-4 rounded-xl bg-muted px-4 py-3 text-sm text-muted-foreground">
-        Use as setas para reordenar. Itens já usados em registros não podem ser excluídos, só arquivados —
-        arquivados somem dos formulários, mas continuam nos registros antigos.
+        A lista vale para todos os núcleos de {estrutura.nomeRegiao(regiao) ?? 'a região'}. Use as setas para reordenar.
+        Itens já usados em registros não podem ser excluídos, só arquivados.
       </p>
 
       {itens === null ? (
@@ -240,11 +265,7 @@ function EditorLista({ lista, rotulo }: { lista: NomeLista; rotulo: string }) {
           <ListaCard>
             {arquivados.map(item => (
               <li key={item.id}>
-                <button
-                  type="button"
-                  onClick={() => abrir(item)}
-                  className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-muted/50"
-                >
+                <button type="button" onClick={() => abrir(item)} className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-muted/50">
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm text-muted-foreground">{item.nome}</span>
                     <span className="block text-xs text-muted-foreground">{rotuloUso(item.nome)}</span>
@@ -264,7 +285,7 @@ function EditorLista({ lista, rotulo }: { lista: NomeLista; rotulo: string }) {
             <DialogDescription>
               {edicao?.item && usoDe(edicao.item.nome) > 0
                 ? 'Renomear não altera registros antigos: eles continuam com o nome anterior.'
-                : rotulo}
+                : `${rotulo} · ${estrutura.nomeRegiao(regiao) ?? ''}`}
             </DialogDescription>
           </DialogHeader>
 

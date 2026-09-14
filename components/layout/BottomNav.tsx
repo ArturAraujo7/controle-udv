@@ -7,13 +7,16 @@ import { useAuth } from '@/components/AuthProvider'
 import { podeEditar } from '@/lib/permissoes'
 import { cn } from '@/lib/utils'
 import { BotaoRegistrar } from './QuickActionSheet'
-import { NAV_PRINCIPAL, estaAtiva } from './rotas'
+import { ehRotaRegional, estaAtiva, navDaRota } from './rotas'
 
 /** Barra de abas flutuante (celular) com o botão "+" de registro rápido ao lado. */
 export function BottomNav() {
   const pathname = usePathname()
   const { profile } = useAuth()
-  const indice = NAV_PRINCIPAL.findIndex(item => estaAtiva(pathname, item))
+  const itens = navDaRota(pathname)
+  const indice = itens.findIndex(item => estaAtiva(pathname, item))
+  // A visão regional é somente leitura: sem botão +
+  const mostrarRegistrar = !ehRotaRegional(pathname) && podeEditar(profile)
 
   return (
     <div className="fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+0.75rem)] z-40 flex items-center gap-3 md:hidden print:hidden">
@@ -30,7 +33,7 @@ export function BottomNav() {
             />
           )}
           <ul className="relative grid grid-cols-4">
-            {NAV_PRINCIPAL.map((item, i) => {
+            {itens.map((item, i) => {
               const ativa = i === indice
               const Icone = item.icon
               return (
@@ -53,7 +56,7 @@ export function BottomNav() {
         </div>
       </nav>
 
-      {podeEditar(profile) && <BotaoRegistrar />}
+      {mostrarRegistrar && <BotaoRegistrar />}
     </div>
   )
 }

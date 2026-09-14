@@ -2,26 +2,29 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { LogOut, Plus, Settings, ShieldCheck, SlidersHorizontal, User, Users } from 'lucide-react'
+import { Globe2, Home, LogOut, Map, Plus, Settings, ShieldCheck, SlidersHorizontal, User, Users } from 'lucide-react'
 
 import { Logo } from '@/components/Logo'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { useAuth } from '@/components/AuthProvider'
 import { supabase } from '@/lib/supabaseClient'
 import { ehAdmin, podeEditar } from '@/lib/permissoes'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { BotaoConta } from './AccountSheet'
-import { ACOES_RAPIDAS, NAV_PRINCIPAL, estaAtiva } from './rotas'
+import { ACOES_RAPIDAS, ehRotaRegional, estaAtiva, navDaRota } from './rotas'
 import { cn } from '@/lib/utils'
 
 export function Header({ ocultarNoMobile = false }: { ocultarNoMobile?: boolean }) {
   const pathname = usePathname()
   const router = useRouter()
   const { profile } = useAuth()
+  const regional = ehRotaRegional(pathname)
+  const admin = ehAdmin(profile)
 
   const sair = async () => {
     await supabase.auth.signOut()
@@ -37,13 +40,14 @@ export function Header({ ocultarNoMobile = false }: { ocultarNoMobile?: boolean 
     >
       <div className="mx-auto flex h-14 max-w-5xl items-center justify-between gap-4 px-4">
         <div className="flex min-w-0 items-center gap-6">
-          <Link href="/" className="flex shrink-0 items-center gap-2">
+          <Link href={regional ? '/regional' : '/'} className="flex shrink-0 items-center gap-2">
             <Logo className="h-5 w-5 text-primary" />
             <span className="font-semibold tracking-tight">Guardião</span>
+            {regional && <Badge variant="outline" className="hidden sm:inline-flex">Regional</Badge>}
           </Link>
 
           <nav aria-label="Navegação principal" className="hidden items-center gap-0.5 text-sm md:flex">
-            {NAV_PRINCIPAL.map(item => {
+            {navDaRota(pathname).map(item => {
               const ativa = estaAtiva(pathname, item)
               return (
                 <Link
@@ -71,7 +75,7 @@ export function Header({ ocultarNoMobile = false }: { ocultarNoMobile?: boolean 
 
         {/* Desktop */}
         <div className="hidden shrink-0 items-center gap-1 md:flex">
-          {podeEditar(profile) && (
+          {!regional && podeEditar(profile) && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button size="sm" className="mr-1">
@@ -90,16 +94,28 @@ export function Header({ ocultarNoMobile = false }: { ocultarNoMobile?: boolean 
 
           <ThemeToggle />
 
-          {ehAdmin(profile) && (
+          {admin && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" aria-label="Administração">
                   <Settings />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuLabel>Administração</DropdownMenuLabel>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel>Administração geral</DropdownMenuLabel>
                 <DropdownMenuSeparator />
+                {regional ? (
+                  <DropdownMenuItem asChild>
+                    <Link href="/"><Home /> Voltar ao meu núcleo</Link>
+                  </DropdownMenuItem>
+                ) : (
+                  <DropdownMenuItem asChild>
+                    <Link href="/regional"><Globe2 /> Visão regional</Link>
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem asChild>
+                  <Link href="/admin/estrutura"><Map /> Regiões e núcleos</Link>
+                </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <Link href="/admin/configuracoes"><SlidersHorizontal /> Configurações</Link>
                 </DropdownMenuItem>

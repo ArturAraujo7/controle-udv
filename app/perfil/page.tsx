@@ -19,7 +19,7 @@ import { supabase } from '@/lib/supabaseClient'
 
 export default function Perfil() {
   const router = useRouter()
-  const { session, profile, recarregarPerfil } = useAuth()
+  const { session, profile, nucleo, recarregarPerfil } = useAuth()
   const [nome, setNome] = useState<string | null>(null)
   const [salvando, setSalvando] = useState(false)
 
@@ -71,6 +71,7 @@ export default function Perfil() {
                 <p className="truncate text-sm text-muted-foreground">{profile.email}</p>
                 <div className="mt-1 flex flex-wrap gap-1.5">
                   <Badge variant="secondary">{rotuloPapel(profile.role)}</Badge>
+                  {nucleo && <Badge variant="outline">{nucleo.nome}</Badge>}
                   {profile.status && profile.status !== 'ativo' && <Badge variant="outline">{SITUACOES[profile.status]}</Badge>}
                 </div>
               </div>

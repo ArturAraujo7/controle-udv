@@ -3,7 +3,7 @@
  * Campos marcados como opcionais (`?`) dependem das migrations de 13/09/2026.
  */
 
-export type Papel = 'admin' | 'representante' | 'assistente' | 'mestre'
+export type Papel = 'admin' | 'representante' | 'assistente' | 'mestre' | 'central'
 export type SituacaoUsuario = 'pendente' | 'ativo' | 'desativado'
 
 export type Preparo = {
@@ -118,6 +118,10 @@ export type Perfil = {
   role: Papel
   status?: SituacaoUsuario
   membro_id?: number | null
+  /** Núcleo do usuário (nulo para o Mestre Central). */
+  nucleo_id?: number | null
+  /** Região do Mestre Central. */
+  regiao_id?: number | null
 }
 
 export type UsuarioAdmin = Perfil & {
@@ -127,10 +131,8 @@ export type UsuarioAdmin = Perfil & {
   provedor: string | null
 }
 
+/** Configurações de um núcleo (nome e cidade ficam em `nucleos`). */
 export type Configuracoes = {
-  nucleo_nome: string
-  nucleo_regiao: string | null
-  nucleo_cidade: string | null
   logo_arquivo: string | null
   estoque_minimo_litros: number
   dias_lote_parado: number
@@ -150,8 +152,40 @@ export type NomeLista =
   | 'nucleos'
   | 'motivos_saida'
 
+export type Regiao = {
+  id: number
+  nome: string
+  created_at: string
+}
+
+export type Nucleo = {
+  id: number
+  nome: string
+  regiao_id: number
+  cidade: string | null
+  ativo: boolean
+  created_at: string
+}
+
+/** Resultado de dados_regionais(): tudo da região, em somente leitura. */
+export type DadosRegionais = {
+  regiao: Regiao | null
+  nucleos: (Nucleo & { configuracao: (Configuracoes & { nucleo_id: number }) | null })[]
+  sessoes: (Sessao & { nucleo_id: number })[]
+  consumos: (ConsumoSessao & { nucleo_id: number })[]
+  preparos: (Preparo & { nucleo_id: number })[]
+  saidas: (Saida & { nucleo_id: number })[]
+  membros: (Membro & { nucleo_id: number })[]
+  leituras: (Leitura & { nucleo_id: number })[]
+  historias: (Historia & { nucleo_id: number })[]
+  visitantes: (Visitante & { nucleo_id: number })[]
+  graus: (MudancaGrau & { nucleo_id: number })[]
+  responsaveis: { nucleo_id: number; nome: string | null; papel: Papel }[]
+}
+
 export type ItemLista = {
   id: number
+  regiao_id?: number
   lista: NomeLista
   nome: string
   ordem: number

@@ -1,13 +1,11 @@
 'use client'
 import { useCallback, useEffect, useState } from 'react'
 
+import { useAuth } from '@/components/AuthProvider'
 import { supabase } from '@/lib/supabaseClient'
 import type { Configuracoes } from '@/lib/tipos'
 
 export const CONFIGURACOES_PADRAO: Configuracoes = {
-  nucleo_nome: 'Núcleo Jardim Real',
-  nucleo_regiao: null,
-  nucleo_cidade: null,
   logo_arquivo: null,
   estoque_minimo_litros: 10,
   dias_lote_parado: 90,
@@ -18,42 +16,61 @@ export const CONFIGURACOES_PADRAO: Configuracoes = {
   resumo_mensal_email: false,
 }
 
-// Compartilhado entre telas para não buscar a mesma linha a cada navegação.
-let cache: Configuracoes | null = null
+type Chave = number | 'padrao'
 
-async function carregarConfiguracoes(): Promise<Configuracoes> {
-  const { data } = await supabase.from('configuracoes').select('*').eq('id', 1).maybeSingle()
-  const config: Configuracoes = data
-    ? { ...CONFIGURACOES_PADRAO, ...data, estoque_minimo_litros: Number(data.estoque_minimo_litros) }
+// Compartilhado entre telas para não buscar a mesma linha a cada navegação.
+const cache = new Map<Chave, Configuracoes>()
+
+export function normalizarConfiguracoes(dados: Partial<Configuracoes> | null | undefined): Configuracoes {
+  return dados
+    ? { ...CONFIGURACOES_PADRAO, ...dados, estoque_minimo_litros: Number(dados.estoque_minimo_litros ?? CONFIGURACOES_PADRAO.estoque_minimo_litros) }
     : CONFIGURACOES_PADRAO
-  cache = config
+}
+
+async function carregarConfiguracoes(nucleoId: number | null): Promise<Configuracoes> {
+  let resposta = nucleoId
+    ? await supabase.from('configuracoes').select('*').eq('nucleo_id', nucleoId).maybeSingle()
+    : null
+  // Antes da migration de núcleos a tabela tinha uma linha só, sem nucleo_id.
+  if (!resposta || resposta.error) {
+    resposta = await supabase.from('configuracoes').select('*').limit(1).maybeSingle()
+  }
+  const config = normalizarConfiguracoes(resposta.error ? null : resposta.data)
+  cache.set(nucleoId ?? 'padrao', config)
   return config
 }
 
+export function invalidarConfiguracoes() {
+  cache.clear()
+}
+
 /**
- * Configurações do núcleo (tabela `configuracoes`). Enquanto carrega — ou se a
- * migration ainda não foi aplicada — devolve os valores padrão.
+ * Configurações do núcleo do usuário (ou de `nucleoId`, na administração).
+ * Enquanto carrega — ou sem as migrations — devolve os valores padrão.
  */
-export function useConfiguracoes() {
-  const [config, setConfig] = useState<Configuracoes>(cache ?? CONFIGURACOES_PADRAO)
-  const [carregado, setCarregado] = useState(cache !== null)
+export function useConfiguracoes(nucleoId?: number | null) {
+  const { profile } = useAuth()
+  const alvo = nucleoId !== undefined ? nucleoId : profile?.nucleo_id ?? null
+  const chave: Chave = alvo ?? 'padrao'
+
+  const [estado, setEstado] = useState<{ chave: Chave; config: Configuracoes } | null>(
+    () => (cache.has(chave) ? { chave, config: cache.get(chave)! } : null)
+  )
 
   useEffect(() => {
-    if (cache) return
+    if (cache.has(chave)) return
     let ativo = true
-    carregarConfiguracoes().then(c => {
-      if (!ativo) return
-      setConfig(c)
-      setCarregado(true)
+    carregarConfiguracoes(alvo).then(config => {
+      if (ativo) setEstado({ chave, config })
     })
     return () => { ativo = false }
-  }, [])
+  }, [chave, alvo])
 
   const recarregar = useCallback(async () => {
-    const c = await carregarConfiguracoes()
-    setConfig(c)
-    setCarregado(true)
-  }, [])
+    const config = await carregarConfiguracoes(alvo)
+    setEstado({ chave, config })
+  }, [chave, alvo])
 
-  return { config, carregado, recarregar }
+  const atual = estado?.chave === chave ? estado.config : cache.get(chave)
+  return { config: atual ?? CONFIGURACOES_PADRAO, carregado: !!atual, recarregar }
 }

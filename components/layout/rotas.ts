@@ -7,7 +7,7 @@ export type ItemNav = {
   href: string
   label: string
   icon: LucideIcon
-  /** Rotas que acendem esta aba (além do próprio href). */
+  /** Outras rotas que também acendem esta aba. */
   prefixos: string[]
 }
 
@@ -26,6 +26,14 @@ export const NAV_PRINCIPAL: ItemNav[] = [
     ],
   },
   { href: '/relatorios', label: 'Relatórios', icon: BarChart3, prefixos: ['/relatorios'] },
+]
+
+/** Visão regional (Mestre Central e administrador geral) — somente leitura, sem botão +. */
+export const NAV_REGIONAL: ItemNav[] = [
+  { href: '/regional', label: 'Início', icon: Home, prefixos: ['/regional/nucleos'] },
+  { href: '/regional/estoque', label: 'Estoque', icon: Package, prefixos: ['/regional/estoque', '/regional/lotes'] },
+  { href: '/regional/sessoes', label: 'Sessões', icon: CalendarDays, prefixos: ['/regional/sessoes', '/regional/membros'] },
+  { href: '/regional/relatorios', label: 'Relatórios', icon: BarChart3, prefixos: ['/regional/relatorios'] },
 ]
 
 /** Registros rápidos — folha do botão "+" e menu "Registrar" do desktop. */
@@ -50,8 +58,15 @@ export function temShell(pathname: string) {
 }
 
 export function estaAtiva(pathname: string, item: ItemNav) {
-  if (item.href === '/') return pathname === '/'
-  return item.prefixos.some(p => pathname === p || pathname.startsWith(`${p}/`))
+  return pathname === item.href || item.prefixos.some(p => pathname === p || pathname.startsWith(`${p}/`))
+}
+
+export function ehRotaRegional(pathname: string) {
+  return pathname === '/regional' || pathname.startsWith('/regional/')
+}
+
+export function navDaRota(pathname: string) {
+  return ehRotaRegional(pathname) ? NAV_REGIONAL : NAV_PRINCIPAL
 }
 
 const ROTA_FORMULARIO = /^\/(?:(?:nova|novo|editar)-[^/]+(?:\/[^/]+)?|membros\/(?:novo|\d+\/editar))\/?$/

@@ -16,6 +16,8 @@ async function carregarUsuarios(): Promise<{ usuarios: UsuarioAdmin[]; completo:
       ...p,
       status: 'ativo' as const,
       membro_id: null,
+      nucleo_id: null,
+      regiao_id: null,
       criado_em: '',
       ultimo_acesso: null,
       provedor: null,

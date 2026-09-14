@@ -6,11 +6,15 @@ import { Session } from '@supabase/supabase-js'
 import { Loader2, ShieldOff } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
-import type { Perfil } from '@/lib/tipos'
+import type { Nucleo, Perfil } from '@/lib/tipos'
 
 type AuthContextType = {
   session: Session | null
   profile: Perfil | null
+  /** Núcleo do usuário (nulo para o Mestre Central ou antes das migrations). */
+  nucleo: Nucleo | null
+  /** Região do usuário: a do núcleo, ou a do Mestre Central. */
+  regiaoId: number | null
   loading: boolean
   /** Busca o perfil de novo (ex.: depois de editar o nome). */
   recarregarPerfil: () => Promise<void>
@@ -19,25 +23,29 @@ type AuthContextType = {
 const AuthContext = createContext<AuthContextType>({
   session: null,
   profile: null,
+  nucleo: null,
+  regiaoId: null,
   loading: true,
   recarregarPerfil: async () => {},
 })
 
 export const useAuth = () => useContext(AuthContext)
 
+type DadosPerfil = { profile: Perfil | null; nucleo: Nucleo | null }
+
 export default function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
   const [session, setSession] = useState<Session | null>(null)
-  const [profile, setProfile] = useState<Perfil | null>(null)
+  const [dados, setDados] = useState<DadosPerfil>({ profile: null, nucleo: null })
   const [loading, setLoading] = useState(true)
 
   // Rotas acessíveis sem sessão (a vitrine do design system só tem dados fictícios)
   const isPublicRoute = pathname === '/login' || pathname === '/design-system'
 
-  const fetchProfile = useCallback(async (userId: string) => {
+  const fetchProfile = useCallback(async (userId: string): Promise<DadosPerfil> => {
     try {
-      // `*` para funcionar antes e depois das migrations (status, membro_id)
+      // `*` para funcionar antes e depois das migrations (status, membro_id, nucleo_id…)
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -46,12 +54,19 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
 
       if (error) {
         console.error('Erro ao buscar perfil:', error.message)
-        return null
+        return { profile: null, nucleo: null }
       }
-      return data as Perfil
+
+      const profile = data as Perfil
+      let nucleo: Nucleo | null = null
+      if (profile.nucleo_id) {
+        const resposta = await supabase.from('nucleos').select('*').eq('id', profile.nucleo_id).maybeSingle()
+        nucleo = (resposta.data as Nucleo | null) ?? null
+      }
+      return { profile, nucleo }
     } catch (err) {
       console.error('Erro inesperado ao buscar perfil:', err)
-      return null
+      return { profile: null, nucleo: null }
     }
   }, [])
 
@@ -66,12 +81,12 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
       if (session) {
         setSession(session)
         // Busca o perfil em segundo plano para não travar o carregamento inicial
-        fetchProfile(session.user.id).then(userProfile => {
-          if (mounted) setProfile(userProfile)
+        fetchProfile(session.user.id).then(resultado => {
+          if (mounted) setDados(resultado)
         })
       } else {
         setSession(null)
-        setProfile(null)
+        setDados({ profile: null, nucleo: null })
       }
 
       setLoading(false)
@@ -89,15 +104,15 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
       setSession(session)
 
       if (session) {
-        fetchProfile(session.user.id).then(userProfile => {
-          if (mounted) setProfile(userProfile)
+        fetchProfile(session.user.id).then(resultado => {
+          if (mounted) setDados(resultado)
         })
 
         if (pathname === '/login') {
           router.push('/')
         }
       } else {
-        setProfile(null)
+        setDados({ profile: null, nucleo: null })
         if (!isPublicRoute) {
           router.push('/login')
         }
@@ -113,7 +128,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
   const userId = session?.user.id
   const recarregarPerfil = useCallback(async () => {
     if (!userId) return
-    setProfile(await fetchProfile(userId))
+    setDados(await fetchProfile(userId))
   }, [userId, fetchProfile])
 
   if (loading && !isPublicRoute) {
@@ -123,6 +138,8 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
       </div>
     )
   }
+
+  const { profile, nucleo } = dados
 
   if (profile?.status === 'desativado' && !isPublicRoute) {
     return (
@@ -149,7 +166,16 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
   }
 
   return (
-    <AuthContext.Provider value={{ session, profile, loading, recarregarPerfil }}>
+    <AuthContext.Provider
+      value={{
+        session,
+        profile,
+        nucleo,
+        regiaoId: profile?.regiao_id ?? nucleo?.regiao_id ?? null,
+        loading,
+        recarregarPerfil,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   )

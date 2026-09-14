@@ -1,6 +1,7 @@
 'use client'
 import { useCallback, useEffect, useState } from 'react'
 
+import { useAuth } from '@/components/AuthProvider'
 import { supabase } from '@/lib/supabaseClient'
 import { GRAUS_MEMBRO, MOTIVOS_SAIDA, TIPOS_DELEGACAO, TIPOS_SESSAO } from '@/lib/constants'
 import type { ItemLista, NomeLista } from '@/lib/tipos'
@@ -18,48 +19,61 @@ const PADRAO: Record<NomeLista, readonly string[]> = {
 
 type Resultado = { itens: ItemLista[]; indisponivel: boolean }
 
-const cache = new Map<NomeLista, Resultado>()
+const cache = new Map<string, Resultado>()
+const chaveDe = (lista: NomeLista, regiaoId: number | null) => `${regiaoId ?? 'sem-regiao'}:${lista}`
 
-async function carregarLista(lista: NomeLista): Promise<Resultado> {
-  const { data, error } = await supabase
-    .from('listas_sistema')
-    .select('*')
-    .eq('lista', lista)
-    .order('ordem')
-    .order('nome')
+async function carregarLista(lista: NomeLista, regiaoId: number | null): Promise<Resultado> {
+  const consulta = (porRegiao: boolean) => {
+    let q = supabase.from('listas_sistema').select('*').eq('lista', lista)
+    if (porRegiao && regiaoId) q = q.eq('regiao_id', regiaoId)
+    return q.order('ordem').order('nome')
+  }
 
-  const resultado = error
+  let resposta = await consulta(true)
+  // Antes da migration de núcleos as listas não tinham região.
+  if (resposta.error && regiaoId) resposta = await consulta(false)
+
+  const resultado = resposta.error
     ? { itens: [], indisponivel: true }
-    : { itens: data as ItemLista[], indisponivel: false }
-  if (!error) cache.set(lista, resultado)
+    : { itens: resposta.data as ItemLista[], indisponivel: false }
+  if (!resposta.error) cache.set(chaveDe(lista, regiaoId), resultado)
   return resultado
 }
 
 export function invalidarLista(lista: NomeLista) {
-  cache.delete(lista)
+  for (const chave of [...cache.keys()]) {
+    if (chave.endsWith(`:${lista}`)) cache.delete(chave)
+  }
 }
 
-/** Itens completos de uma lista (inclui arquivados) — usado na administração. */
-export function useItensLista(lista: NomeLista) {
-  const [resultado, setResultado] = useState<{ lista: NomeLista; dados: Resultado } | null>(
-    () => (cache.has(lista) ? { lista, dados: cache.get(lista)! } : null)
+/**
+ * Itens completos de uma lista (inclui arquivados). Por padrão usa a região do
+ * usuário; a administração passa `regiaoId` para editar outra região.
+ */
+export function useItensLista(lista: NomeLista, regiaoId?: number | null) {
+  const { regiaoId: regiaoUsuario } = useAuth()
+  const regiao = regiaoId !== undefined ? regiaoId : regiaoUsuario
+  const chave = chaveDe(lista, regiao)
+
+  const [resultado, setResultado] = useState<{ chave: string; dados: Resultado } | null>(
+    () => (cache.has(chave) ? { chave, dados: cache.get(chave)! } : null)
   )
 
   useEffect(() => {
-    if (cache.has(lista)) return
+    if (cache.has(chave)) return
     let ativo = true
-    carregarLista(lista).then(dados => {
-      if (ativo) setResultado({ lista, dados })
+    carregarLista(lista, regiao).then(dados => {
+      if (ativo) setResultado({ chave, dados })
     })
     return () => { ativo = false }
-  }, [lista])
+  }, [chave, lista, regiao])
 
   const recarregar = useCallback(async () => {
-    const dados = await carregarLista(lista)
-    setResultado({ lista, dados })
-  }, [lista])
+    const dados = await carregarLista(lista, regiao)
+    setResultado({ chave, dados })
+  }, [chave, lista, regiao])
 
-  const atual = resultado?.lista === lista ? resultado.dados : cache.get(lista)
+  const atual = resultado?.chave === chave ? resultado.dados : cache.get(chave)
   return { itens: atual?.itens ?? null, indisponivel: atual?.indisponivel ?? false, recarregar }
 }
 

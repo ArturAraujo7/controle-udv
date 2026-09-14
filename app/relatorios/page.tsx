@@ -63,8 +63,9 @@ function resumir(sessoes: Sessao[], porSessao: Map<number, number>) {
 }
 
 export default function Relatorios() {
-  const { profile } = useAuth()
+  const { profile, nucleo } = useAuth()
   const editor = podeEditar(profile)
+  const nomeNucleo = nucleo?.nome ?? 'Guardião'
   const { config } = useConfiguracoes()
   const { carregando, erro, preparos, consumos, saidas, sessoes } = useDadosEstoque()
 
@@ -252,7 +253,7 @@ export default function Relatorios() {
         <div className="mb-8 hidden flex-col items-center gap-3 border-b pb-5 print:flex">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/PDF/header.svg" alt="Guardião" className="h-16 w-auto" />
-          <p className="text-sm font-semibold">{config.nucleo_nome}</p>
+          <p className="text-sm font-semibold">{nomeNucleo}</p>
           <p className="text-[10px] uppercase tracking-widest">
             Período de referência: <span className="font-bold">{periodo.rotulo}</span>
           </p>
@@ -334,7 +335,7 @@ export default function Relatorios() {
             sessoes={dados.sessoesPeriodo}
             loading={carregando}
             periodo={periodo.rotulo}
-            nucleoNome={config.nucleo_nome}
+            nucleoNome={nomeNucleo}
           />
           <div className="mt-4 grid gap-4 md:grid-cols-3">
             <ListaFuncaoLiturgica titulo="Dirigentes" sessoes={dados.sessoesPeriodo} funcaoKey="dirigente" loading={carregando} />

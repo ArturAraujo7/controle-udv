@@ -21,6 +21,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
+import { useEstrutura } from '@/hooks/useEstrutura'
 import { useUsuarios } from '@/hooks/useUsuarios'
 import { formatarDataHora, formatarRelativo } from '@/lib/formato'
 import { nomeMembro } from '@/lib/membros'
@@ -31,6 +32,13 @@ import type { Membro, Papel, SituacaoUsuario } from '@/lib/tipos'
 const SEM_MEMBRO = 'nenhum'
 
 type Atividade = { id: number; mensagem_automatica: string | null; created_at: string }
+type CamposPerfil = Partial<{
+  role: Papel
+  status: SituacaoUsuario
+  membro_id: number | null
+  nucleo_id: number | null
+  regiao_id: number | null
+}>
 
 export default function PaginaUsuario({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
@@ -42,13 +50,15 @@ export default function PaginaUsuario({ params }: { params: Promise<{ id: string
 }
 
 function DetalheUsuario({ id }: { id: string }) {
-  const { profile } = useAuth()
+  const { profile, nucleo: meuNucleo } = useAuth()
   const { carregando, usuarios, completo, recarregar } = useUsuarios()
+  const estrutura = useEstrutura()
   const [membros, setMembros] = useState<Membro[]>([])
   const [atividades, setAtividades] = useState<Atividade[]>([])
   const [ocupado, setOcupado] = useState(false)
-  const [confirmarAdmin, setConfirmarAdmin] = useState(false)
+  const [troca, setTroca] = useState<{ papel: Papel; destino: string } | null>(null)
   const [confirmarDesativar, setConfirmarDesativar] = useState(false)
+  const [nucleoAprovacao, setNucleoAprovacao] = useState('')
 
   const usuario = usuarios.find(u => u.id === id)
   const ehVoce = profile?.id === id
@@ -71,25 +81,47 @@ function DetalheUsuario({ id }: { id: string }) {
     return () => { ativo = false }
   }, [id])
 
-  const atualizarPerfil = async (dados: Partial<{ role: Papel; status: SituacaoUsuario; membro_id: number | null }>, sucesso: string) => {
+  const atualizarPerfil = async (dados: CamposPerfil, sucesso: string) => {
     setOcupado(true)
     const { error } = await supabase.from('profiles').update(dados).eq('id', id)
     setOcupado(false)
     if (error) {
       toast.error('Não foi possível atualizar', { description: error.message })
-      return
+      return false
     }
     toast.success(sucesso)
     await recarregar()
+    return true
   }
 
+  const nucleosAtivos = estrutura.nucleos.filter(n => n.ativo)
+
   const mudarPapel = (papel: Papel) => {
-    if (papel === usuario?.role) return
-    if (papel === 'admin') {
-      setConfirmarAdmin(true)
-      return
+    if (!usuario || papel === usuario.role) return
+    const virandoCentral = papel === 'central'
+    const saindoDeCentral = usuario.role === 'central'
+    if (virandoCentral) {
+      const regiao = usuario.regiao_id ?? estrutura.nucleos.find(n => n.id === usuario.nucleo_id)?.regiao_id ?? estrutura.regioes[0]?.id
+      setTroca({ papel, destino: regiao ? String(regiao) : '' })
+    } else if (saindoDeCentral) {
+      const nucleo = nucleosAtivos.find(n => n.regiao_id === usuario.regiao_id) ?? nucleosAtivos[0]
+      setTroca({ papel, destino: nucleo ? String(nucleo.id) : '' })
+    } else if (papel === 'admin') {
+      setTroca({ papel, destino: '' })
+    } else {
+      atualizarPerfil({ role: papel }, `Papel alterado para ${rotuloPapel(papel)}`)
     }
-    atualizarPerfil({ role: papel }, `Papel alterado para ${rotuloPapel(papel)}`)
+  }
+
+  const confirmarTroca = async () => {
+    if (!troca || !usuario) return
+    const dados: CamposPerfil = { role: troca.papel }
+    if (troca.papel === 'central') {
+      Object.assign(dados, { regiao_id: Number(troca.destino), nucleo_id: null, membro_id: null })
+    } else if (usuario.role === 'central') {
+      Object.assign(dados, { nucleo_id: Number(troca.destino), regiao_id: null })
+    }
+    if (await atualizarPerfil(dados, `Papel alterado para ${rotuloPapel(troca.papel)}`)) setTroca(null)
   }
 
   const enviarRedefinicao = async () => {
@@ -122,7 +154,11 @@ function DetalheUsuario({ id }: { id: string }) {
     )
   }
 
+  const central = usuario.role === 'central'
+  const mesmoNucleo = !!usuario.nucleo_id && usuario.nucleo_id === meuNucleo?.id
   const membro = usuario.membro_id ? membros.find(m => m.id === usuario.membro_id) : undefined
+  const precisaNucleo = !central && !usuario.nucleo_id
+  const nucleoParaAprovar = nucleoAprovacao || (usuario.nucleo_id ? String(usuario.nucleo_id) : '')
 
   return (
     <div className="mx-auto max-w-2xl md:mx-0">
@@ -141,10 +177,27 @@ function DetalheUsuario({ id }: { id: string }) {
         <Card className="mb-5 ring-amber-300 dark:ring-amber-500/30">
           <CardContent className="space-y-3">
             <p className="text-sm">
-              Esta pessoa criou uma conta e aguarda aprovação. Enquanto isso, só visualiza os dados.
+              Esta pessoa criou uma conta e aguarda aprovação.
+              {precisaNucleo && ' Escolha o núcleo dela para aprovar.'}
             </p>
+            {!central && (
+              <Select value={nucleoParaAprovar} onValueChange={setNucleoAprovacao}>
+                <SelectTrigger className="h-10 w-full" aria-label="Núcleo"><SelectValue placeholder="Escolha o núcleo" /></SelectTrigger>
+                <SelectContent>
+                  {nucleosAtivos.map(n => <SelectItem key={n.id} value={String(n.id)}>{n.nome} · {estrutura.nomeRegiao(n.regiao_id)}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            )}
             <div className="flex gap-2">
-              <Button disabled={ocupado} onClick={() => atualizarPerfil({ status: 'ativo' }, 'Acesso aprovado')}>Aprovar acesso</Button>
+              <Button
+                disabled={ocupado || (!central && !nucleoParaAprovar)}
+                onClick={() => atualizarPerfil(
+                  central ? { status: 'ativo' } : { status: 'ativo', nucleo_id: Number(nucleoParaAprovar) },
+                  'Acesso aprovado'
+                )}
+              >
+                Aprovar acesso
+              </Button>
               <Button variant="outline" disabled={ocupado} onClick={() => atualizarPerfil({ status: 'desativado' }, 'Acesso recusado')}>Recusar</Button>
             </div>
           </CardContent>
@@ -170,23 +223,63 @@ function DetalheUsuario({ id }: { id: string }) {
           ))}
         </RadioGroup>
         <p className="mt-2 px-1 text-xs text-muted-foreground">
-          {ehVoce ? 'Você não pode mudar o próprio papel.' : 'Promover a Administrador pede confirmação.'}
+          {ehVoce ? 'Você não pode mudar o próprio papel.' : 'Tornar administrador geral ou Mestre Central pede confirmação.'}
         </p>
       </Secao>
 
-      {completo && (
+      {completo && !estrutura.indisponivel && (
+        central ? (
+          <Secao titulo="Região" acao={usuario.regiao_id ? <LinkSecao href={`/regional?regiao=${usuario.regiao_id}`}>Ver visão regional</LinkSecao> : undefined}>
+            <Select
+              value={usuario.regiao_id ? String(usuario.regiao_id) : ''}
+              onValueChange={v => atualizarPerfil({ regiao_id: Number(v) }, 'Região atualizada')}
+              disabled={ocupado}
+            >
+              <SelectTrigger className="h-10 w-full bg-card" aria-label="Região"><SelectValue placeholder="Escolha a região" /></SelectTrigger>
+              <SelectContent>
+                {estrutura.regioes.map(r => <SelectItem key={r.id} value={String(r.id)}>{r.nome}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <p className="mt-2 px-1 text-xs text-muted-foreground">O Mestre Central não pertence a um núcleo e vê todos os núcleos desta região.</p>
+          </Secao>
+        ) : (
+          <Secao titulo="Núcleo">
+            <Select
+              value={usuario.nucleo_id ? String(usuario.nucleo_id) : ''}
+              onValueChange={v => atualizarPerfil({ nucleo_id: Number(v), membro_id: null }, 'Núcleo atualizado')}
+              disabled={ocupado || ehVoce}
+            >
+              <SelectTrigger className="h-10 w-full bg-card" aria-label="Núcleo"><SelectValue placeholder="Sem núcleo" /></SelectTrigger>
+              <SelectContent>
+                {nucleosAtivos.map(n => <SelectItem key={n.id} value={String(n.id)}>{n.nome} · {estrutura.nomeRegiao(n.regiao_id)}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <p className="mt-2 px-1 text-xs text-muted-foreground">
+              {ehVoce ? 'Você não pode mudar o próprio núcleo.' : 'Trocar o núcleo remove o vínculo com o cadastro de membro.'}
+            </p>
+          </Secao>
+        )
+      )}
+
+      {completo && !central && (
         <Secao titulo="Membro vinculado" acao={membro && <LinkSecao href={`/membros/${membro.id}`}>Ver ficha</LinkSecao>}>
-          <Select
-            value={usuario.membro_id ? String(usuario.membro_id) : SEM_MEMBRO}
-            onValueChange={v => atualizarPerfil({ membro_id: v === SEM_MEMBRO ? null : Number(v) }, 'Vínculo atualizado')}
-            disabled={ocupado}
-          >
-            <SelectTrigger className="h-10 w-full bg-card" aria-label="Membro vinculado"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value={SEM_MEMBRO}>Nenhum membro vinculado</SelectItem>
-              {membros.map(m => <SelectItem key={m.id} value={String(m.id)}>{nomeMembro(m)}</SelectItem>)}
-            </SelectContent>
-          </Select>
+          {mesmoNucleo ? (
+            <Select
+              value={usuario.membro_id ? String(usuario.membro_id) : SEM_MEMBRO}
+              onValueChange={v => atualizarPerfil({ membro_id: v === SEM_MEMBRO ? null : Number(v) }, 'Vínculo atualizado')}
+              disabled={ocupado}
+            >
+              <SelectTrigger className="h-10 w-full bg-card" aria-label="Membro vinculado"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value={SEM_MEMBRO}>Nenhum membro vinculado</SelectItem>
+                {membros.map(m => <SelectItem key={m.id} value={String(m.id)}>{nomeMembro(m)}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          ) : (
+            <p className="rounded-xl bg-muted px-4 py-3 text-sm text-muted-foreground">
+              O cadastro de membros é por núcleo. O vínculo deste usuário é feito pelo formulário do membro, no núcleo dele.
+            </p>
+          )}
         </Secao>
       )}
 
@@ -238,17 +331,40 @@ function DetalheUsuario({ id }: { id: string }) {
         )}
       </div>
 
-      <AlertDialog open={confirmarAdmin} onOpenChange={setConfirmarAdmin}>
+      <AlertDialog open={!!troca} onOpenChange={aberto => { if (!aberto) setTroca(null) }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Tornar {usuario.full_name || usuario.email} administrador?</AlertDialogTitle>
+            <AlertDialogTitle>
+              Tornar {usuario.full_name || usuario.email} {troca ? rotuloPapel(troca.papel) : ''}?
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              Administradores podem mudar papéis de outros usuários, editar configurações e ver toda a auditoria.
+              {troca?.papel === 'admin'
+                ? 'O administrador geral gerencia regiões, núcleos, usuários, configurações e auditoria de todos os núcleos.'
+                : troca?.papel === 'central'
+                  ? 'O Mestre Central deixa de pertencer a um núcleo e passa a ver, sem alterar, todos os núcleos da região escolhida.'
+                  : 'Escolha o núcleo em que esta pessoa vai atuar.'}
             </AlertDialogDescription>
           </AlertDialogHeader>
+
+          {troca && troca.papel !== 'admin' && (
+            <Select value={troca.destino} onValueChange={destino => setTroca({ ...troca, destino })}>
+              <SelectTrigger className="h-10 w-full" aria-label={troca.papel === 'central' ? 'Região' : 'Núcleo'}>
+                <SelectValue placeholder={troca.papel === 'central' ? 'Escolha a região' : 'Escolha o núcleo'} />
+              </SelectTrigger>
+              <SelectContent>
+                {troca.papel === 'central'
+                  ? estrutura.regioes.map(r => <SelectItem key={r.id} value={String(r.id)}>{r.nome}</SelectItem>)
+                  : nucleosAtivos.map(n => <SelectItem key={n.id} value={String(n.id)}>{n.nome} · {estrutura.nomeRegiao(n.regiao_id)}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          )}
+
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={() => atualizarPerfil({ role: 'admin' }, 'Papel alterado para Administrador')}>
+            <AlertDialogCancel disabled={ocupado}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={e => { e.preventDefault(); confirmarTroca() }}
+              disabled={ocupado || (!!troca && troca.papel !== 'admin' && !troca.destino)}
+            >
               Confirmar
             </AlertDialogAction>
           </AlertDialogFooter>

@@ -16,7 +16,11 @@ import {
   Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
+import { useEstrutura } from '@/hooks/useEstrutura'
 import { useUsuarios } from '@/hooks/useUsuarios'
 import { nomeMembro } from '@/lib/membros'
 import { PAPEIS, SITUACOES } from '@/lib/permissoes'
@@ -34,8 +38,10 @@ export default function PaginaUsuarios() {
 function Usuarios() {
   const { profile } = useAuth()
   const { carregando, usuarios, completo, erro } = useUsuarios()
+  const estrutura = useEstrutura()
   const [membros, setMembros] = useState<Map<number, Membro>>(new Map())
   const [filtro, setFiltro] = useState('todos')
+  const [nucleoFiltro, setNucleoFiltro] = useState('todos')
   const [busca, setBusca] = useState('')
   const [convite, setConvite] = useState(false)
   const [copiado, setCopiado] = useState(false)
@@ -49,7 +55,7 @@ function Usuarios() {
   }, [])
 
   const pendentes = usuarios.filter(u => u.status === 'pendente')
-  const semVinculo = usuarios.filter(u => u.status !== 'desativado' && !u.membro_id)
+  const semNucleo = usuarios.filter(u => u.status !== 'desativado' && u.role !== 'central' && !u.nucleo_id)
   const termo = busca.trim().toLowerCase()
 
   const filtrados = usuarios
@@ -59,6 +65,7 @@ function Usuarios() {
           : filtro === 'desativados' ? u.status === 'desativado'
             : u.role === filtro && u.status !== 'desativado'
     )
+    .filter(u => nucleoFiltro === 'todos' || String(u.nucleo_id) === nucleoFiltro || (nucleoFiltro === 'sem' && !u.nucleo_id))
     .filter(u => !termo || [u.full_name, u.email].some(v => v?.toLowerCase().includes(termo)))
 
   const linkConvite = typeof window !== 'undefined' ? `${window.location.origin}/login` : '/login'
@@ -73,14 +80,14 @@ function Usuarios() {
     <div className="mx-auto max-w-2xl md:mx-0">
       <Cabecalho
         titulo="Usuários"
-        descricao="O papel define quem pode registrar e editar dados."
+        descricao="Usuários de todos os núcleos. O papel define o que cada um pode ver e fazer."
         acoes={<Button variant="outline" onClick={() => setConvite(true)}><UserPlus /> Convidar</Button>}
       />
 
       {erro && <div className="mb-4"><Vazio>Não foi possível carregar os usuários: {erro}</Vazio></div>}
       {!carregando && !completo && (
         <p className="mb-4 rounded-xl bg-muted px-4 py-3 text-xs text-muted-foreground">
-          Situação, último acesso e vínculo com membros aparecem depois que as migrations de 13/09/2026 forem aplicadas.
+          Situação, núcleo, último acesso e vínculo com membros aparecem depois que as migrations de 13 e 14/09/2026 forem aplicadas.
         </p>
       )}
 
@@ -89,7 +96,7 @@ function Usuarios() {
         itens={[
           { rotulo: 'Usuários', valor: usuarios.filter(u => u.status !== 'desativado').length },
           { rotulo: 'Pendentes', valor: pendentes.length, className: pendentes.length ? 'text-amber-600 dark:text-amber-400' : undefined },
-          { rotulo: 'Sem vínculo', valor: semVinculo.length },
+          { rotulo: 'Sem núcleo', valor: semNucleo.length, className: semNucleo.length ? 'text-amber-600 dark:text-amber-400' : undefined },
         ]}
       />
 
@@ -111,17 +118,29 @@ function Usuarios() {
         <Input className="h-10 pl-9" placeholder="Buscar por nome ou e-mail…" value={busca} onChange={e => setBusca(e.target.value)} aria-label="Buscar usuário" />
       </div>
 
-      <ChipsFiltro
-        rotulo="Filtrar usuários"
-        valor={filtro}
-        onChange={setFiltro}
-        opcoes={[
-          { valor: 'todos', rotulo: 'Todos' },
-          ...PAPEIS.map(p => ({ valor: p.valor, rotulo: p.valor === 'admin' ? 'Admin' : p.rotulo.replace('Mestre ', '') })),
-          { valor: 'pendentes', rotulo: 'Pendentes', contagem: pendentes.length },
-          { valor: 'desativados', rotulo: 'Desativados' },
-        ]}
-      />
+      <div className="space-y-3">
+        <ChipsFiltro
+          rotulo="Filtrar usuários"
+          valor={filtro}
+          onChange={setFiltro}
+          opcoes={[
+            { valor: 'todos', rotulo: 'Todos' },
+            ...PAPEIS.map(p => ({ valor: p.valor, rotulo: p.valor === 'admin' ? 'Admin geral' : p.rotulo.replace('Mestre ', '') })),
+            { valor: 'pendentes', rotulo: 'Pendentes', contagem: pendentes.length },
+            { valor: 'desativados', rotulo: 'Desativados' },
+          ]}
+        />
+        {estrutura.nucleos.length > 0 && (
+          <Select value={nucleoFiltro} onValueChange={setNucleoFiltro}>
+            <SelectTrigger className="h-10 w-full bg-card" aria-label="Núcleo"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos os núcleos</SelectItem>
+              {estrutura.nucleos.map(n => <SelectItem key={n.id} value={String(n.id)}>{n.nome}</SelectItem>)}
+              <SelectItem value="sem">Sem núcleo</SelectItem>
+            </SelectContent>
+          </Select>
+        )}
+      </div>
 
       <div className="mt-4">
         {carregando ? (
@@ -132,13 +151,16 @@ function Usuarios() {
           <ListaCard>
             {filtrados.map(u => {
               const membro = u.membro_id ? membros.get(u.membro_id) : undefined
+              const lotacao = u.role === 'central'
+                ? `Região ${estrutura.nomeRegiao(u.regiao_id) ?? '—'}`
+                : estrutura.nomeNucleo(u.nucleo_id) ?? (completo ? 'Sem núcleo' : null)
               return (
                 <ItemLista
                   key={u.id}
                   href={`/admin/usuarios/${u.id}`}
                   inicio={<Avatar nome={u.full_name || u.email} arquivo={membro?.foto_arquivo} />}
                   titulo={<>{u.full_name || 'Sem nome'}{u.id === profile?.id && <span className="font-normal text-muted-foreground"> · você</span>}</>}
-                  subtitulo={[u.email, membro && `membro: ${nomeMembro(membro)}`].filter(Boolean).join(' · ')}
+                  subtitulo={[lotacao, u.email, membro && `membro: ${nomeMembro(membro)}`].filter(Boolean).join(' · ')}
                   fim={<BadgeUsuario usuario={u} />}
                 />
               )
@@ -159,8 +181,7 @@ function Usuarios() {
           <DialogHeader>
             <DialogTitle>Convidar para o Guardião</DialogTitle>
             <DialogDescription>
-              Envie o link abaixo. A pessoa cria a conta e aparece aqui como pendente, com papel de Mestre (só leitura),
-              até você revisar.
+              Envie o link abaixo. A pessoa cria a conta e aparece aqui como pendente; ao aprovar, você escolhe o núcleo e o papel.
             </DialogDescription>
           </DialogHeader>
           <div className="flex items-center gap-2">

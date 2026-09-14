@@ -37,7 +37,7 @@ const BOAS_VINDAS: Message = {
 }
 
 function AIChatWidget({ aberto, onAbertoChange }: { aberto: boolean; onAbertoChange: (aberto: boolean) => void }) {
-  const { session } = useAuth()
+  const { session, profile } = useAuth()
   const [messages, setMessages] = useState<Message[]>([BOAS_VINDAS])
   const [inputValue, setInputValue] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -105,7 +105,8 @@ function AIChatWidget({ aberto, onAbertoChange }: { aberto: boolean; onAbertoCha
     }
   }
 
-  if (!session) return null
+  // O assistente responde sobre os dados do núcleo; o Mestre Central não pertence a um.
+  if (!session || profile?.role === 'central') return null
 
   const esperandoStream = isLoading && messages[messages.length - 1]?.text === ''
 

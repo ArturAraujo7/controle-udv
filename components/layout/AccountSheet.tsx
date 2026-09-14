@@ -1,9 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { useTheme } from 'next-themes'
-import { LogOut, ShieldCheck, SlidersHorizontal, User, Users } from 'lucide-react'
+import { Globe2, Home, LogOut, Map, ShieldCheck, SlidersHorizontal, User, Users } from 'lucide-react'
 
 import { useAuth } from '@/components/AuthProvider'
 import { Avatar } from '@/components/comum/Avatar'
@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/sheet'
 import { ehAdmin, rotuloPapel } from '@/lib/permissoes'
 import { supabase } from '@/lib/supabaseClient'
+import { ehRotaRegional } from './rotas'
 
 const TEMAS = [
   { valor: 'light', rotulo: 'Claro' },
@@ -26,7 +27,8 @@ const TEMAS = [
 /** Avatar do header (celular): abre a folha com perfil, administração, tema e sair. */
 export function BotaoConta() {
   const router = useRouter()
-  const { profile, session } = useAuth()
+  const pathname = usePathname()
+  const { profile, session, nucleo } = useAuth()
   const { theme, setTheme } = useTheme()
   const [aberto, setAberto] = useState(false)
 
@@ -37,6 +39,7 @@ export function BotaoConta() {
   }
 
   const nome = profile?.full_name || session?.user.email || 'Minha conta'
+  const regional = ehRotaRegional(pathname)
 
   return (
     <Sheet open={aberto} onOpenChange={setAberto}>
@@ -63,7 +66,7 @@ export function BotaoConta() {
             <SheetTitle className="truncate text-base font-semibold">{nome}</SheetTitle>
             <SheetDescription className="truncate text-xs">
               {rotuloPapel(profile?.role)}
-              {profile?.email && ` · ${profile.email}`}
+              {nucleo && ` · ${nucleo.nome}`}
             </SheetDescription>
           </div>
         </div>
@@ -76,10 +79,16 @@ export function BotaoConta() {
           {ehAdmin(profile) && (
             <>
               <p className="px-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                Administração
+                Administração geral
               </p>
               <ListaCard>
-                <ItemLista href="/admin/configuracoes" inicio={<IconeLinha><SlidersHorizontal /></IconeLinha>} titulo="Configurações do núcleo" />
+                {regional ? (
+                  <ItemLista href="/" inicio={<IconeLinha><Home /></IconeLinha>} titulo="Voltar ao meu núcleo" />
+                ) : (
+                  <ItemLista href="/regional" inicio={<IconeLinha><Globe2 /></IconeLinha>} titulo="Visão regional" subtitulo="Somente leitura" />
+                )}
+                <ItemLista href="/admin/estrutura" inicio={<IconeLinha><Map /></IconeLinha>} titulo="Regiões e núcleos" />
+                <ItemLista href="/admin/configuracoes" inicio={<IconeLinha><SlidersHorizontal /></IconeLinha>} titulo="Configurações" />
                 <ItemLista href="/admin/usuarios" inicio={<IconeLinha><Users /></IconeLinha>} titulo="Usuários" />
                 <ItemLista href="/admin/auditoria" inicio={<IconeLinha><ShieldCheck /></IconeLinha>} titulo="Auditoria" />
               </ListaCard>
