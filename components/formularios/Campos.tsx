@@ -58,7 +58,8 @@ export function BlocoFormulario({
   children: React.ReactNode
 }) {
   return (
-    <Card className={className}>
+    // overflow-visible: as listas de busca de membros abrem para fora do cartão
+    <Card className={`overflow-visible ${className ?? ''}`}>
       {titulo && (
         <CardHeader>
           <CardTitle>{titulo}</CardTitle>

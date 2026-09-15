@@ -42,11 +42,11 @@ export function SeletorMultiploMembro({
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  const membrosFiltrados = query.length >= 3 
-    ? membros.filter(m => {
-        const nomeNorm = (m.nome_exibicao || m.nome).toLowerCase()
-        return nomeNorm.includes(query.toLowerCase())
-      })
+  // Ignora acentos, maiúsculas e o prefixo "M." / "C." que aparece nos nomes
+  const normalizar = (texto: string) => texto.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim()
+  const termo = normalizar(query).replace(/^(m|c)\.\s*/, '')
+  const membrosFiltrados = query.length >= 3
+    ? membros.filter(m => [m.nome, m.nome_exibicao].some(v => v && normalizar(v).includes(termo)))
     : [] // Só busca com 3 letras pra evitar lista gigante aberta
 
   const handleSelect = (membro: MembroSimples) => {
@@ -54,7 +54,7 @@ export function SeletorMultiploMembro({
     // Colocar prefixos apenas para fins visuais no campo
     if (membro.grau === 'Mestre') {
       finalName = `M. ${finalName}`
-    } else if (membro.grau === 'Conselheiro') {
+    } else if (membro.grau === 'Corpo do Conselho') {
       finalName = `C. ${finalName}`
     }
 
@@ -104,7 +104,7 @@ export function SeletorMultiploMembro({
       
       let finalName = novoMembro.nome_exibicao || novoMembro.nome
       if (novoMembro.grau === 'Mestre') finalName = `M. ${finalName}`
-      else if (novoMembro.grau === 'Conselheiro') finalName = `C. ${finalName}`
+      else if (novoMembro.grau === 'Corpo do Conselho') finalName = `C. ${finalName}`
 
       if (value.length < max) {
           onChange([...value, { id: novoMembro.id, nome: finalName }])
@@ -162,7 +162,7 @@ export function SeletorMultiploMembro({
                   {membrosFiltrados.map((membro) => {
                     let previewName = membro.nome_exibicao || membro.nome
                     if (membro.grau === 'Mestre') previewName = `M. ${previewName}`
-                    else if (membro.grau === 'Conselheiro') previewName = `C. ${previewName}`
+                    else if (membro.grau === 'Corpo do Conselho') previewName = `C. ${previewName}`
 
                     const isSelected = value.some(v => v.id === membro.id)
 

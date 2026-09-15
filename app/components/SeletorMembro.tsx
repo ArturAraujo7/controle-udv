@@ -45,10 +45,11 @@ export function SeletorMembro({ placeholder = "Selecione ou digite...", value, o
     return () => document.removeEventListener("mousedown", handleClickOutside)
   }, [])
 
+  // Ignora acentos, maiúsculas e o prefixo "M." / "C." que aparece nos nomes
+  const normalizar = (texto: string) => texto.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim()
+  const termo = normalizar(search).replace(/^(m|c)\.\s*/, '')
   const filteredMembros = membros.filter(m =>
-    m.nome.toLowerCase().includes(search.toLowerCase()) ||
-    (m.nome_exibicao && m.nome_exibicao.toLowerCase().includes(search.toLowerCase())) ||
-    (m.grau && m.grau.toLowerCase().includes(search.toLowerCase()))
+    [m.nome, m.nome_exibicao, m.grau].some(v => v && normalizar(v).includes(termo))
   )
 
   const formatarNome = (nomeBase: string, grau?: string) => {
