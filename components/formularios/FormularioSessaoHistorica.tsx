@@ -21,7 +21,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
-import { useLista } from '@/hooks/useListas'
+import { useLista, useTipoTemLeitura } from '@/hooks/useListas'
 import { useMembrosSelecao } from '@/hooks/useMembros'
 import { enviarArquivo, removerArquivo } from '@/lib/arquivos'
 import { FONTES_REGISTRO } from '@/lib/constants'
@@ -75,6 +75,9 @@ export function FormularioSessaoHistorica({ id }: { id?: number }) {
   const [erros, setErros] = useState<Record<string, string>>({})
   const [mesmaData, setMesmaData] = useState<{ id: number; tipo: string }[]>([])
   const tipos = useLista('tipos_sessao', form.tipo)
+  // Leitura e explanação só existem em alguns tipos; nomes já gravados continuam visíveis
+  const temLeitura = useTipoTemLeitura(form.tipo)
+  const mostrarLeitura = temLeitura || !!form.condutores.leitor.nome.trim() || !!form.condutores.explanador.nome.trim()
 
   const atualizar = <K extends keyof Form>(campo: K, valor: Form[K]) => setForm(f => ({ ...f, [campo]: valor }))
   const atualizarCondutores = (parcial: Partial<CondutoresForm>) =>
@@ -272,6 +275,7 @@ export function FormularioSessaoHistorica({ id }: { id?: number }) {
           explanador={condutores.explanador}
           membros={membros}
           rotuloDirigente="Quem estava na responsabilidade?"
+          mostrarLeituraExplanacao={mostrarLeitura}
           onDirigentesChange={dirigentes => atualizarCondutores({ dirigentes })}
           onTipoDelegacaoChange={tipo_delegacao => atualizarCondutores({ tipo_delegacao })}
           onLeitorChange={leitor => atualizarCondutores({ leitor })}

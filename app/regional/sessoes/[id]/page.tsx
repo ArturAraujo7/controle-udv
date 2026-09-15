@@ -62,7 +62,7 @@ export default function SessaoRegional({ params }: { params: Promise<{ id: strin
     ...(sessao.dirigente_2_id || nomes[1] ? [{ papel: `Dirigente · ${sessao.tipo_delegacao || 'delegação'}`, ...pessoa(sessao.dirigente_2_id, nomes[1]) }] : []),
     { papel: 'Leitor de documentos', ...pessoa(sessao.leitor_documentos_id, sessao.leitor_documentos) },
     { papel: 'Explanador', ...pessoa(sessao.explanador_id, sessao.explanador) },
-  ]
+  ].filter(c => c.papel.startsWith('Dirigente') || c.nome) // leitor e explanador só quando houver
 
   const chamadas = d.chamadas.filter(c => c.id_sessao === sessao.id)
   const historias = d.historias.filter(h => h.id_sessao === sessao.id)

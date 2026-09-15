@@ -18,7 +18,7 @@ import {
 import { Textarea } from '@/components/ui/textarea'
 import { useConfiguracoes } from '@/hooks/useConfiguracoes'
 import { useDadosEstoque } from '@/hooks/useDadosEstoque'
-import { useItensLista, useLista } from '@/hooks/useListas'
+import { useLista, useTipoTemLeitura } from '@/hooks/useListas'
 import { useMembrosSelecao } from '@/hooks/useMembros'
 import { calcularSaldos, estoqueDisponivel, type PreparoComSaldo } from '@/lib/estoque'
 import { formatarData, formatarNumero, hojeISO, separarDataHora } from '@/lib/formato'
@@ -70,7 +70,6 @@ export function FormularioSessao({ id, duplicarDe }: { id?: number; duplicarDe?:
   const { config } = useConfiguracoes()
   const { membros, adicionar } = useMembrosSelecao()
   const estoque = useDadosEstoque()
-  const { itens: itensTipos } = useItensLista('tipos_sessao')
 
   const [carregando, setCarregando] = useState(editando || duplicarDe !== undefined)
   const [salvando, setSalvando] = useState(false)
@@ -155,17 +154,19 @@ export function FormularioSessao({ id, duplicarDe }: { id?: number; duplicarDe?:
     return lote ? (usoPorLote.get(c.id_preparo) ?? 0) > disponivelDe(lote) + 0.001 : false
   }
 
-  const tipoExigeExplanador = itensTipos?.find(t => t.nome === form.tipo)?.exige_explanador ?? false
+  // Leitura e explanação só existem em alguns tipos (Escala e Escala Anual). Se a
+  // sessão já tem esses nomes, os campos continuam visíveis para poderem ser limpos.
+  const temLeitura = useTipoTemLeitura(form.tipo)
+  const mostrarLeitura = temLeitura || !!form.condutores.leitor.nome.trim() || !!form.condutores.explanador.nome.trim()
+  const exigirLeitura = temLeitura && config.exigir_leitor_explanador
 
   const validar = () => {
     const e: Record<string, string> = {}
     if (!form.data) e.data = 'Informe a data'
     if (!form.tipo) e.tipo = 'Escolha o tipo de sessão'
     if (form.condutores.dirigentes.length === 0) e.dirigente = 'Informe quem dirigiu'
-    if (config.exigir_leitor_explanador && !form.condutores.leitor.nome.trim()) e.leitor = 'Informe quem leu os documentos'
-    if ((config.exigir_leitor_explanador || tipoExigeExplanador) && !form.condutores.explanador.nome.trim()) {
-      e.explanador = 'Informe quem fez a explanação'
-    }
+    if (exigirLeitura && !form.condutores.leitor.nome.trim()) e.leitor = 'Informe quem leu os documentos'
+    if (exigirLeitura && !form.condutores.explanador.nome.trim()) e.explanador = 'Informe quem fez a explanação'
     if (!(lerNumero(form.participantes) > 0)) e.participantes = 'Informe o número de participantes'
 
     const validos = form.consumos.filter(c => c.id_preparo && lerNumero(c.quantidade) > 0)
@@ -293,8 +294,8 @@ export function FormularioSessao({ id, duplicarDe }: { id?: number; duplicarDe?:
           leitor={condutores.leitor}
           explanador={condutores.explanador}
           membros={membros}
-          exigirLeitorExplanador={config.exigir_leitor_explanador}
-          exigirExplanador={tipoExigeExplanador}
+          mostrarLeituraExplanacao={mostrarLeitura}
+          exigirLeitorExplanador={exigirLeitura}
           erros={{ dirigente: erros.dirigente, leitor: erros.leitor, explanador: erros.explanador }}
           onDirigentesChange={dirigentes => atualizarCondutores({ dirigentes })}
           onTipoDelegacaoChange={tipo_delegacao => atualizarCondutores({ tipo_delegacao })}

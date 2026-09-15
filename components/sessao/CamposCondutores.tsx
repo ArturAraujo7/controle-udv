@@ -14,6 +14,7 @@ export type { MembroRef }
 /**
  * Bloco "quem conduziu a sessão" — dirigentes (até 2, com classificação da
  * delegação), leitor e explanador. Compartilhado pelos formulários de sessão.
+ * Leitor e explanador só aparecem nos tipos com leitura e explanação.
  */
 export function CamposCondutores({
   dirigentes,
@@ -22,8 +23,8 @@ export function CamposCondutores({
   explanador,
   membros,
   rotuloDirigente = 'Quem dirigiu?',
+  mostrarLeituraExplanacao = true,
   exigirLeitorExplanador = false,
-  exigirExplanador = false,
   erros,
   onDirigentesChange,
   onTipoDelegacaoChange,
@@ -37,8 +38,8 @@ export function CamposCondutores({
   explanador: MembroRef
   membros: MembroSimples[]
   rotuloDirigente?: string
+  mostrarLeituraExplanacao?: boolean
   exigirLeitorExplanador?: boolean
-  exigirExplanador?: boolean
   erros?: Partial<Record<'dirigente' | 'leitor' | 'explanador', string>>
   onDirigentesChange: (valor: MembroRef[]) => void
   onTipoDelegacaoChange: (valor: string) => void
@@ -82,30 +83,32 @@ export function CamposCondutores({
         </div>
       )}
 
-      <div className="grid gap-5 sm:grid-cols-2">
-        <div className="space-y-2">
-          <Label>Leitor de documentos {exigirLeitorExplanador && obrigatorio}</Label>
-          <SeletorMembro
-            placeholder="Quem leu?"
-            value={leitor}
-            onChange={onLeitorChange}
-            membros={membros}
-            onMembroAdicionado={onMembroAdicionado}
-          />
-          {erros?.leitor && <p className="text-xs text-destructive" role="alert">{erros.leitor}</p>}
+      {mostrarLeituraExplanacao && (
+        <div className="grid gap-5 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label>Leitor de documentos {exigirLeitorExplanador && obrigatorio}</Label>
+            <SeletorMembro
+              placeholder="Quem leu?"
+              value={leitor}
+              onChange={onLeitorChange}
+              membros={membros}
+              onMembroAdicionado={onMembroAdicionado}
+            />
+            {erros?.leitor && <p className="text-xs text-destructive" role="alert">{erros.leitor}</p>}
+          </div>
+          <div className="space-y-2">
+            <Label>Explanador {exigirLeitorExplanador && obrigatorio}</Label>
+            <SeletorMembro
+              placeholder="Quem explanou?"
+              value={explanador}
+              onChange={onExplanadorChange}
+              membros={membros}
+              onMembroAdicionado={onMembroAdicionado}
+            />
+            {erros?.explanador && <p className="text-xs text-destructive" role="alert">{erros.explanador}</p>}
+          </div>
         </div>
-        <div className="space-y-2">
-          <Label>Explanador {(exigirLeitorExplanador || exigirExplanador) && obrigatorio}</Label>
-          <SeletorMembro
-            placeholder="Quem explanou?"
-            value={explanador}
-            onChange={onExplanadorChange}
-            membros={membros}
-            onMembroAdicionado={onMembroAdicionado}
-          />
-          {erros?.explanador && <p className="text-xs text-destructive" role="alert">{erros.explanador}</p>}
-        </div>
-      </div>
+      )}
     </div>
   )
 }

@@ -193,7 +193,8 @@ export type ItemLista = {
   ordem: number
   ativo: boolean
   cor: string | null
-  exige_explanador: boolean
+  /** Tipos de sessão: mostra leitor de documentos e explanador. */
+  tem_leitura_explanacao: boolean
   /** Só na lista de chamadas. */
   autor?: string | null
 }

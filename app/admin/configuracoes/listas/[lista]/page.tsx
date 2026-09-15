@@ -83,7 +83,7 @@ export default function PaginaLista({
   )
 }
 
-type Edicao = { item: ItemLista | null; nome: string; autor: string; cor: string; exigeExplanador: boolean }
+type Edicao = { item: ItemLista | null; nome: string; autor: string; cor: string; temLeitura: boolean }
 
 function EditorLista({ lista, rotulo, regiaoParametro }: { lista: NomeLista; rotulo: string; regiaoParametro: number | null }) {
   const router = useRouter()
@@ -150,7 +150,7 @@ function EditorLista({ lista, rotulo, regiaoParametro }: { lista: NomeLista; rot
       nome: item?.nome ?? '',
       autor: item?.autor ?? '',
       cor: item?.cor ?? SEM_COR,
-      exigeExplanador: item?.exige_explanador ?? false,
+      temLeitura: item?.tem_leitura_explanacao ?? false,
     })
 
   const salvarEdicao = async () => {
@@ -164,7 +164,7 @@ function EditorLista({ lista, rotulo, regiaoParametro }: { lista: NomeLista; rot
     const dados = {
       nome,
       cor: edicao.cor === SEM_COR ? null : edicao.cor,
-      exige_explanador: lista === 'tipos_sessao' ? edicao.exigeExplanador : false,
+      ...(lista === 'tipos_sessao' ? { tem_leitura_explanacao: edicao.temLeitura } : {}),
       ...(lista === 'chamadas' ? { autor: edicao.autor.trim() || null } : {}),
     }
     const { error } = edicao.item
@@ -288,7 +288,7 @@ function EditorLista({ lista, rotulo, regiaoParametro }: { lista: NomeLista; rot
                   <span className="block text-xs text-muted-foreground">
                     {item.autor && `${item.autor} · `}
                     {rotuloUso(item.nome)}
-                    {item.exige_explanador && ' · exige explanador'}
+                    {item.tem_leitura_explanacao && ' · leitura e explanação'}
                   </span>
                 </span>
               </button>
@@ -352,11 +352,11 @@ function EditorLista({ lista, rotulo, regiaoParametro }: { lista: NomeLista; rot
                     </Select>
                   </Campo>
                   <LinhaInterruptor
-                    id="exige-explanador"
-                    rotulo="Exige explanador"
-                    descricao="O formulário da sessão passa a pedir o explanador para este tipo."
-                    checked={edicao.exigeExplanador}
-                    onCheckedChange={v => setEdicao({ ...edicao, exigeExplanador: v })}
+                    id="tem-leitura"
+                    rotulo="Tem leitura e explanação"
+                    descricao="O formulário da sessão mostra os campos de leitor de documentos e explanador para este tipo."
+                    checked={edicao.temLeitura}
+                    onCheckedChange={v => setEdicao({ ...edicao, temLeitura: v })}
                   />
                 </>
               )}

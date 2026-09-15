@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from 'react'
 
 import { useAuth } from '@/components/AuthProvider'
 import { supabase } from '@/lib/supabaseClient'
-import { GRAUS_MEMBRO, MOTIVOS_SAIDA, TIPOS_DELEGACAO, TIPOS_SESSAO } from '@/lib/constants'
+import { GRAUS_MEMBRO, MOTIVOS_SAIDA, TIPOS_COM_LEITURA, TIPOS_DELEGACAO, TIPOS_SESSAO } from '@/lib/constants'
 import type { ItemLista, NomeLista } from '@/lib/tipos'
 
 /** Valores usados quando a tabela `listas_sistema` não existe ou está vazia. */
@@ -88,4 +88,12 @@ export function useLista(lista: NomeLista, incluir?: string | null) {
     : [...PADRAO[lista]]
   if (incluir && !nomes.includes(incluir)) nomes.push(incluir)
   return nomes
+}
+
+/** Se o tipo de sessão tem leitura de documentos e explanação (por padrão, Escala e Escala Anual). */
+export function useTipoTemLeitura(tipo: string) {
+  const { itens } = useItensLista('tipos_sessao')
+  const item = itens?.find(i => i.nome === tipo)
+  if (item && typeof item.tem_leitura_explanacao === 'boolean') return item.tem_leitura_explanacao
+  return TIPOS_COM_LEITURA.includes(tipo)
 }

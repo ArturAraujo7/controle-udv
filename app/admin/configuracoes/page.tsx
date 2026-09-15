@@ -264,7 +264,7 @@ function ConfiguracoesNucleo() {
           <LinhaInterruptor
             id="exigir-condutores"
             rotulo="Exigir leitor e explanador"
-            descricao="Vale para novas sessões; registros históricos continuam opcionais."
+            descricao="Vale para os tipos com leitura e explanação (Escala e Escala Anual). Registros históricos continuam opcionais."
             checked={config.exigir_leitor_explanador}
             onCheckedChange={v => atualizar('exigir_leitor_explanador', v)}
           />

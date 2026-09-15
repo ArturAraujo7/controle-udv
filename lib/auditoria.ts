@@ -81,7 +81,7 @@ const ROTULO_CAMPO: Record<string, string> = {
   lista: 'Lista',
   ordem: 'Ordem',
   cor: 'Cor',
-  exige_explanador: 'Exige explanador',
+  tem_leitura_explanacao: 'Tem leitura e explanação',
 }
 
 /** Campos técnicos que nunca aparecem no diff. */

@@ -39,6 +39,9 @@ export const MOTIVOS_SAIDA = [
   'Outro',
 ] as const
 
+/** Tipos com leitura de documentos e explanação quando a lista de tipos não está disponível. */
+export const TIPOS_COM_LEITURA: readonly string[] = ['Escala', 'Escala Anual']
+
 /** Espelha o CHECK sessoes_fonte_registro_check. */
 export const FONTES_REGISTRO = ['Livro de atas', 'Relato oral', 'Outro'] as const
 

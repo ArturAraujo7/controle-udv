@@ -201,7 +201,7 @@ export default function DetalheSessao({ params }: { params: Promise<{ id: string
       : []),
     { papel: 'Leitor de documentos', ...pessoa(sessao.leitor_documentos_id, sessao.leitor_documentos) },
     { papel: 'Explanador', ...pessoa(sessao.explanador_id, sessao.explanador) },
-  ]
+  ].filter(c => c.papel.startsWith('Dirigente') || c.nome) // leitor e explanador só quando houver
 
   const hrefEditar = detalhe.historica ? `/editar-sessao-historica/${sessao.id}` : `/editar-sessao/${sessao.id}`
   const porPessoa = sessao.quantidade_participantes > 0 ? (detalhe.total * 1000) / sessao.quantidade_participantes : 0
